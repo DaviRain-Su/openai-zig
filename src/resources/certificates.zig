@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const MultipartRequest = struct {
     content_type: []const u8,
@@ -82,21 +83,30 @@ pub const Resource = struct {
     }
 
     /// Organization-level certificates
-    pub fn list_org_certificates(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(std.json.Value) {
+    pub fn list_org_certificates(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(gen.ListCertificatesResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/organization/certificates");
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        const resp = try self.transport.request(.GET, path, &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(gen.ListCertificatesResponse, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
     pub fn upload_certificate(
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Certificate) {
         const resp = try self.transport.request(.POST, "/organization/certificates", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
@@ -104,55 +114,109 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Certificate, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
     }
 
-    pub fn activate_org_certificates(self: *const Resource, allocator: std.mem.Allocator) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendNoBody(allocator, .POST, "/organization/certificates/activate");
+    pub fn activate_org_certificates(self: *const Resource, allocator: std.mem.Allocator) errors.Error!std.json.Parsed(gen.ToggleCertificatesRequest) {
+        const resp = try self.transport.request(.POST, "/organization/certificates/activate", &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(gen.ToggleCertificatesRequest, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
-    pub fn deactivate_org_certificates(self: *const Resource, allocator: std.mem.Allocator) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendNoBody(allocator, .POST, "/organization/certificates/deactivate");
+    pub fn deactivate_org_certificates(self: *const Resource, allocator: std.mem.Allocator) errors.Error!std.json.Parsed(gen.ToggleCertificatesRequest) {
+        const resp = try self.transport.request(.POST, "/organization/certificates/deactivate", &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(gen.ToggleCertificatesRequest, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
     pub fn get_certificate(
         self: *const Resource,
         allocator: std.mem.Allocator,
         certificate_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Certificate) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/certificates/{s}", .{certificate_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        const resp = try self.transport.request(.GET, path, &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(gen.Certificate, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
     pub fn modify_certificate(
         self: *const Resource,
         allocator: std.mem.Allocator,
         certificate_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.ModifyCertificateRequest,
+    ) errors.Error!std.json.Parsed(gen.Certificate) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/certificates/{s}", .{certificate_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        const resp = try self.transport.request(.POST, path, &.{
+            .{ .name = "Accept", .value = "application/json" },
+            .{ .name = "Content-Type", .value = "application/json" },
+        }, blk: {
+            var body_writer: std.io.Writer.Allocating = .init(allocator);
+            defer body_writer.deinit();
+            var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
+            json_stream.write(body) catch {
+                return errors.Error.SerializeError;
+            };
+            break :blk body_writer.written();
+        });
+        const body_bytes = resp.body;
+        defer self.transport.allocator.free(body_bytes);
+
+        const parsed = std.json.parseFromSlice(gen.Certificate, allocator, body_bytes, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
     pub fn delete_certificate(
         self: *const Resource,
         allocator: std.mem.Allocator,
         certificate_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeleteCertificateResponse) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/certificates/{s}", .{certificate_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        const resp = try self.transport.request(.DELETE, path, &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(gen.DeleteCertificateResponse, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
     /// Project-level certificates
@@ -161,37 +225,64 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ListCertificatesResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/organization/projects/{s}/certificates", .{project_id});
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        const resp = try self.transport.request(.GET, path, &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(gen.ListCertificatesResponse, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
     pub fn activate_project_certificates(
         self: *const Resource,
         allocator: std.mem.Allocator,
         project_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ToggleCertificatesRequest) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/certificates/activate", .{project_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .POST, path);
+        const resp = try self.transport.request(.POST, path, &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(gen.ToggleCertificatesRequest, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
     pub fn deactivate_project_certificates(
         self: *const Resource,
         allocator: std.mem.Allocator,
         project_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ToggleCertificatesRequest) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/certificates/deactivate", .{project_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .POST, path);
+        const resp = try self.transport.request(.POST, path, &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(gen.ToggleCertificatesRequest, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 };
