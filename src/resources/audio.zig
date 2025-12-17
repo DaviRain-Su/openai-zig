@@ -1,17 +1,10 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
-/// Minimal request payload for POST /audio/speech (text-to-speech).
-pub const CreateSpeechRequest = struct {
-    model: []const u8,
-    input: []const u8,
-    voice: []const u8,
-    response_format: ?[]const u8 = null,
-    speed: ?f64 = null,
-    instructions: ?[]const u8 = null,
-    stream_format: ?[]const u8 = null,
-};
+/// Request payload for POST /audio/speech (text-to-speech).
+pub const CreateSpeechRequest = gen.CreateSpeechRequest;
 
 /// Generic representation of a multipart/form-data payload. The caller is responsible
 /// for constructing a valid body and boundary string.
@@ -37,9 +30,7 @@ pub const ListVoiceConsentsParams = struct {
 };
 
 /// Request body for updating an existing voice consent.
-pub const UpdateVoiceConsentRequest = struct {
-    name: []const u8,
-};
+pub const UpdateVoiceConsentRequest = gen.UpdateVoiceConsentRequest;
 
 pub const Resource = struct {
     transport: *transport_mod.Transport,
@@ -78,7 +69,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.CreateTranscriptionResponseJson) {
         const resp = try self.transport.request(.POST, "/audio/transcriptions", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
@@ -86,7 +77,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateTranscriptionResponseJson, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -97,7 +88,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
         const resp = try self.transport.request(.POST, "/audio/translations", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
@@ -105,7 +96,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateTranslationResponseJson, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -116,7 +107,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
         const resp = try self.transport.request(.POST, "/audio/voice_consents", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
@@ -124,7 +115,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VoiceConsentResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -135,7 +126,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListVoiceConsentsParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const writer = fbs.writer();
@@ -157,7 +148,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VoiceConsentListResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -168,7 +159,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         consent_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/audio/voice_consents/{s}", .{consent_id}) catch {
             return errors.Error.SerializeError;
@@ -180,7 +171,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VoiceConsentResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -192,7 +183,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         consent_id: []const u8,
         req: UpdateVoiceConsentRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -213,7 +204,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VoiceConsentResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -224,7 +215,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         consent_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentDeletedResource) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/audio/voice_consents/{s}", .{consent_id}) catch {
             return errors.Error.SerializeError;
@@ -236,7 +227,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VoiceConsentDeletedResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -247,7 +238,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VoiceResource) {
         const resp = try self.transport.request(.POST, "/audio/voices", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
@@ -255,7 +246,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VoiceResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
