@@ -47,6 +47,18 @@ pub const Client = struct {
         return resources.FilesResource.init(&self.transport);
     }
 
+    pub fn completions(self: *Client) resources.CompletionsResource {
+        return resources.CompletionsResource.init(&self.transport);
+    }
+
+    pub fn embeddings(self: *Client) resources.EmbeddingsResource {
+        return resources.EmbeddingsResource.init(&self.transport);
+    }
+
+    pub fn images(self: *Client) resources.ImagesResource {
+        return resources.ImagesResource.init(&self.transport);
+    }
+
     pub fn rawTransport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }

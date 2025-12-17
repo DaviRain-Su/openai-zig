@@ -21,7 +21,7 @@ pub fn main() !void {
     });
     defer client.deinit();
 
-    var files = client.files().list_files(gpa) catch |err| {
+    var files = client.files().list_files(gpa, .{}) catch |err| {
         if (err == errors.Error.HttpError) {
             std.debug.print("HTTP error (likely invalid key)\n", .{});
             return;

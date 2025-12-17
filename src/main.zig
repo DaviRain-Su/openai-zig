@@ -41,7 +41,7 @@ pub fn main() !void {
 
     // Simple chat completion call.
     const messages = [_]sdk.resources.chat.ChatMessage{
-        .{ .role = "user", .content = "Say hello from Zig" },
+        .{ .role = "user", .content = "who are you?" },
     };
     var chat = client.chat().create_chat_completion(gpa, .{
         .model = "gpt-oss-20b",
