@@ -144,7 +144,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         completion_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ChatCompletionMessageList) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}/messages", .{completion_id}) catch {
             return errors.Error.SerializeError;
@@ -156,7 +156,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ChatCompletionMessageList, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

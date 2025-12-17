@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const ListParams = struct {
     limit: ?u32 = null,
@@ -35,13 +36,14 @@ pub const Resource = struct {
         }
     }
 
-    fn sendJson(
+    fn sendJsonTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
         value: anytype,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -57,25 +59,26 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
     }
 
-    fn sendNoBody(
+    fn sendNoBodyTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         const resp = try self.transport.request(method, path, &.{
             .{ .name = "Accept", .value = "application/json" },
         }, null);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -85,46 +88,46 @@ pub const Resource = struct {
     pub fn create_conversation(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/conversations", body);
+        body: gen.CreateConversationBody,
+    ) errors.Error!std.json.Parsed(gen.ConversationResource) {
+        return self.sendJsonTyped(allocator, .POST, "/conversations", body, gen.ConversationResource);
     }
 
     pub fn get_conversation(
         self: *const Resource,
         allocator: std.mem.Allocator,
         conversation_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ConversationResource) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/conversations/{s}", .{conversation_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ConversationResource);
     }
 
     pub fn delete_conversation(
         self: *const Resource,
         allocator: std.mem.Allocator,
         conversation_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeletedConversationResource) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/conversations/{s}", .{conversation_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.DeletedConversationResource);
     }
 
     pub fn update_conversation(
         self: *const Resource,
         allocator: std.mem.Allocator,
         conversation_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.CreateConversationBody,
+    ) errors.Error!std.json.Parsed(gen.ConversationResource) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/conversations/{s}", .{conversation_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.ConversationResource);
     }
 
     /// Conversation items
@@ -132,13 +135,13 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         conversation_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.ConversationItem,
+    ) errors.Error!std.json.Parsed(gen.ConversationItem) {
         var path_buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/conversations/{s}/items", .{conversation_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.ConversationItem);
     }
 
     pub fn list_conversation_items(
@@ -146,14 +149,14 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         conversation_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ConversationItemList) {
         var buf: [280]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/conversations/{s}/items", .{conversation_id});
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ConversationItemList);
     }
 
     pub fn get_conversation_item(
@@ -161,12 +164,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         conversation_id: []const u8,
         item_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ConversationItem) {
         var buf: [320]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/conversations/{s}/items/{s}", .{ conversation_id, item_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ConversationItem);
     }
 
     pub fn delete_conversation_item(
@@ -174,11 +177,11 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         conversation_id: []const u8,
         item_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeletedConversationResource) {
         var buf: [320]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/conversations/{s}/items/{s}", .{ conversation_id, item_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.DeletedConversationResource);
     }
 };

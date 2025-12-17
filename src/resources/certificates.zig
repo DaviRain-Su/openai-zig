@@ -42,7 +42,8 @@ pub const Resource = struct {
         method: std.http.Method,
         path: []const u8,
         value: anytype,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -58,7 +59,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -69,14 +70,15 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         const resp = try self.transport.request(method, path, &.{
             .{ .name = "Accept", .value = "application/json" },
         }, null);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
