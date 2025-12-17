@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 /// Minimal request shape for POST /chat/completions (text content only).
 pub const ChatMessage = struct {
@@ -27,14 +28,14 @@ pub const Resource = struct {
     pub fn list_chat_completions(
         self: *const Resource,
         allocator: std.mem.Allocator,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ChatCompletionList) {
         const resp = try self.transport.request(.GET, "/chat/completions", &.{
             .{ .name = "Accept", .value = "application/json" },
         }, null);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ChatCompletionList, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -45,7 +46,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateChatCompletionRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -61,7 +62,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateChatCompletionResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -72,7 +73,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         completion_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}", .{completion_id}) catch {
             return errors.Error.SerializeError;
@@ -84,7 +85,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateChatCompletionResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -96,7 +97,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         completion_id: []const u8,
         payload: ?[]const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}", .{completion_id}) catch {
             return errors.Error.SerializeError;
@@ -109,7 +110,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateChatCompletionResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -120,7 +121,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         completion_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ChatCompletionDeleted) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}", .{completion_id}) catch {
             return errors.Error.SerializeError;
@@ -132,7 +133,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ChatCompletionDeleted, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

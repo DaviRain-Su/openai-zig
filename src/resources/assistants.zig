@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const ListParams = struct {
     limit: ?u32 = null,
@@ -21,88 +22,6 @@ pub const ListRunStepsParams = struct {
 
 pub const CreateRunQuery = struct {
     include: ?[]const []const u8 = null,
-};
-
-/// Minimal typed request bodies (keep complex nested fields as generic JSON for flexibility).
-pub const CreateAssistantRequest = struct {
-    model: []const u8,
-    name: ?[]const u8 = null,
-    description: ?[]const u8 = null,
-    instructions: ?[]const u8 = null,
-    tools: ?std.json.Value = null,
-    metadata: ?std.json.Value = null,
-    temperature: ?f64 = null,
-    top_p: ?f64 = null,
-    response_format: ?std.json.Value = null,
-    tool_resources: ?std.json.Value = null,
-};
-
-pub const ModifyAssistantRequest = struct {
-    name: ?[]const u8 = null,
-    description: ?[]const u8 = null,
-    instructions: ?[]const u8 = null,
-    tools: ?std.json.Value = null,
-    metadata: ?std.json.Value = null,
-    temperature: ?f64 = null,
-    top_p: ?f64 = null,
-    response_format: ?std.json.Value = null,
-    tool_resources: ?std.json.Value = null,
-    model: ?[]const u8 = null,
-};
-
-pub const ThreadMessage = struct {
-    role: []const u8,
-    content: std.json.Value,
-    attachments: ?std.json.Value = null,
-    metadata: ?std.json.Value = null,
-};
-
-pub const CreateThreadRequest = struct {
-    messages: ?[]const ThreadMessage = null,
-    metadata: ?std.json.Value = null,
-    tool_resources: ?std.json.Value = null,
-};
-
-pub const CreateMessageRequest = struct {
-    role: []const u8,
-    content: std.json.Value,
-    attachments: ?std.json.Value = null,
-    metadata: ?std.json.Value = null,
-};
-
-pub const CreateRunRequest = struct {
-    assistant_id: []const u8,
-    instructions: ?[]const u8 = null,
-    model: ?[]const u8 = null,
-    metadata: ?std.json.Value = null,
-    tools: ?std.json.Value = null,
-    parallel_tool_calls: ?bool = null,
-    tool_choice: ?std.json.Value = null,
-    response_format: ?std.json.Value = null,
-    truncation_strategy: ?std.json.Value = null,
-    temperature: ?f64 = null,
-    top_p: ?f64 = null,
-    max_prompt_tokens: ?u32 = null,
-    max_completion_tokens: ?u32 = null,
-    stream: ?bool = null,
-    additional_instructions: ?[]const u8 = null,
-    additional_messages: ?std.json.Value = null,
-    tool_resources: ?std.json.Value = null,
-};
-
-pub const ModifyRunRequest = struct {
-    metadata: ?std.json.Value = null,
-    instructions: ?[]const u8 = null,
-    tool_choice: ?std.json.Value = null,
-    parallel_tool_calls: ?bool = null,
-    temperature: ?f64 = null,
-    max_prompt_tokens: ?u32 = null,
-    max_completion_tokens: ?u32 = null,
-};
-
-pub const SubmitToolOutputsRequest = struct {
-    tool_outputs: std.json.Value,
-    stream: ?bool = null,
 };
 
 pub const Resource = struct {
@@ -140,6 +59,17 @@ pub const Resource = struct {
         path: []const u8,
         value: anytype,
     ) errors.Error!std.json.Parsed(std.json.Value) {
+        return self.sendJsonTyped(allocator, method, path, value, std.json.Value);
+    }
+
+    fn sendJsonTyped(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        value: anytype,
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -155,7 +85,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -167,13 +97,23 @@ pub const Resource = struct {
         method: std.http.Method,
         path: []const u8,
     ) errors.Error!std.json.Parsed(std.json.Value) {
+        return self.sendNoBodyTyped(allocator, method, path, std.json.Value);
+    }
+
+    fn sendNoBodyTyped(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         const resp = try self.transport.request(method, path, &.{
             .{ .name = "Accept", .value = "application/json" },
         }, null);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -184,23 +124,23 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ListAssistantsResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/assistants");
         _ = try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ListAssistantsResponse);
     }
 
     /// POST /assistants
     pub fn create_assistant(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        body: CreateAssistantRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/assistants", body);
+        body: gen.CreateAssistantRequest,
+    ) errors.Error!std.json.Parsed(gen.AssistantObject) {
+        return self.sendJsonTyped(allocator, .POST, "/assistants", body, gen.AssistantObject);
     }
 
     /// GET /assistants/{assistant_id}
@@ -208,12 +148,12 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         assistant_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.AssistantObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/assistants/{s}", .{assistant_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.AssistantObject);
     }
 
     /// POST /assistants/{assistant_id}
@@ -221,13 +161,13 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         assistant_id: []const u8,
-        body: ModifyAssistantRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.ModifyAssistantRequest,
+    ) errors.Error!std.json.Parsed(gen.AssistantObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/assistants/{s}", .{assistant_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.AssistantObject);
     }
 
     /// DELETE /assistants/{assistant_id}
@@ -235,30 +175,30 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         assistant_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeleteAssistantResponse) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/assistants/{s}", .{assistant_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.DeleteAssistantResponse);
     }
 
     /// POST /threads
     pub fn create_thread(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        body: CreateThreadRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/threads", body);
+        body: gen.CreateThreadRequest,
+    ) errors.Error!std.json.Parsed(gen.ThreadObject) {
+        return self.sendJsonTyped(allocator, .POST, "/threads", body, gen.ThreadObject);
     }
 
     /// POST /threads/runs
     pub fn create_thread_and_run(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/threads/runs", body);
+        body: gen.CreateThreadAndRunRequest,
+    ) errors.Error!std.json.Parsed(gen.RunObject) {
+        return self.sendJsonTyped(allocator, .POST, "/threads/runs", body, gen.RunObject);
     }
 
     /// GET /threads/{thread_id}
@@ -266,12 +206,12 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         thread_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ThreadObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}", .{thread_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ThreadObject);
     }
 
     /// POST /threads/{thread_id}
@@ -279,13 +219,13 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         thread_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.ModifyThreadRequest,
+    ) errors.Error!std.json.Parsed(gen.ThreadObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}", .{thread_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.ThreadObject);
     }
 
     /// DELETE /threads/{thread_id}
@@ -293,12 +233,12 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         thread_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeleteThreadResponse) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}", .{thread_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.DeleteThreadResponse);
     }
 
     /// GET /threads/{thread_id}/messages
@@ -307,7 +247,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         params: ListMessagesParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ListMessagesResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -317,7 +257,7 @@ pub const Resource = struct {
             try w.print("{s}run_id={s}", .{ sep, run_id });
         }
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ListMessagesResponse);
     }
 
     /// POST /threads/{thread_id}/messages
@@ -325,13 +265,13 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         thread_id: []const u8,
-        body: CreateMessageRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.CreateMessageRequest,
+    ) errors.Error!std.json.Parsed(gen.MessageObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}/messages", .{thread_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.MessageObject);
     }
 
     /// GET /threads/{thread_id}/messages/{message_id}
@@ -340,12 +280,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         message_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.MessageObject) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}/messages/{s}", .{ thread_id, message_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.MessageObject);
     }
 
     /// POST /threads/{thread_id}/messages/{message_id}
@@ -354,13 +294,13 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         message_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.ModifyMessageRequest,
+    ) errors.Error!std.json.Parsed(gen.MessageObject) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}/messages/{s}", .{ thread_id, message_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.MessageObject);
     }
 
     /// DELETE /threads/{thread_id}/messages/{message_id}
@@ -369,12 +309,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         message_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeleteMessageResponse) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}/messages/{s}", .{ thread_id, message_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.DeleteMessageResponse);
     }
 
     /// GET /threads/{thread_id}/runs
@@ -383,14 +323,14 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ListRunsResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/threads/{s}/runs", .{thread_id});
         _ = try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ListRunsResponse);
     }
 
     /// POST /threads/{thread_id}/runs
@@ -399,8 +339,8 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         query: CreateRunQuery,
-        body: CreateRunRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.CreateRunRequest,
+    ) errors.Error!std.json.Parsed(gen.RunObject) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -413,7 +353,7 @@ pub const Resource = struct {
             }
         }
         const path = fbs.getWritten();
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.RunObject);
     }
 
     /// GET /threads/{thread_id}/runs/{run_id}
@@ -422,12 +362,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         run_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.RunObject) {
         var buf: [280]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}/runs/{s}", .{ thread_id, run_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.RunObject);
     }
 
     /// POST /threads/{thread_id}/runs/{run_id}
@@ -436,13 +376,13 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         run_id: []const u8,
-        body: ModifyRunRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.ModifyRunRequest,
+    ) errors.Error!std.json.Parsed(gen.RunObject) {
         var buf: [280]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}/runs/{s}", .{ thread_id, run_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.RunObject);
     }
 
     /// POST /threads/{thread_id}/runs/{run_id}/cancel
@@ -451,12 +391,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         run_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.RunObject) {
         var buf: [320]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}/runs/{s}/cancel", .{ thread_id, run_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .POST, path);
+        return self.sendNoBodyTyped(allocator, .POST, path, gen.RunObject);
     }
 
     /// GET /threads/{thread_id}/runs/{run_id}/steps
@@ -466,7 +406,7 @@ pub const Resource = struct {
         thread_id: []const u8,
         run_id: []const u8,
         params: ListRunStepsParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ListRunStepsResponse) {
         var buf: [320]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -479,7 +419,7 @@ pub const Resource = struct {
             }
         }
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ListRunStepsResponse);
     }
 
     /// GET /threads/{thread_id}/runs/{run_id}/steps/{step_id}
@@ -490,7 +430,7 @@ pub const Resource = struct {
         run_id: []const u8,
         step_id: []const u8,
         include: ?[]const []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.RunStepObject) {
         var buf: [360]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -503,7 +443,7 @@ pub const Resource = struct {
             }
         }
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.RunStepObject);
     }
 
     /// POST /threads/{thread_id}/runs/{run_id}/submit_tool_outputs
@@ -512,12 +452,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         run_id: []const u8,
-        body: SubmitToolOutputsRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.SubmitToolOutputsRequest,
+    ) errors.Error!std.json.Parsed(gen.RunObject) {
         var buf: [360]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/threads/{s}/runs/{s}/submit_tool_outputs", .{ thread_id, run_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.RunObject);
     }
 };
