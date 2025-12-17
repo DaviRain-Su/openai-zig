@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const MultipartRequest = struct {
     content_type: []const u8,
@@ -26,6 +27,24 @@ pub const ListParams = struct {
 
 pub const CreateAdminApiKeyRequest = struct {
     name: []const u8,
+};
+
+pub const DeletedContainer = struct {
+    id: []const u8,
+    object: []const u8,
+    deleted: bool,
+};
+
+pub const DeletedContainerFile = struct {
+    id: []const u8,
+    object: []const u8,
+    deleted: bool,
+};
+
+pub const DeleteAdminApiKeyResponse = struct {
+    id: []const u8,
+    object: []const u8,
+    deleted: bool,
 };
 
 pub const Resource = struct {
@@ -64,7 +83,8 @@ pub const Resource = struct {
         method: std.http.Method,
         path: []const u8,
         value: anytype,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -80,7 +100,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -91,48 +111,49 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         const resp = try self.transport.request(method, path, &.{
             .{ .name = "Accept", .value = "application/json" },
         }, null);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
     }
 
     /// Containers
-    pub fn list_containers(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(std.json.Value) {
+    pub fn list_containers(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(gen.ContainerListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/containers");
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBody(gen.ContainerListResource, allocator, .GET, path);
     }
 
-    pub fn create_container(self: *const Resource, allocator: std.mem.Allocator, body: std.json.Value) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/containers", body);
+    pub fn create_container(self: *const Resource, allocator: std.mem.Allocator, body: gen.CreateContainerBody) errors.Error!std.json.Parsed(gen.ContainerResource) {
+        return self.sendJson(gen.ContainerResource, allocator, .POST, "/containers", body);
     }
 
-    pub fn retrieve_container(self: *const Resource, allocator: std.mem.Allocator, container_id: []const u8) errors.Error!std.json.Parsed(std.json.Value) {
+    pub fn retrieve_container(self: *const Resource, allocator: std.mem.Allocator, container_id: []const u8) errors.Error!std.json.Parsed(gen.ContainerResource) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/containers/{s}", .{container_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBody(gen.ContainerResource, allocator, .GET, path);
     }
 
-    pub fn delete_container(self: *const Resource, allocator: std.mem.Allocator, container_id: []const u8) errors.Error!std.json.Parsed(std.json.Value) {
+    pub fn delete_container(self: *const Resource, allocator: std.mem.Allocator, container_id: []const u8) errors.Error!std.json.Parsed(DeletedContainer) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/containers/{s}", .{container_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBody(DeletedContainer, allocator, .DELETE, path);
     }
 
     pub fn create_container_file(
@@ -140,7 +161,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         container_id: []const u8,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ContainerFileResource) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/containers/{s}/files", .{container_id}) catch {
             return errors.Error.SerializeError;
@@ -153,7 +174,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ContainerFileResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -164,14 +185,14 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         container_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ContainerFileListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/containers/{s}/files", .{container_id});
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBody(gen.ContainerFileListResource, allocator, .GET, path);
     }
 
     pub fn retrieve_container_file(
@@ -179,12 +200,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         container_id: []const u8,
         file_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ContainerFileResource) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/containers/{s}/files/{s}", .{ container_id, file_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBody(gen.ContainerFileResource, allocator, .GET, path);
     }
 
     pub fn delete_container_file(
@@ -192,12 +213,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         container_id: []const u8,
         file_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(DeletedContainerFile) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/containers/{s}/files/{s}", .{ container_id, file_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBody(DeletedContainerFile, allocator, .DELETE, path);
     }
 
     pub fn retrieve_container_file_content(
@@ -218,116 +239,116 @@ pub const Resource = struct {
     }
 
     /// Admin API keys
-    pub fn list_admin_api_keys(self: *const Resource, allocator: std.mem.Allocator) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendNoBody(allocator, .GET, "/organization/admin_api_keys");
+    pub fn list_admin_api_keys(self: *const Resource, allocator: std.mem.Allocator) errors.Error!std.json.Parsed(gen.ApiKeyList) {
+        return self.sendNoBody(gen.ApiKeyList, allocator, .GET, "/organization/admin_api_keys");
     }
 
     pub fn create_admin_api_key(
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateAdminApiKeyRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/organization/admin_api_keys", req);
+    ) errors.Error!std.json.Parsed(gen.AdminApiKey) {
+        return self.sendJson(gen.AdminApiKey, allocator, .POST, "/organization/admin_api_keys", req);
     }
 
     pub fn get_admin_api_key(
         self: *const Resource,
         allocator: std.mem.Allocator,
         key_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.AdminApiKey) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/admin_api_keys/{s}", .{key_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBody(gen.AdminApiKey, allocator, .GET, path);
     }
 
     pub fn delete_admin_api_key(
         self: *const Resource,
         allocator: std.mem.Allocator,
         key_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(DeleteAdminApiKeyResponse) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/admin_api_keys/{s}", .{key_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBody(DeleteAdminApiKeyResponse, allocator, .DELETE, path);
     }
 
     /// Responses helpers
     pub fn get_input_token_counts(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/responses/input_tokens", body);
+        body: gen.TokenCountsBody,
+    ) errors.Error!std.json.Parsed(gen.TokenCountsResource) {
+        return self.sendJson(gen.TokenCountsResource, allocator, .POST, "/responses/input_tokens", body);
     }
 
     pub fn compact_conversation(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/responses/compact", body);
+        body: gen.CompactResponseMethodPublicBody,
+    ) errors.Error!std.json.Parsed(gen.CompactResource) {
+        return self.sendJson(gen.CompactResource, allocator, .POST, "/responses/compact", body);
     }
 
     /// ChatKit sessions and threads
     pub fn create_chat_session(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/chatkit/sessions", body);
+        body: gen.CreateChatSessionBody,
+    ) errors.Error!std.json.Parsed(gen.ChatSessionResource) {
+        return self.sendJson(gen.ChatSessionResource, allocator, .POST, "/chatkit/sessions", body);
     }
 
     pub fn cancel_chat_session(
         self: *const Resource,
         allocator: std.mem.Allocator,
         session_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ChatSessionResource) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/chatkit/sessions/{s}/cancel", .{session_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .POST, path);
+        return self.sendNoBody(gen.ChatSessionResource, allocator, .POST, path);
     }
 
     pub fn list_threads(
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ThreadListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/chatkit/threads");
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBody(gen.ThreadListResource, allocator, .GET, path);
     }
 
     pub fn get_thread(
         self: *const Resource,
         allocator: std.mem.Allocator,
         thread_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ThreadResource) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/chatkit/threads/{s}", .{thread_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBody(gen.ThreadResource, allocator, .GET, path);
     }
 
     pub fn delete_thread(
         self: *const Resource,
         allocator: std.mem.Allocator,
         thread_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeletedThreadResource) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/chatkit/threads/{s}", .{thread_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBody(gen.DeletedThreadResource, allocator, .DELETE, path);
     }
 
     pub fn list_thread_items(
@@ -335,13 +356,13 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         thread_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ThreadItemListResource) {
         var buf: [280]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/chatkit/threads/{s}/items", .{thread_id});
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBody(gen.ThreadItemListResource, allocator, .GET, path);
     }
 };
