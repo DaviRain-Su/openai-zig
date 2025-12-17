@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const AssignRoleRequest = struct {
     role_id: []const u8,
@@ -43,7 +44,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         path: []const u8,
         req: AssignRoleRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -59,7 +60,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.GroupRoleAssignment, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -95,7 +96,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         req: AssignRoleRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/groups/{s}/roles", .{group_id}) catch {
             return errors.Error.SerializeError;
@@ -109,7 +110,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         role_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
         var path_buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/groups/{s}/roles/{s}", .{ group_id, role_id }) catch {
             return errors.Error.SerializeError;
@@ -121,7 +122,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.GroupRoleAssignment, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

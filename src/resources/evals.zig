@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const ListParams = struct {
     limit: ?u32 = null,
@@ -35,13 +36,14 @@ pub const Resource = struct {
         }
     }
 
-    fn sendJson(
+    fn sendJsonTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
         value: anytype,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -57,80 +59,81 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
     }
 
-    fn sendNoBody(
+    fn sendNoBodyTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         const resp = try self.transport.request(method, path, &.{
             .{ .name = "Accept", .value = "application/json" },
         }, null);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
     }
 
     /// Evals
-    pub fn list_evals(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(std.json.Value) {
+    pub fn list_evals(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(gen.EvalList) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/evals");
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalList);
     }
 
-    pub fn create_eval(self: *const Resource, allocator: std.mem.Allocator, body: std.json.Value) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/evals", body);
+    pub fn create_eval(self: *const Resource, allocator: std.mem.Allocator, body: gen.CreateEvalRequest) errors.Error!std.json.Parsed(gen.EvalObject) {
+        return self.sendJsonTyped(allocator, .POST, "/evals", body, gen.EvalObject);
     }
 
     pub fn get_eval(
         self: *const Resource,
         allocator: std.mem.Allocator,
         eval_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.EvalObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/evals/{s}", .{eval_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalObject);
     }
 
     pub fn update_eval(
         self: *const Resource,
         allocator: std.mem.Allocator,
         eval_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.CreateEvalRequest,
+    ) errors.Error!std.json.Parsed(gen.EvalObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/evals/{s}", .{eval_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.EvalObject);
     }
 
     pub fn delete_eval(
         self: *const Resource,
         allocator: std.mem.Allocator,
         eval_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.EvalObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/evals/{s}", .{eval_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.EvalObject);
     }
 
     /// Runs
@@ -139,27 +142,27 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         eval_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.EvalRunList) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/evals/{s}/runs", .{eval_id});
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalRunList);
     }
 
     pub fn create_eval_run(
         self: *const Resource,
         allocator: std.mem.Allocator,
         eval_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.CreateEvalRunRequest,
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/evals/{s}/runs", .{eval_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.EvalRun);
     }
 
     pub fn get_eval_run(
@@ -167,12 +170,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         eval_id: []const u8,
         run_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/evals/{s}/runs/{s}", .{ eval_id, run_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalRun);
     }
 
     pub fn cancel_eval_run(
@@ -180,12 +183,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         eval_id: []const u8,
         run_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
         var buf: [260]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/evals/{s}/runs/{s}", .{ eval_id, run_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .POST, path);
+        return self.sendNoBodyTyped(allocator, .POST, path, gen.EvalRun);
     }
 
     pub fn delete_eval_run(
@@ -193,12 +196,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         eval_id: []const u8,
         run_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
         var buf: [260]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/evals/{s}/runs/{s}", .{ eval_id, run_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.EvalRun);
     }
 
     /// Output items
@@ -208,14 +211,14 @@ pub const Resource = struct {
         eval_id: []const u8,
         run_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.EvalRunOutputItemList) {
         var buf: [280]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/evals/{s}/runs/{s}/output_items", .{ eval_id, run_id });
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalRunOutputItemList);
     }
 
     pub fn get_eval_run_output_item(
@@ -224,11 +227,11 @@ pub const Resource = struct {
         eval_id: []const u8,
         run_id: []const u8,
         output_item_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.EvalRunOutputItem) {
         var buf: [320]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/evals/{s}/runs/{s}/output_items/{s}", .{ eval_id, run_id, output_item_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalRunOutputItem);
     }
 };

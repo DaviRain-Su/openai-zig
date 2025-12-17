@@ -1,15 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
-
-pub const CreateImageRequest = struct {
-    model: []const u8,
-    prompt: []const u8,
-    size: ?[]const u8 = null,
-    n: ?u32 = null,
-    response_format: ?[]const u8 = null,
-    user: ?[]const u8 = null,
-};
+const gen = @import("../generated/types.zig");
 
 pub const Resource = struct {
     transport: *transport_mod.Transport,
@@ -22,8 +14,8 @@ pub const Resource = struct {
     pub fn create_image(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        req: CreateImageRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        req: gen.CreateImageRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateImageResponse) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -39,7 +31,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateImageResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -51,7 +43,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         content_type: []const u8,
         body: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.CreateImageEditResponse) {
         const resp = try self.transport.request(.POST, "/images/edits", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = content_type },
@@ -59,7 +51,7 @@ pub const Resource = struct {
         const resp_body = resp.body;
         defer self.transport.allocator.free(resp_body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, resp_body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateImageEditResponse, allocator, resp_body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -71,7 +63,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         content_type: []const u8,
         body: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.CreateImageVariationResponse) {
         const resp = try self.transport.request(.POST, "/images/variations", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = content_type },
@@ -79,7 +71,7 @@ pub const Resource = struct {
         const resp_body = resp.body;
         defer self.transport.allocator.free(resp_body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, resp_body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateImageVariationResponse, allocator, resp_body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

@@ -1,11 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
-
-pub const CreateModerationRequest = struct {
-    model: []const u8,
-    input: []const u8,
-};
+const gen = @import("../generated/types.zig");
 
 pub const Resource = struct {
     transport: *transport_mod.Transport,
@@ -18,8 +14,8 @@ pub const Resource = struct {
     pub fn create_moderation(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        req: CreateModerationRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        req: gen.CreateModerationRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateModerationResponse) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -35,7 +31,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateModerationResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
