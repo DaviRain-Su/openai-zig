@@ -143,6 +143,26 @@ pub const Client = struct {
         return resources.ConversationsResource.init(&self.transport);
     }
 
+    pub fn realtime(self: *Client) resources.RealtimeResource {
+        return resources.RealtimeResource.init(&self.transport);
+    }
+
+    pub fn certificates(self: *Client) resources.CertificatesResource {
+        return resources.CertificatesResource.init(&self.transport);
+    }
+
+    pub fn evals(self: *Client) resources.EvalsResource {
+        return resources.EvalsResource.init(&self.transport);
+    }
+
+    pub fn projects(self: *Client) resources.ProjectsResource {
+        return resources.ProjectsResource.init(&self.transport);
+    }
+
+    pub fn vector_stores(self: *Client) resources.VectorStoresResource {
+        return resources.VectorStoresResource.init(&self.transport);
+    }
+
     pub fn rawTransport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }
