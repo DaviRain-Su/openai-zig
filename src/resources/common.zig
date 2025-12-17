@@ -26,7 +26,9 @@ pub inline fn sendJsonTyped(
     const body = resp.body;
     defer transport.allocator.free(body);
 
-    const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
+    const parsed = std.json.parseFromSlice(T, allocator, body, .{
+        .ignore_unknown_fields = true,
+    }) catch {
         return errors.Error.DeserializeError;
     };
     return parsed;
@@ -46,7 +48,9 @@ pub inline fn sendNoBodyTyped(
     const body = resp.body;
     defer transport.allocator.free(body);
 
-    const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
+    const parsed = std.json.parseFromSlice(T, allocator, body, .{
+        .ignore_unknown_fields = true,
+    }) catch {
         return errors.Error.DeserializeError;
     };
     return parsed;

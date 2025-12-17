@@ -198,6 +198,19 @@ def write_ir(ir: Dict[str, Any], out_dir: pathlib.Path) -> None:
 
 def zig_type_from_schema(name: str, schema: Dict[str, Any]) -> str:
     """Coarse mapper from OpenAPI schema to Zig type string. Falls back to std.json.Value."""
+    DYNAMIC_SCHEMAS = {
+        # These responses are too loose in practice; keep them fully dynamic.
+        "CreateChatCompletionResponse",
+    }
+    OPTIONAL_SCHEMAS = {
+        # Chat completions responses are loosely specified in practice; treat fields as optional.
+        "CreateChatCompletionResponse",
+        "ChatCompletionResponseMessage",
+        "ChatCompletionMessageList",
+        "ChatCompletionList",
+    }
+    if name in DYNAMIC_SCHEMAS:
+        return "std.json.Value"
     if not schema:
         return "std.json.Value"
     if "$ref" in schema:
@@ -218,6 +231,8 @@ def zig_type_from_schema(name: str, schema: Dict[str, Any]) -> str:
     if t == "object":
         props = schema.get("properties") or {}
         required = set(schema.get("required") or [])
+        if name in OPTIONAL_SCHEMAS:
+            required = set()
         if not props:
             return "std.json.Value"
         fields = []

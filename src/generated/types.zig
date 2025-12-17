@@ -15,13 +15,13 @@ pub const AdminApiKey = struct {
     created_at: i64,
     last_used_at: std.json.Value,
     owner: struct {
-        type: ?[]const u8,
-        object: ?[]const u8,
-        id: ?[]const u8,
-        name: ?[]const u8,
-        created_at: ?i64,
-        role: ?[]const u8,
-    },
+    type: ?[]const u8,
+    object: ?[]const u8,
+    id: ?[]const u8,
+    name: ?[]const u8,
+    created_at: ?i64,
+    role: ?[]const u8,
+},
 };
 pub const Annotation = std.json.Value;
 pub const ApiKeyList = struct {
@@ -149,9 +149,9 @@ pub const AssistantToolsCode = struct {
 pub const AssistantToolsFileSearch = struct {
     type: []const u8,
     file_search: ?struct {
-        max_num_results: ?i64,
-        ranking_options: ?FileSearchRankingOptions,
-    },
+    max_num_results: ?i64,
+    ranking_options: ?FileSearchRankingOptions,
+},
 };
 pub const AssistantToolsFileSearchTypeOnly = struct {
     type: []const u8,
@@ -165,8 +165,8 @@ pub const AssistantsApiToolChoiceOption = std.json.Value;
 pub const AssistantsNamedToolChoice = struct {
     type: []const u8,
     function: ?struct {
-        name: []const u8,
-    },
+    name: []const u8,
+},
 };
 pub const Attachment = struct {
     type: AttachmentType,
@@ -187,248 +187,248 @@ pub const AuditLog = struct {
     type: AuditLogEventType,
     effective_at: i64,
     project: ?struct {
-        id: ?[]const u8,
-        name: ?[]const u8,
-    },
+    id: ?[]const u8,
+    name: ?[]const u8,
+},
     actor: AuditLogActor,
     api_key_created: ?struct {
-        id: ?[]const u8,
-        data: ?struct {
-            scopes: ?[]const []const u8,
-        },
-    },
+    id: ?[]const u8,
+    data: ?struct {
+    scopes: ?[]const []const u8,
+},
+},
     api_key_updated: ?struct {
-        id: ?[]const u8,
-        changes_requested: ?struct {
-            scopes: ?[]const []const u8,
-        },
-    },
+    id: ?[]const u8,
+    changes_requested: ?struct {
+    scopes: ?[]const []const u8,
+},
+},
     api_key_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     checkpoint_permission_created: ?struct {
-        id: ?[]const u8,
-        data: ?struct {
-            project_id: ?[]const u8,
-            fine_tuned_model_checkpoint: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    data: ?struct {
+    project_id: ?[]const u8,
+    fine_tuned_model_checkpoint: ?[]const u8,
+},
+},
     checkpoint_permission_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     external_key_registered: ?struct {
-        id: ?[]const u8,
-        data: ?std.json.Value,
-    },
+    id: ?[]const u8,
+    data: ?std.json.Value,
+},
     external_key_removed: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     group_created: ?struct {
-        id: ?[]const u8,
-        data: ?struct {
-            group_name: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    data: ?struct {
+    group_name: ?[]const u8,
+},
+},
     group_updated: ?struct {
-        id: ?[]const u8,
-        changes_requested: ?struct {
-            group_name: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    changes_requested: ?struct {
+    group_name: ?[]const u8,
+},
+},
     group_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     scim_enabled: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     scim_disabled: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     invite_sent: ?struct {
-        id: ?[]const u8,
-        data: ?struct {
-            email: ?[]const u8,
-            role: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    data: ?struct {
+    email: ?[]const u8,
+    role: ?[]const u8,
+},
+},
     invite_accepted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     invite_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     ip_allowlist_created: ?struct {
-        id: ?[]const u8,
-        name: ?[]const u8,
-        allowed_ips: ?[]const []const u8,
-    },
+    id: ?[]const u8,
+    name: ?[]const u8,
+    allowed_ips: ?[]const []const u8,
+},
     ip_allowlist_updated: ?struct {
-        id: ?[]const u8,
-        allowed_ips: ?[]const []const u8,
-    },
+    id: ?[]const u8,
+    allowed_ips: ?[]const []const u8,
+},
     ip_allowlist_deleted: ?struct {
-        id: ?[]const u8,
-        name: ?[]const u8,
-        allowed_ips: ?[]const []const u8,
-    },
+    id: ?[]const u8,
+    name: ?[]const u8,
+    allowed_ips: ?[]const []const u8,
+},
     ip_allowlist_config_activated: ?struct {
-        configs: ?[]const struct {
-            id: ?[]const u8,
-            name: ?[]const u8,
-        },
-    },
+    configs: ?[]const struct {
+    id: ?[]const u8,
+    name: ?[]const u8,
+},
+},
     ip_allowlist_config_deactivated: ?struct {
-        configs: ?[]const struct {
-            id: ?[]const u8,
-            name: ?[]const u8,
-        },
-    },
+    configs: ?[]const struct {
+    id: ?[]const u8,
+    name: ?[]const u8,
+},
+},
     login_succeeded: ?std.json.Value,
     login_failed: ?struct {
-        error_code: ?[]const u8,
-        error_message: ?[]const u8,
-    },
+    error_code: ?[]const u8,
+    error_message: ?[]const u8,
+},
     logout_succeeded: ?std.json.Value,
     logout_failed: ?struct {
-        error_code: ?[]const u8,
-        error_message: ?[]const u8,
-    },
+    error_code: ?[]const u8,
+    error_message: ?[]const u8,
+},
     organization_updated: ?struct {
-        id: ?[]const u8,
-        changes_requested: ?struct {
-            title: ?[]const u8,
-            description: ?[]const u8,
-            name: ?[]const u8,
-            threads_ui_visibility: ?[]const u8,
-            usage_dashboard_visibility: ?[]const u8,
-            api_call_logging: ?[]const u8,
-            api_call_logging_project_ids: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    changes_requested: ?struct {
+    title: ?[]const u8,
+    description: ?[]const u8,
+    name: ?[]const u8,
+    threads_ui_visibility: ?[]const u8,
+    usage_dashboard_visibility: ?[]const u8,
+    api_call_logging: ?[]const u8,
+    api_call_logging_project_ids: ?[]const u8,
+},
+},
     project_created: ?struct {
-        id: ?[]const u8,
-        data: ?struct {
-            name: ?[]const u8,
-            title: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    data: ?struct {
+    name: ?[]const u8,
+    title: ?[]const u8,
+},
+},
     project_updated: ?struct {
-        id: ?[]const u8,
-        changes_requested: ?struct {
-            title: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    changes_requested: ?struct {
+    title: ?[]const u8,
+},
+},
     project_archived: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     project_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     rate_limit_updated: ?struct {
-        id: ?[]const u8,
-        changes_requested: ?struct {
-            max_requests_per_1_minute: ?i64,
-            max_tokens_per_1_minute: ?i64,
-            max_images_per_1_minute: ?i64,
-            max_audio_megabytes_per_1_minute: ?i64,
-            max_requests_per_1_day: ?i64,
-            batch_1_day_max_input_tokens: ?i64,
-        },
-    },
+    id: ?[]const u8,
+    changes_requested: ?struct {
+    max_requests_per_1_minute: ?i64,
+    max_tokens_per_1_minute: ?i64,
+    max_images_per_1_minute: ?i64,
+    max_audio_megabytes_per_1_minute: ?i64,
+    max_requests_per_1_day: ?i64,
+    batch_1_day_max_input_tokens: ?i64,
+},
+},
     rate_limit_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     role_created: ?struct {
-        id: ?[]const u8,
-        role_name: ?[]const u8,
-        permissions: ?[]const []const u8,
-        resource_type: ?[]const u8,
-        resource_id: ?[]const u8,
-    },
+    id: ?[]const u8,
+    role_name: ?[]const u8,
+    permissions: ?[]const []const u8,
+    resource_type: ?[]const u8,
+    resource_id: ?[]const u8,
+},
     role_updated: ?struct {
-        id: ?[]const u8,
-        changes_requested: ?struct {
-            role_name: ?[]const u8,
-            resource_id: ?[]const u8,
-            resource_type: ?[]const u8,
-            permissions_added: ?[]const []const u8,
-            permissions_removed: ?[]const []const u8,
-            description: ?[]const u8,
-            metadata: ?std.json.Value,
-        },
-    },
+    id: ?[]const u8,
+    changes_requested: ?struct {
+    role_name: ?[]const u8,
+    resource_id: ?[]const u8,
+    resource_type: ?[]const u8,
+    permissions_added: ?[]const []const u8,
+    permissions_removed: ?[]const []const u8,
+    description: ?[]const u8,
+    metadata: ?std.json.Value,
+},
+},
     role_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     role_assignment_created: ?struct {
-        id: ?[]const u8,
-        principal_id: ?[]const u8,
-        principal_type: ?[]const u8,
-        resource_id: ?[]const u8,
-        resource_type: ?[]const u8,
-    },
+    id: ?[]const u8,
+    principal_id: ?[]const u8,
+    principal_type: ?[]const u8,
+    resource_id: ?[]const u8,
+    resource_type: ?[]const u8,
+},
     role_assignment_deleted: ?struct {
-        id: ?[]const u8,
-        principal_id: ?[]const u8,
-        principal_type: ?[]const u8,
-        resource_id: ?[]const u8,
-        resource_type: ?[]const u8,
-    },
+    id: ?[]const u8,
+    principal_id: ?[]const u8,
+    principal_type: ?[]const u8,
+    resource_id: ?[]const u8,
+    resource_type: ?[]const u8,
+},
     service_account_created: ?struct {
-        id: ?[]const u8,
-        data: ?struct {
-            role: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    data: ?struct {
+    role: ?[]const u8,
+},
+},
     service_account_updated: ?struct {
-        id: ?[]const u8,
-        changes_requested: ?struct {
-            role: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    changes_requested: ?struct {
+    role: ?[]const u8,
+},
+},
     service_account_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     user_added: ?struct {
-        id: ?[]const u8,
-        data: ?struct {
-            role: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    data: ?struct {
+    role: ?[]const u8,
+},
+},
     user_updated: ?struct {
-        id: ?[]const u8,
-        changes_requested: ?struct {
-            role: ?[]const u8,
-        },
-    },
+    id: ?[]const u8,
+    changes_requested: ?struct {
+    role: ?[]const u8,
+},
+},
     user_deleted: ?struct {
-        id: ?[]const u8,
-    },
+    id: ?[]const u8,
+},
     certificate_created: ?struct {
-        id: ?[]const u8,
-        name: ?[]const u8,
-    },
+    id: ?[]const u8,
+    name: ?[]const u8,
+},
     certificate_updated: ?struct {
-        id: ?[]const u8,
-        name: ?[]const u8,
-    },
+    id: ?[]const u8,
+    name: ?[]const u8,
+},
     certificate_deleted: ?struct {
-        id: ?[]const u8,
-        name: ?[]const u8,
-        certificate: ?[]const u8,
-    },
+    id: ?[]const u8,
+    name: ?[]const u8,
+    certificate: ?[]const u8,
+},
     certificates_activated: ?struct {
-        certificates: ?[]const struct {
-            id: ?[]const u8,
-            name: ?[]const u8,
-        },
-    },
+    certificates: ?[]const struct {
+    id: ?[]const u8,
+    name: ?[]const u8,
+},
+},
     certificates_deactivated: ?struct {
-        certificates: ?[]const struct {
-            id: ?[]const u8,
-            name: ?[]const u8,
-        },
-    },
+    certificates: ?[]const struct {
+    id: ?[]const u8,
+    name: ?[]const u8,
+},
+},
 };
 pub const AuditLogActor = struct {
     type: ?[]const u8,
@@ -465,9 +465,9 @@ pub const Batch = struct {
     endpoint: []const u8,
     model: ?[]const u8,
     errors: ?struct {
-        object: ?[]const u8,
-        data: ?[]const BatchError,
-    },
+    object: ?[]const u8,
+    data: ?[]const BatchError,
+},
     input_file_id: []const u8,
     completion_window: []const u8,
     status: []const u8,
@@ -484,16 +484,16 @@ pub const Batch = struct {
     cancelled_at: ?i64,
     request_counts: ?BatchRequestCounts,
     usage: ?struct {
-        input_tokens: i64,
-        input_tokens_details: struct {
-            cached_tokens: i64,
-        },
-        output_tokens: i64,
-        output_tokens_details: struct {
-            reasoning_tokens: i64,
-        },
-        total_tokens: i64,
-    },
+    input_tokens: i64,
+    input_tokens_details: struct {
+    cached_tokens: i64,
+},
+    output_tokens: i64,
+    output_tokens_details: struct {
+    reasoning_tokens: i64,
+},
+    total_tokens: i64,
+},
     metadata: ?Metadata,
 };
 pub const BatchError = struct {
@@ -528,10 +528,10 @@ pub const Certificate = struct {
     name: []const u8,
     created_at: i64,
     certificate_details: struct {
-        valid_at: ?i64,
-        expires_at: ?i64,
-        content: ?[]const u8,
-    },
+    valid_at: ?i64,
+    expires_at: ?i64,
+    content: ?[]const u8,
+},
     active: ?bool,
 };
 pub const ChatCompletionAllowedTools = struct {
@@ -556,57 +556,57 @@ pub const ChatCompletionFunctions = struct {
     parameters: ?FunctionParameters,
 };
 pub const ChatCompletionList = struct {
-    object: []const u8,
-    data: []const CreateChatCompletionResponse,
-    first_id: []const u8,
-    last_id: []const u8,
-    has_more: bool,
+    object: ?[]const u8,
+    data: ?[]const CreateChatCompletionResponse,
+    first_id: ?[]const u8,
+    last_id: ?[]const u8,
+    has_more: ?bool,
 };
 pub const ChatCompletionMessageCustomToolCall = struct {
     id: []const u8,
     type: []const u8,
     custom: struct {
-        name: []const u8,
-        input: []const u8,
-    },
+    name: []const u8,
+    input: []const u8,
+},
 };
 pub const ChatCompletionMessageList = struct {
-    object: []const u8,
-    data: []const std.json.Value,
-    first_id: []const u8,
-    last_id: []const u8,
-    has_more: bool,
+    object: ?[]const u8,
+    data: ?[]const std.json.Value,
+    first_id: ?[]const u8,
+    last_id: ?[]const u8,
+    has_more: ?bool,
 };
 pub const ChatCompletionMessageToolCall = struct {
     id: []const u8,
     type: []const u8,
     function: struct {
-        name: []const u8,
-        arguments: []const u8,
-    },
+    name: []const u8,
+    arguments: []const u8,
+},
 };
 pub const ChatCompletionMessageToolCallChunk = struct {
     index: i64,
     id: ?[]const u8,
     type: ?[]const u8,
     function: ?struct {
-        name: ?[]const u8,
-        arguments: ?[]const u8,
-    },
+    name: ?[]const u8,
+    arguments: ?[]const u8,
+},
 };
 pub const ChatCompletionMessageToolCalls = []const std.json.Value;
 pub const ChatCompletionModalities = std.json.Value;
 pub const ChatCompletionNamedToolChoice = struct {
     type: []const u8,
     function: struct {
-        name: []const u8,
-    },
+    name: []const u8,
+},
 };
 pub const ChatCompletionNamedToolChoiceCustom = struct {
     type: []const u8,
     custom: struct {
-        name: []const u8,
-    },
+    name: []const u8,
+},
 };
 pub const ChatCompletionRequestAssistantMessage = struct {
     content: ?std.json.Value,
@@ -632,24 +632,24 @@ pub const ChatCompletionRequestMessage = std.json.Value;
 pub const ChatCompletionRequestMessageContentPartAudio = struct {
     type: []const u8,
     input_audio: struct {
-        data: []const u8,
-        format: []const u8,
-    },
+    data: []const u8,
+    format: []const u8,
+},
 };
 pub const ChatCompletionRequestMessageContentPartFile = struct {
     type: []const u8,
     file: struct {
-        filename: ?[]const u8,
-        file_data: ?[]const u8,
-        file_id: ?[]const u8,
-    },
+    filename: ?[]const u8,
+    file_data: ?[]const u8,
+    file_id: ?[]const u8,
+},
 };
 pub const ChatCompletionRequestMessageContentPartImage = struct {
     type: []const u8,
     image_url: struct {
-        url: []const u8,
-        detail: ?[]const u8,
-    },
+    url: []const u8,
+    detail: ?[]const u8,
+},
 };
 pub const ChatCompletionRequestMessageContentPartRefusal = struct {
     type: []const u8,
@@ -678,23 +678,23 @@ pub const ChatCompletionRequestUserMessage = struct {
 };
 pub const ChatCompletionRequestUserMessageContentPart = std.json.Value;
 pub const ChatCompletionResponseMessage = struct {
-    content: std.json.Value,
-    refusal: std.json.Value,
+    content: ?std.json.Value,
+    refusal: ?std.json.Value,
     tool_calls: ?ChatCompletionMessageToolCalls,
     annotations: ?[]const struct {
-        type: []const u8,
-        url_citation: struct {
-            end_index: i64,
-            start_index: i64,
-            url: []const u8,
-            title: []const u8,
-        },
-    },
-    role: []const u8,
+    type: []const u8,
+    url_citation: struct {
+    end_index: i64,
+    start_index: i64,
+    url: []const u8,
+    title: []const u8,
+},
+},
+    role: ?[]const u8,
     function_call: ?struct {
-        arguments: []const u8,
-        name: []const u8,
-    },
+    arguments: []const u8,
+    name: []const u8,
+},
     audio: ?std.json.Value,
 };
 pub const ChatCompletionRole = []const u8;
@@ -702,9 +702,9 @@ pub const ChatCompletionStreamOptions = std.json.Value;
 pub const ChatCompletionStreamResponseDelta = struct {
     content: ?std.json.Value,
     function_call: ?struct {
-        arguments: ?[]const u8,
-        name: ?[]const u8,
-    },
+    arguments: ?[]const u8,
+    name: ?[]const u8,
+},
     tool_calls: ?[]const ChatCompletionMessageToolCallChunk,
     role: ?[]const u8,
     refusal: ?std.json.Value,
@@ -714,10 +714,10 @@ pub const ChatCompletionTokenLogprob = struct {
     logprob: f64,
     bytes: std.json.Value,
     top_logprobs: []const struct {
-        token: []const u8,
-        logprob: f64,
-        bytes: std.json.Value,
-    },
+    token: []const u8,
+    logprob: f64,
+    bytes: std.json.Value,
+},
 };
 pub const ChatCompletionTool = struct {
     type: []const u8,
@@ -806,9 +806,9 @@ pub const CodeInterpreterContainerAuto = struct {
 pub const CodeInterpreterFileOutput = struct {
     type: []const u8,
     files: []const struct {
-        mime_type: []const u8,
-        file_id: []const u8,
-    },
+    mime_type: []const u8,
+    file_id: []const u8,
+},
 };
 pub const CodeInterpreterOutputImage = struct {
     type: []const u8,
@@ -873,15 +873,15 @@ pub const CompletionUsage = struct {
     prompt_tokens: i64,
     total_tokens: i64,
     completion_tokens_details: ?struct {
-        accepted_prediction_tokens: ?i64,
-        audio_tokens: ?i64,
-        reasoning_tokens: ?i64,
-        rejected_prediction_tokens: ?i64,
-    },
+    accepted_prediction_tokens: ?i64,
+    audio_tokens: ?i64,
+    reasoning_tokens: ?i64,
+    rejected_prediction_tokens: ?i64,
+},
     prompt_tokens_details: ?struct {
-        audio_tokens: ?i64,
-        cached_tokens: ?i64,
-    },
+    audio_tokens: ?i64,
+    cached_tokens: ?i64,
+},
 };
 pub const CompoundFilter = struct {
     type: []const u8,
@@ -975,9 +975,9 @@ pub const ContainerResource = struct {
     status: []const u8,
     last_active_at: ?i64,
     expires_after: ?struct {
-        anchor: ?[]const u8,
-        minutes: ?i64,
-    },
+    anchor: ?[]const u8,
+    minutes: ?i64,
+},
     memory_limit: ?[]const u8,
 };
 pub const Content = std.json.Value;
@@ -1006,9 +1006,9 @@ pub const ConversationResource = struct {
 pub const CostsResult = struct {
     object: []const u8,
     amount: ?struct {
-        value: ?f64,
-        currency: ?[]const u8,
-    },
+    value: ?f64,
+    currency: ?[]const u8,
+},
     line_item: ?std.json.Value,
     project_id: ?std.json.Value,
 };
@@ -1026,32 +1026,18 @@ pub const CreateAssistantRequest = struct {
     response_format: ?std.json.Value,
 };
 pub const CreateChatCompletionRequest = std.json.Value;
-pub const CreateChatCompletionResponse = struct {
-    id: []const u8,
-    choices: []const struct {
-        finish_reason: []const u8,
-        index: i64,
-        message: ChatCompletionResponseMessage,
-        logprobs: std.json.Value,
-    },
-    created: i64,
-    model: []const u8,
-    service_tier: ?ServiceTier,
-    system_fingerprint: ?[]const u8,
-    object: []const u8,
-    usage: ?CompletionUsage,
-};
+pub const CreateChatCompletionResponse = std.json.Value;
 pub const CreateChatCompletionStreamResponse = struct {
     id: []const u8,
     choices: []const struct {
-        delta: ChatCompletionStreamResponseDelta,
-        logprobs: ?struct {
-            content: []const ChatCompletionTokenLogprob,
-            refusal: []const ChatCompletionTokenLogprob,
-        },
-        finish_reason: []const u8,
-        index: i64,
-    },
+    delta: ChatCompletionStreamResponseDelta,
+    logprobs: ?struct {
+    content: []const ChatCompletionTokenLogprob,
+    refusal: []const ChatCompletionTokenLogprob,
+},
+    finish_reason: []const u8,
+    index: i64,
+},
     created: i64,
     model: []const u8,
     service_tier: ?ServiceTier,
@@ -1089,11 +1075,11 @@ pub const CreateCompletionRequest = struct {
 pub const CreateCompletionResponse = struct {
     id: []const u8,
     choices: []const struct {
-        finish_reason: []const u8,
-        index: i64,
-        logprobs: std.json.Value,
-        text: []const u8,
-    },
+    finish_reason: []const u8,
+    index: i64,
+    logprobs: std.json.Value,
+    text: []const u8,
+},
     created: i64,
     model: []const u8,
     system_fingerprint: ?[]const u8,
@@ -1104,9 +1090,9 @@ pub const CreateContainerBody = struct {
     name: []const u8,
     file_ids: ?[]const []const u8,
     expires_after: ?struct {
-        anchor: []const u8,
-        minutes: i64,
-    },
+    anchor: []const u8,
+    minutes: i64,
+},
     memory_limit: ?[]const u8,
 };
 pub const CreateContainerFileBody = struct {
@@ -1129,22 +1115,22 @@ pub const CreateEmbeddingResponse = struct {
     model: []const u8,
     object: []const u8,
     usage: struct {
-        prompt_tokens: i64,
-        total_tokens: i64,
-    },
+    prompt_tokens: i64,
+    total_tokens: i64,
+},
 };
 pub const CreateEvalCompletionsRunDataSource = struct {
     type: []const u8,
     input_messages: ?std.json.Value,
     sampling_params: ?struct {
-        reasoning_effort: ?ReasoningEffort,
-        temperature: ?f64,
-        max_completion_tokens: ?i64,
-        top_p: ?f64,
-        seed: ?i64,
-        response_format: ?std.json.Value,
-        tools: ?[]const ChatCompletionTool,
-    },
+    reasoning_effort: ?ReasoningEffort,
+    temperature: ?f64,
+    max_completion_tokens: ?i64,
+    top_p: ?f64,
+    seed: ?i64,
+    response_format: ?std.json.Value,
+    tools: ?[]const ChatCompletionTool,
+},
     model: ?[]const u8,
     source: std.json.Value,
 };
@@ -1180,16 +1166,16 @@ pub const CreateEvalResponsesRunDataSource = struct {
     type: []const u8,
     input_messages: ?std.json.Value,
     sampling_params: ?struct {
-        reasoning_effort: ?ReasoningEffort,
-        temperature: ?f64,
-        max_completion_tokens: ?i64,
-        top_p: ?f64,
-        seed: ?i64,
-        tools: ?[]const Tool,
-        text: ?struct {
-            format: ?TextResponseFormatConfiguration,
-        },
-    },
+    reasoning_effort: ?ReasoningEffort,
+    temperature: ?f64,
+    max_completion_tokens: ?i64,
+    top_p: ?f64,
+    seed: ?i64,
+    tools: ?[]const Tool,
+    text: ?struct {
+    format: ?TextResponseFormatConfiguration,
+},
+},
     model: ?[]const u8,
     source: std.json.Value,
 };
@@ -1214,21 +1200,21 @@ pub const CreateFineTuningJobRequest = struct {
     model: std.json.Value,
     training_file: []const u8,
     hyperparameters: ?struct {
-        batch_size: ?std.json.Value,
-        learning_rate_multiplier: ?std.json.Value,
-        n_epochs: ?std.json.Value,
-    },
+    batch_size: ?std.json.Value,
+    learning_rate_multiplier: ?std.json.Value,
+    n_epochs: ?std.json.Value,
+},
     suffix: ?[]const u8,
     validation_file: ?[]const u8,
     integrations: ?[]const struct {
-        type: std.json.Value,
-        wandb: struct {
-            project: []const u8,
-            name: ?[]const u8,
-            entity: ?[]const u8,
-            tags: ?[]const []const u8,
-        },
-    },
+    type: std.json.Value,
+    wandb: struct {
+    project: []const u8,
+    name: ?[]const u8,
+    entity: ?[]const u8,
+    tags: ?[]const []const u8,
+},
+},
     seed: ?i64,
     method: ?FineTuneMethod,
     metadata: ?Metadata,
@@ -1295,53 +1281,53 @@ pub const CreateModerationResponse = struct {
     id: []const u8,
     model: []const u8,
     results: []const struct {
-        flagged: bool,
-        categories: struct {
-            hate: bool,
-            hate_threatening: bool,
-            harassment: bool,
-            harassment_threatening: bool,
-            illicit: std.json.Value,
-            illicit_violent: std.json.Value,
-            self_harm: bool,
-            self_harm_intent: bool,
-            self_harm_instructions: bool,
-            sexual: bool,
-            sexual_minors: bool,
-            violence: bool,
-            violence_graphic: bool,
-        },
-        category_scores: struct {
-            hate: f64,
-            hate_threatening: f64,
-            harassment: f64,
-            harassment_threatening: f64,
-            illicit: f64,
-            illicit_violent: f64,
-            self_harm: f64,
-            self_harm_intent: f64,
-            self_harm_instructions: f64,
-            sexual: f64,
-            sexual_minors: f64,
-            violence: f64,
-            violence_graphic: f64,
-        },
-        category_applied_input_types: struct {
-            hate: []const []const u8,
-            hate_threatening: []const []const u8,
-            harassment: []const []const u8,
-            harassment_threatening: []const []const u8,
-            illicit: []const []const u8,
-            illicit_violent: []const []const u8,
-            self_harm: []const []const u8,
-            self_harm_intent: []const []const u8,
-            self_harm_instructions: []const []const u8,
-            sexual: []const []const u8,
-            sexual_minors: []const []const u8,
-            violence: []const []const u8,
-            violence_graphic: []const []const u8,
-        },
-    },
+    flagged: bool,
+    categories: struct {
+    hate: bool,
+    hate_threatening: bool,
+    harassment: bool,
+    harassment_threatening: bool,
+    illicit: std.json.Value,
+    illicit_violent: std.json.Value,
+    self_harm: bool,
+    self_harm_intent: bool,
+    self_harm_instructions: bool,
+    sexual: bool,
+    sexual_minors: bool,
+    violence: bool,
+    violence_graphic: bool,
+},
+    category_scores: struct {
+    hate: f64,
+    hate_threatening: f64,
+    harassment: f64,
+    harassment_threatening: f64,
+    illicit: f64,
+    illicit_violent: f64,
+    self_harm: f64,
+    self_harm_intent: f64,
+    self_harm_instructions: f64,
+    sexual: f64,
+    sexual_minors: f64,
+    violence: f64,
+    violence_graphic: f64,
+},
+    category_applied_input_types: struct {
+    hate: []const []const u8,
+    hate_threatening: []const []const u8,
+    harassment: []const []const u8,
+    harassment_threatening: []const []const u8,
+    illicit: []const []const u8,
+    illicit_violent: []const []const u8,
+    self_harm: []const []const u8,
+    self_harm_intent: []const []const u8,
+    self_harm_instructions: []const []const u8,
+    sexual: []const []const u8,
+    sexual_minors: []const []const u8,
+    violence: []const []const u8,
+    violence_graphic: []const []const u8,
+},
+},
 };
 pub const CreateResponse = std.json.Value;
 pub const CreateRunRequest = struct {
@@ -1398,13 +1384,13 @@ pub const CreateThreadAndRunRequest = struct {
     instructions: ?[]const u8,
     tools: ?[]const AssistantTool,
     tool_resources: ?struct {
-        code_interpreter: ?struct {
-            file_ids: ?[]const []const u8,
-        },
-        file_search: ?struct {
-            vector_store_ids: ?[]const []const u8,
-        },
-    },
+    code_interpreter: ?struct {
+    file_ids: ?[]const []const u8,
+},
+    file_search: ?struct {
+    vector_store_ids: ?[]const []const u8,
+},
+},
     metadata: ?Metadata,
     temperature: ?f64,
     top_p: ?f64,
@@ -1423,13 +1409,13 @@ pub const CreateThreadAndRunRequestWithoutStream = struct {
     instructions: ?[]const u8,
     tools: ?[]const AssistantTool,
     tool_resources: ?struct {
-        code_interpreter: ?struct {
-            file_ids: ?[]const []const u8,
-        },
-        file_search: ?struct {
-            vector_store_ids: ?[]const []const u8,
-        },
-    },
+    code_interpreter: ?struct {
+    file_ids: ?[]const []const u8,
+},
+    file_search: ?struct {
+    vector_store_ids: ?[]const []const u8,
+},
+},
     metadata: ?Metadata,
     temperature: ?f64,
     top_p: ?f64,
@@ -1469,10 +1455,10 @@ pub const CreateTranscriptionResponseDiarizedJson = struct {
 pub const CreateTranscriptionResponseJson = struct {
     text: []const u8,
     logprobs: ?[]const struct {
-        token: ?[]const u8,
-        logprob: ?f64,
-        bytes: ?[]const f64,
-    },
+    token: ?[]const u8,
+    logprob: ?f64,
+    bytes: ?[]const f64,
+},
     usage: ?std.json.Value,
 };
 pub const CreateTranscriptionResponseStreamEvent = std.json.Value;
@@ -1570,10 +1556,10 @@ pub const CustomToolCallOutput = struct {
 pub const CustomToolChatCompletions = struct {
     type: []const u8,
     custom: struct {
-        name: []const u8,
-        description: ?[]const u8,
-        format: ?std.json.Value,
-    },
+    name: []const u8,
+    description: ?[]const u8,
+    format: ?std.json.Value,
+},
 };
 pub const CustomToolParam = struct {
     type: []const u8,
@@ -1733,9 +1719,9 @@ pub const EvalItemInputImage = struct {
 pub const EvalJsonlFileContentSource = struct {
     type: []const u8,
     content: []const struct {
-        item: std.json.Value,
-        sample: ?std.json.Value,
-    },
+    item: std.json.Value,
+    sample: ?std.json.Value,
+},
 };
 pub const EvalJsonlFileIdSource = struct {
     type: []const u8,
@@ -1776,24 +1762,24 @@ pub const EvalRun = struct {
     created_at: i64,
     report_url: []const u8,
     result_counts: struct {
-        total: i64,
-        errored: i64,
-        failed: i64,
-        passed: i64,
-    },
+    total: i64,
+    errored: i64,
+    failed: i64,
+    passed: i64,
+},
     per_model_usage: []const struct {
-        model_name: []const u8,
-        invocation_count: i64,
-        prompt_tokens: i64,
-        completion_tokens: i64,
-        total_tokens: i64,
-        cached_tokens: i64,
-    },
+    model_name: []const u8,
+    invocation_count: i64,
+    prompt_tokens: i64,
+    completion_tokens: i64,
+    total_tokens: i64,
+    cached_tokens: i64,
+},
     per_testing_criteria_results: []const struct {
-        testing_criteria: []const u8,
-        passed: i64,
-        failed: i64,
-    },
+    testing_criteria: []const u8,
+    passed: i64,
+    failed: i64,
+},
     data_source: std.json.Value,
     metadata: Metadata,
     _error: EvalApiError,
@@ -1816,28 +1802,28 @@ pub const EvalRunOutputItem = struct {
     datasource_item: std.json.Value,
     results: []const EvalRunOutputItemResult,
     sample: struct {
-        input: []const struct {
-            role: []const u8,
-            content: []const u8,
-        },
-        output: []const struct {
-            role: ?[]const u8,
-            content: ?[]const u8,
-        },
-        finish_reason: []const u8,
-        model: []const u8,
-        usage: struct {
-            total_tokens: i64,
-            completion_tokens: i64,
-            prompt_tokens: i64,
-            cached_tokens: i64,
-        },
-        _error: EvalApiError,
-        temperature: f64,
-        max_completion_tokens: i64,
-        top_p: f64,
-        seed: i64,
-    },
+    input: []const struct {
+    role: []const u8,
+    content: []const u8,
+},
+    output: []const struct {
+    role: ?[]const u8,
+    content: ?[]const u8,
+},
+    finish_reason: []const u8,
+    model: []const u8,
+    usage: struct {
+    total_tokens: i64,
+    completion_tokens: i64,
+    prompt_tokens: i64,
+    cached_tokens: i64,
+},
+    _error: EvalApiError,
+    temperature: f64,
+    max_completion_tokens: i64,
+    top_p: f64,
+    seed: i64,
+},
 };
 pub const EvalRunOutputItemList = struct {
     object: []const u8,
@@ -1943,10 +1929,10 @@ pub const FineTuneMethod = struct {
 };
 pub const FineTunePreferenceRequestInput = struct {
     input: ?struct {
-        messages: ?[]const std.json.Value,
-        tools: ?[]const ChatCompletionTool,
-        parallel_tool_calls: ?ParallelToolCalls,
-    },
+    messages: ?[]const std.json.Value,
+    tools: ?[]const ChatCompletionTool,
+    parallel_tool_calls: ?ParallelToolCalls,
+},
     preferred_output: ?[]const std.json.Value,
     non_preferred_output: ?[]const std.json.Value,
 };
@@ -1984,11 +1970,11 @@ pub const FineTuningCheckpointPermission = struct {
 pub const FineTuningIntegration = struct {
     type: []const u8,
     wandb: struct {
-        project: []const u8,
-        name: ?std.json.Value,
-        entity: ?std.json.Value,
-        tags: ?[]const []const u8,
-    },
+    project: []const u8,
+    name: ?std.json.Value,
+    entity: ?std.json.Value,
+    tags: ?[]const []const u8,
+},
 };
 pub const FineTuningJob = struct {
     id: []const u8,
@@ -1997,10 +1983,10 @@ pub const FineTuningJob = struct {
     fine_tuned_model: std.json.Value,
     finished_at: std.json.Value,
     hyperparameters: struct {
-        batch_size: ?std.json.Value,
-        learning_rate_multiplier: ?std.json.Value,
-        n_epochs: ?std.json.Value,
-    },
+    batch_size: ?std.json.Value,
+    learning_rate_multiplier: ?std.json.Value,
+    n_epochs: ?std.json.Value,
+},
     model: []const u8,
     object: []const u8,
     organization_id: []const u8,
@@ -2021,14 +2007,14 @@ pub const FineTuningJobCheckpoint = struct {
     fine_tuned_model_checkpoint: []const u8,
     step_number: i64,
     metrics: struct {
-        step: ?f64,
-        train_loss: ?f64,
-        train_mean_token_accuracy: ?f64,
-        valid_loss: ?f64,
-        valid_mean_token_accuracy: ?f64,
-        full_valid_loss: ?f64,
-        full_valid_mean_token_accuracy: ?f64,
-    },
+    step: ?f64,
+    train_loss: ?f64,
+    train_mean_token_accuracy: ?f64,
+    valid_loss: ?f64,
+    valid_mean_token_accuracy: ?f64,
+    full_valid_loss: ?f64,
+    full_valid_mean_token_accuracy: ?f64,
+},
     fine_tuning_job_id: []const u8,
     object: []const u8,
 };
@@ -2176,12 +2162,12 @@ pub const GraderScoreModel = struct {
     name: []const u8,
     model: []const u8,
     sampling_params: ?struct {
-        seed: ?std.json.Value,
-        top_p: ?std.json.Value,
-        temperature: ?std.json.Value,
-        max_completions_tokens: ?std.json.Value,
-        reasoning_effort: ?ReasoningEffort,
-    },
+    seed: ?std.json.Value,
+    top_p: ?std.json.Value,
+    temperature: ?std.json.Value,
+    max_completions_tokens: ?std.json.Value,
+    reasoning_effort: ?ReasoningEffort,
+},
     input: []const EvalItem,
     range: ?[]const f64,
 };
@@ -2319,9 +2305,9 @@ pub const ImageGenTool = struct {
     background: ?[]const u8,
     input_fidelity: ?std.json.Value,
     input_image_mask: ?struct {
-        image_url: ?[]const u8,
-        file_id: ?[]const u8,
-    },
+    image_url: ?[]const u8,
+    file_id: ?[]const u8,
+},
     partial_images: ?i64,
 };
 pub const ImageGenToolCall = struct {
@@ -2351,9 +2337,9 @@ pub const ImagesUsage = struct {
     input_tokens: i64,
     output_tokens: i64,
     input_tokens_details: struct {
-        text_tokens: i64,
-        image_tokens: i64,
-    },
+    text_tokens: i64,
+    image_tokens: i64,
+},
 };
 pub const IncludeEnum = []const u8;
 pub const InferenceOptions = struct {
@@ -2363,9 +2349,9 @@ pub const InferenceOptions = struct {
 pub const InputAudio = struct {
     type: []const u8,
     input_audio: struct {
-        data: []const u8,
-        format: []const u8,
-    },
+    data: []const u8,
+    format: []const u8,
+},
 };
 pub const InputContent = std.json.Value;
 pub const InputFidelity = []const u8;
@@ -2423,9 +2409,9 @@ pub const Invite = struct {
     expires_at: i64,
     accepted_at: ?i64,
     projects: ?[]const struct {
-        id: ?[]const u8,
-        role: ?[]const u8,
-    },
+    id: ?[]const u8,
+    role: ?[]const u8,
+},
 };
 pub const InviteDeleteResponse = struct {
     object: []const u8,
@@ -2447,9 +2433,9 @@ pub const InviteRequest = struct {
     email: []const u8,
     role: []const u8,
     projects: ?[]const struct {
-        id: []const u8,
-        role: []const u8,
-    },
+    id: []const u8,
+    role: []const u8,
+},
 };
 pub const Item = std.json.Value;
 pub const ItemField = std.json.Value;
@@ -2649,16 +2635,16 @@ pub const MessageContentDelta = std.json.Value;
 pub const MessageContentImageFileObject = struct {
     type: []const u8,
     image_file: struct {
-        file_id: []const u8,
-        detail: ?[]const u8,
-    },
+    file_id: []const u8,
+    detail: ?[]const u8,
+},
 };
 pub const MessageContentImageUrlObject = struct {
     type: []const u8,
     image_url: struct {
-        url: []const u8,
-        detail: ?[]const u8,
-    },
+    url: []const u8,
+    detail: ?[]const u8,
+},
 };
 pub const MessageContentRefusalObject = struct {
     type: []const u8,
@@ -2668,8 +2654,8 @@ pub const MessageContentTextAnnotationsFileCitationObject = struct {
     type: []const u8,
     text: []const u8,
     file_citation: struct {
-        file_id: []const u8,
-    },
+    file_id: []const u8,
+},
     start_index: i64,
     end_index: i64,
 };
@@ -2677,33 +2663,33 @@ pub const MessageContentTextAnnotationsFilePathObject = struct {
     type: []const u8,
     text: []const u8,
     file_path: struct {
-        file_id: []const u8,
-    },
+    file_id: []const u8,
+},
     start_index: i64,
     end_index: i64,
 };
 pub const MessageContentTextObject = struct {
     type: []const u8,
     text: struct {
-        value: []const u8,
-        annotations: []const TextAnnotation,
-    },
+    value: []const u8,
+    annotations: []const TextAnnotation,
+},
 };
 pub const MessageDeltaContentImageFileObject = struct {
     index: i64,
     type: []const u8,
     image_file: ?struct {
-        file_id: ?[]const u8,
-        detail: ?[]const u8,
-    },
+    file_id: ?[]const u8,
+    detail: ?[]const u8,
+},
 };
 pub const MessageDeltaContentImageUrlObject = struct {
     index: i64,
     type: []const u8,
     image_url: ?struct {
-        url: ?[]const u8,
-        detail: ?[]const u8,
-    },
+    url: ?[]const u8,
+    detail: ?[]const u8,
+},
 };
 pub const MessageDeltaContentRefusalObject = struct {
     index: i64,
@@ -2715,9 +2701,9 @@ pub const MessageDeltaContentTextAnnotationsFileCitationObject = struct {
     type: []const u8,
     text: ?[]const u8,
     file_citation: ?struct {
-        file_id: ?[]const u8,
-        quote: ?[]const u8,
-    },
+    file_id: ?[]const u8,
+    quote: ?[]const u8,
+},
     start_index: ?i64,
     end_index: ?i64,
 };
@@ -2726,8 +2712,8 @@ pub const MessageDeltaContentTextAnnotationsFilePathObject = struct {
     type: []const u8,
     text: ?[]const u8,
     file_path: ?struct {
-        file_id: ?[]const u8,
-    },
+    file_id: ?[]const u8,
+},
     start_index: ?i64,
     end_index: ?i64,
 };
@@ -2735,17 +2721,17 @@ pub const MessageDeltaContentTextObject = struct {
     index: i64,
     type: []const u8,
     text: ?struct {
-        value: ?[]const u8,
-        annotations: ?[]const TextAnnotationDelta,
-    },
+    value: ?[]const u8,
+    annotations: ?[]const TextAnnotationDelta,
+},
 };
 pub const MessageDeltaObject = struct {
     id: []const u8,
     object: []const u8,
     delta: struct {
-        role: ?[]const u8,
-        content: ?[]const MessageContentDelta,
-    },
+    role: ?[]const u8,
+    content: ?[]const MessageContentDelta,
+},
 };
 pub const MessageObject = struct {
     id: []const u8,
@@ -2790,8 +2776,8 @@ pub const ModelResponseProperties = struct {
 pub const ModerationImageURLInput = struct {
     type: []const u8,
     image_url: struct {
-        url: []const u8,
-    },
+    url: []const u8,
+},
 };
 pub const ModerationTextInput = struct {
     type: []const u8,
@@ -2877,10 +2863,10 @@ pub const ProjectApiKey = struct {
     last_used_at: i64,
     id: []const u8,
     owner: struct {
-        type: ?[]const u8,
-        user: ?ProjectUser,
-        service_account: ?ProjectServiceAccount,
-    },
+    type: ?[]const u8,
+    user: ?ProjectUser,
+    service_account: ?ProjectServiceAccount,
+},
 };
 pub const ProjectApiKeyDeleteResponse = struct {
     object: []const u8,
@@ -3110,35 +3096,35 @@ pub const RealtimeBetaResponse = struct {
     object: ?std.json.Value,
     status: ?[]const u8,
     status_details: ?struct {
-        type: ?[]const u8,
-        reason: ?[]const u8,
-        _error: ?struct {
-            type: ?[]const u8,
-            code: ?[]const u8,
-        },
-    },
+    type: ?[]const u8,
+    reason: ?[]const u8,
+    _error: ?struct {
+    type: ?[]const u8,
+    code: ?[]const u8,
+},
+},
     output: ?[]const RealtimeConversationItem,
     metadata: ?Metadata,
     usage: ?struct {
-        total_tokens: ?i64,
-        input_tokens: ?i64,
-        output_tokens: ?i64,
-        input_token_details: ?struct {
-            cached_tokens: ?i64,
-            text_tokens: ?i64,
-            image_tokens: ?i64,
-            audio_tokens: ?i64,
-            cached_tokens_details: ?struct {
-                text_tokens: ?i64,
-                image_tokens: ?i64,
-                audio_tokens: ?i64,
-            },
-        },
-        output_token_details: ?struct {
-            text_tokens: ?i64,
-            audio_tokens: ?i64,
-        },
-    },
+    total_tokens: ?i64,
+    input_tokens: ?i64,
+    output_tokens: ?i64,
+    input_token_details: ?struct {
+    cached_tokens: ?i64,
+    text_tokens: ?i64,
+    image_tokens: ?i64,
+    audio_tokens: ?i64,
+    cached_tokens_details: ?struct {
+    text_tokens: ?i64,
+    image_tokens: ?i64,
+    audio_tokens: ?i64,
+},
+},
+    output_token_details: ?struct {
+    text_tokens: ?i64,
+    audio_tokens: ?i64,
+},
+},
     conversation_id: ?[]const u8,
     voice: ?VoiceIdsShared,
     modalities: ?[]const []const u8,
@@ -3152,11 +3138,11 @@ pub const RealtimeBetaResponseCreateParams = struct {
     voice: ?VoiceIdsShared,
     output_audio_format: ?[]const u8,
     tools: ?[]const struct {
-        type: ?[]const u8,
-        name: ?[]const u8,
-        description: ?[]const u8,
-        parameters: ?std.json.Value,
-    },
+    type: ?[]const u8,
+    name: ?[]const u8,
+    description: ?[]const u8,
+    parameters: ?std.json.Value,
+},
     tool_choice: ?std.json.Value,
     temperature: ?f64,
     max_output_tokens: ?std.json.Value,
@@ -3199,11 +3185,11 @@ pub const RealtimeBetaServerEventConversationItemInputAudioTranscriptionFailed =
     item_id: []const u8,
     content_index: i64,
     _error: struct {
-        type: ?[]const u8,
-        code: ?[]const u8,
-        message: ?[]const u8,
-        param: ?[]const u8,
-    },
+    type: ?[]const u8,
+    code: ?[]const u8,
+    message: ?[]const u8,
+    param: ?[]const u8,
+},
 };
 pub const RealtimeBetaServerEventConversationItemInputAudioTranscriptionSegment = struct {
     event_id: []const u8,
@@ -3232,12 +3218,12 @@ pub const RealtimeBetaServerEventError = struct {
     event_id: []const u8,
     type: std.json.Value,
     _error: struct {
-        type: []const u8,
-        code: ?std.json.Value,
-        message: []const u8,
-        param: ?std.json.Value,
-        event_id: ?std.json.Value,
-    },
+    type: []const u8,
+    code: ?std.json.Value,
+    message: []const u8,
+    param: ?std.json.Value,
+    event_id: ?std.json.Value,
+},
 };
 pub const RealtimeBetaServerEventInputAudioBufferCleared = struct {
     event_id: []const u8,
@@ -3280,11 +3266,11 @@ pub const RealtimeBetaServerEventRateLimitsUpdated = struct {
     event_id: []const u8,
     type: std.json.Value,
     rate_limits: []const struct {
-        name: ?[]const u8,
-        limit: ?i64,
-        remaining: ?i64,
-        reset_seconds: ?f64,
-    },
+    name: ?[]const u8,
+    limit: ?i64,
+    remaining: ?i64,
+    reset_seconds: ?f64,
+},
 };
 pub const RealtimeBetaServerEventResponseAudioDelta = struct {
     event_id: []const u8,
@@ -3329,11 +3315,11 @@ pub const RealtimeBetaServerEventResponseContentPartAdded = struct {
     output_index: i64,
     content_index: i64,
     part: struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-        audio: ?[]const u8,
-        transcript: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+    audio: ?[]const u8,
+    transcript: ?[]const u8,
+},
 };
 pub const RealtimeBetaServerEventResponseContentPartDone = struct {
     event_id: []const u8,
@@ -3343,11 +3329,11 @@ pub const RealtimeBetaServerEventResponseContentPartDone = struct {
     output_index: i64,
     content_index: i64,
     part: struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-        audio: ?[]const u8,
-        transcript: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+    audio: ?[]const u8,
+    transcript: ?[]const u8,
+},
 };
 pub const RealtimeBetaServerEventResponseCreated = struct {
     event_id: []const u8,
@@ -3564,11 +3550,11 @@ pub const RealtimeConversationItemMessageAssistant = struct {
     status: ?[]const u8,
     role: []const u8,
     content: []const struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-        audio: ?[]const u8,
-        transcript: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+    audio: ?[]const u8,
+    transcript: ?[]const u8,
+},
 };
 pub const RealtimeConversationItemMessageSystem = struct {
     id: ?[]const u8,
@@ -3577,9 +3563,9 @@ pub const RealtimeConversationItemMessageSystem = struct {
     status: ?[]const u8,
     role: []const u8,
     content: []const struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+},
 };
 pub const RealtimeConversationItemMessageUser = struct {
     id: ?[]const u8,
@@ -3588,13 +3574,13 @@ pub const RealtimeConversationItemMessageUser = struct {
     status: ?[]const u8,
     role: []const u8,
     content: []const struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-        audio: ?[]const u8,
-        image_url: ?[]const u8,
-        detail: ?[]const u8,
-        transcript: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+    audio: ?[]const u8,
+    image_url: ?[]const u8,
+    detail: ?[]const u8,
+    transcript: ?[]const u8,
+},
 };
 pub const RealtimeConversationItemWithReference = struct {
     id: ?[]const u8,
@@ -3603,12 +3589,12 @@ pub const RealtimeConversationItemWithReference = struct {
     status: ?[]const u8,
     role: ?[]const u8,
     content: ?[]const struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-        id: ?[]const u8,
-        audio: ?[]const u8,
-        transcript: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+    id: ?[]const u8,
+    audio: ?[]const u8,
+    transcript: ?[]const u8,
+},
     call_id: ?[]const u8,
     name: ?[]const u8,
     arguments: ?[]const u8,
@@ -3616,9 +3602,9 @@ pub const RealtimeConversationItemWithReference = struct {
 };
 pub const RealtimeCreateClientSecretRequest = struct {
     expires_after: ?struct {
-        anchor: ?[]const u8,
-        seconds: ?i64,
-    },
+    anchor: ?[]const u8,
+    seconds: ?i64,
+},
     session: ?std.json.Value,
 };
 pub const RealtimeCreateClientSecretResponse = struct {
@@ -3681,41 +3667,41 @@ pub const RealtimeResponse = struct {
     object: ?std.json.Value,
     status: ?[]const u8,
     status_details: ?struct {
-        type: ?[]const u8,
-        reason: ?[]const u8,
-        _error: ?struct {
-            type: ?[]const u8,
-            code: ?[]const u8,
-        },
-    },
+    type: ?[]const u8,
+    reason: ?[]const u8,
+    _error: ?struct {
+    type: ?[]const u8,
+    code: ?[]const u8,
+},
+},
     output: ?[]const RealtimeConversationItem,
     metadata: ?Metadata,
     audio: ?struct {
-        output: ?struct {
-            format: ?RealtimeAudioFormats,
-            voice: ?VoiceIdsShared,
-        },
-    },
+    output: ?struct {
+    format: ?RealtimeAudioFormats,
+    voice: ?VoiceIdsShared,
+},
+},
     usage: ?struct {
-        total_tokens: ?i64,
-        input_tokens: ?i64,
-        output_tokens: ?i64,
-        input_token_details: ?struct {
-            cached_tokens: ?i64,
-            text_tokens: ?i64,
-            image_tokens: ?i64,
-            audio_tokens: ?i64,
-            cached_tokens_details: ?struct {
-                text_tokens: ?i64,
-                image_tokens: ?i64,
-                audio_tokens: ?i64,
-            },
-        },
-        output_token_details: ?struct {
-            text_tokens: ?i64,
-            audio_tokens: ?i64,
-        },
-    },
+    total_tokens: ?i64,
+    input_tokens: ?i64,
+    output_tokens: ?i64,
+    input_token_details: ?struct {
+    cached_tokens: ?i64,
+    text_tokens: ?i64,
+    image_tokens: ?i64,
+    audio_tokens: ?i64,
+    cached_tokens_details: ?struct {
+    text_tokens: ?i64,
+    image_tokens: ?i64,
+    audio_tokens: ?i64,
+},
+},
+    output_token_details: ?struct {
+    text_tokens: ?i64,
+    audio_tokens: ?i64,
+},
+},
     conversation_id: ?[]const u8,
     output_modalities: ?[]const []const u8,
     max_output_tokens: ?std.json.Value,
@@ -3724,11 +3710,11 @@ pub const RealtimeResponseCreateParams = struct {
     output_modalities: ?[]const []const u8,
     instructions: ?[]const u8,
     audio: ?struct {
-        output: ?struct {
-            format: ?RealtimeAudioFormats,
-            voice: ?VoiceIdsShared,
-        },
-    },
+    output: ?struct {
+    format: ?RealtimeAudioFormats,
+    voice: ?VoiceIdsShared,
+},
+},
     tools: ?[]const std.json.Value,
     tool_choice: ?std.json.Value,
     max_output_tokens: ?std.json.Value,
@@ -3742,9 +3728,9 @@ pub const RealtimeServerEventConversationCreated = struct {
     event_id: []const u8,
     type: std.json.Value,
     conversation: struct {
-        id: ?[]const u8,
-        object: ?std.json.Value,
-    },
+    id: ?[]const u8,
+    object: ?std.json.Value,
+},
 };
 pub const RealtimeServerEventConversationItemAdded = struct {
     event_id: []const u8,
@@ -3792,11 +3778,11 @@ pub const RealtimeServerEventConversationItemInputAudioTranscriptionFailed = str
     item_id: []const u8,
     content_index: i64,
     _error: struct {
-        type: ?[]const u8,
-        code: ?[]const u8,
-        message: ?[]const u8,
-        param: ?[]const u8,
-    },
+    type: ?[]const u8,
+    code: ?[]const u8,
+    message: ?[]const u8,
+    param: ?[]const u8,
+},
 };
 pub const RealtimeServerEventConversationItemInputAudioTranscriptionSegment = struct {
     event_id: []const u8,
@@ -3825,12 +3811,12 @@ pub const RealtimeServerEventError = struct {
     event_id: []const u8,
     type: std.json.Value,
     _error: struct {
-        type: []const u8,
-        code: ?std.json.Value,
-        message: []const u8,
-        param: ?std.json.Value,
-        event_id: ?std.json.Value,
-    },
+    type: []const u8,
+    code: ?std.json.Value,
+    message: []const u8,
+    param: ?std.json.Value,
+    event_id: ?std.json.Value,
+},
 };
 pub const RealtimeServerEventInputAudioBufferCleared = struct {
     event_id: []const u8,
@@ -3900,11 +3886,11 @@ pub const RealtimeServerEventRateLimitsUpdated = struct {
     event_id: []const u8,
     type: std.json.Value,
     rate_limits: []const struct {
-        name: ?[]const u8,
-        limit: ?i64,
-        remaining: ?i64,
-        reset_seconds: ?f64,
-    },
+    name: ?[]const u8,
+    limit: ?i64,
+    remaining: ?i64,
+    reset_seconds: ?f64,
+},
 };
 pub const RealtimeServerEventResponseAudioDelta = struct {
     event_id: []const u8,
@@ -3949,11 +3935,11 @@ pub const RealtimeServerEventResponseContentPartAdded = struct {
     output_index: i64,
     content_index: i64,
     part: struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-        audio: ?[]const u8,
-        transcript: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+    audio: ?[]const u8,
+    transcript: ?[]const u8,
+},
 };
 pub const RealtimeServerEventResponseContentPartDone = struct {
     event_id: []const u8,
@@ -3963,11 +3949,11 @@ pub const RealtimeServerEventResponseContentPartDone = struct {
     output_index: i64,
     content_index: i64,
     part: struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-        audio: ?[]const u8,
-        transcript: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+    audio: ?[]const u8,
+    transcript: ?[]const u8,
+},
 };
 pub const RealtimeServerEventResponseCreated = struct {
     event_id: []const u8,
@@ -4091,8 +4077,8 @@ pub const RealtimeSession = struct {
     input_audio_transcription: ?std.json.Value,
     turn_detection: ?RealtimeTurnDetection,
     input_audio_noise_reduction: ?struct {
-        type: ?NoiseReductionType,
-    },
+    type: ?NoiseReductionType,
+},
     speed: ?f64,
     tracing: ?std.json.Value,
     tools: ?[]const RealtimeFunctionTool,
@@ -4105,31 +4091,31 @@ pub const RealtimeSession = struct {
 };
 pub const RealtimeSessionCreateRequest = struct {
     client_secret: struct {
-        value: []const u8,
-        expires_at: i64,
-    },
+    value: []const u8,
+    expires_at: i64,
+},
     modalities: ?std.json.Value,
     instructions: ?[]const u8,
     voice: ?VoiceIdsShared,
     input_audio_format: ?[]const u8,
     output_audio_format: ?[]const u8,
     input_audio_transcription: ?struct {
-        model: ?[]const u8,
-    },
+    model: ?[]const u8,
+},
     speed: ?f64,
     tracing: ?std.json.Value,
     turn_detection: ?struct {
-        type: ?[]const u8,
-        threshold: ?f64,
-        prefix_padding_ms: ?i64,
-        silence_duration_ms: ?i64,
-    },
+    type: ?[]const u8,
+    threshold: ?f64,
+    prefix_padding_ms: ?i64,
+    silence_duration_ms: ?i64,
+},
     tools: ?[]const struct {
-        type: ?[]const u8,
-        name: ?[]const u8,
-        description: ?[]const u8,
-        parameters: ?std.json.Value,
-    },
+    type: ?[]const u8,
+    name: ?[]const u8,
+    description: ?[]const u8,
+    parameters: ?std.json.Value,
+},
     tool_choice: ?[]const u8,
     temperature: ?f64,
     max_response_output_tokens: ?std.json.Value,
@@ -4142,20 +4128,20 @@ pub const RealtimeSessionCreateRequestGA = struct {
     model: ?std.json.Value,
     instructions: ?[]const u8,
     audio: ?struct {
-        input: ?struct {
-            format: ?RealtimeAudioFormats,
-            transcription: ?AudioTranscription,
-            noise_reduction: ?struct {
-                type: ?NoiseReductionType,
-            },
-            turn_detection: ?RealtimeTurnDetection,
-        },
-        output: ?struct {
-            format: ?RealtimeAudioFormats,
-            voice: ?VoiceIdsShared,
-            speed: ?f64,
-        },
-    },
+    input: ?struct {
+    format: ?RealtimeAudioFormats,
+    transcription: ?AudioTranscription,
+    noise_reduction: ?struct {
+    type: ?NoiseReductionType,
+},
+    turn_detection: ?RealtimeTurnDetection,
+},
+    output: ?struct {
+    format: ?RealtimeAudioFormats,
+    voice: ?VoiceIdsShared,
+    speed: ?f64,
+},
+},
     include: ?[]const []const u8,
     tracing: ?std.json.Value,
     tools: ?[]const std.json.Value,
@@ -4173,60 +4159,60 @@ pub const RealtimeSessionCreateResponse = struct {
     output_modalities: ?std.json.Value,
     instructions: ?[]const u8,
     audio: ?struct {
-        input: ?struct {
-            format: ?RealtimeAudioFormats,
-            transcription: ?AudioTranscription,
-            noise_reduction: ?struct {
-                type: ?NoiseReductionType,
-            },
-            turn_detection: ?struct {
-                type: ?[]const u8,
-                threshold: ?f64,
-                prefix_padding_ms: ?i64,
-                silence_duration_ms: ?i64,
-            },
-        },
-        output: ?struct {
-            format: ?RealtimeAudioFormats,
-            voice: ?VoiceIdsShared,
-            speed: ?f64,
-        },
-    },
+    input: ?struct {
+    format: ?RealtimeAudioFormats,
+    transcription: ?AudioTranscription,
+    noise_reduction: ?struct {
+    type: ?NoiseReductionType,
+},
+    turn_detection: ?struct {
+    type: ?[]const u8,
+    threshold: ?f64,
+    prefix_padding_ms: ?i64,
+    silence_duration_ms: ?i64,
+},
+},
+    output: ?struct {
+    format: ?RealtimeAudioFormats,
+    voice: ?VoiceIdsShared,
+    speed: ?f64,
+},
+},
     tracing: ?std.json.Value,
     turn_detection: ?struct {
-        type: ?[]const u8,
-        threshold: ?f64,
-        prefix_padding_ms: ?i64,
-        silence_duration_ms: ?i64,
-    },
+    type: ?[]const u8,
+    threshold: ?f64,
+    prefix_padding_ms: ?i64,
+    silence_duration_ms: ?i64,
+},
     tools: ?[]const RealtimeFunctionTool,
     tool_choice: ?[]const u8,
     max_output_tokens: ?std.json.Value,
 };
 pub const RealtimeSessionCreateResponseGA = struct {
     client_secret: struct {
-        value: []const u8,
-        expires_at: i64,
-    },
+    value: []const u8,
+    expires_at: i64,
+},
     type: []const u8,
     output_modalities: ?[]const []const u8,
     model: ?std.json.Value,
     instructions: ?[]const u8,
     audio: ?struct {
-        input: ?struct {
-            format: ?RealtimeAudioFormats,
-            transcription: ?AudioTranscription,
-            noise_reduction: ?struct {
-                type: ?NoiseReductionType,
-            },
-            turn_detection: ?RealtimeTurnDetection,
-        },
-        output: ?struct {
-            format: ?RealtimeAudioFormats,
-            voice: ?VoiceIdsShared,
-            speed: ?f64,
-        },
-    },
+    input: ?struct {
+    format: ?RealtimeAudioFormats,
+    transcription: ?AudioTranscription,
+    noise_reduction: ?struct {
+    type: ?NoiseReductionType,
+},
+    turn_detection: ?RealtimeTurnDetection,
+},
+    output: ?struct {
+    format: ?RealtimeAudioFormats,
+    voice: ?VoiceIdsShared,
+    speed: ?f64,
+},
+},
     include: ?[]const []const u8,
     tracing: ?std.json.Value,
     tools: ?[]const std.json.Value,
@@ -4237,14 +4223,14 @@ pub const RealtimeSessionCreateResponseGA = struct {
 };
 pub const RealtimeTranscriptionSessionCreateRequest = struct {
     turn_detection: ?struct {
-        type: ?[]const u8,
-        threshold: ?f64,
-        prefix_padding_ms: ?i64,
-        silence_duration_ms: ?i64,
-    },
+    type: ?[]const u8,
+    threshold: ?f64,
+    prefix_padding_ms: ?i64,
+    silence_duration_ms: ?i64,
+},
     input_audio_noise_reduction: ?struct {
-        type: ?NoiseReductionType,
-    },
+    type: ?NoiseReductionType,
+},
     input_audio_format: ?[]const u8,
     input_audio_transcription: ?AudioTranscription,
     include: ?[]const []const u8,
@@ -4252,31 +4238,31 @@ pub const RealtimeTranscriptionSessionCreateRequest = struct {
 pub const RealtimeTranscriptionSessionCreateRequestGA = struct {
     type: []const u8,
     audio: ?struct {
-        input: ?struct {
-            format: ?RealtimeAudioFormats,
-            transcription: ?AudioTranscription,
-            noise_reduction: ?struct {
-                type: ?NoiseReductionType,
-            },
-            turn_detection: ?RealtimeTurnDetection,
-        },
-    },
+    input: ?struct {
+    format: ?RealtimeAudioFormats,
+    transcription: ?AudioTranscription,
+    noise_reduction: ?struct {
+    type: ?NoiseReductionType,
+},
+    turn_detection: ?RealtimeTurnDetection,
+},
+},
     include: ?[]const []const u8,
 };
 pub const RealtimeTranscriptionSessionCreateResponse = struct {
     client_secret: struct {
-        value: []const u8,
-        expires_at: i64,
-    },
+    value: []const u8,
+    expires_at: i64,
+},
     modalities: ?std.json.Value,
     input_audio_format: ?[]const u8,
     input_audio_transcription: ?AudioTranscription,
     turn_detection: ?struct {
-        type: ?[]const u8,
-        threshold: ?f64,
-        prefix_padding_ms: ?i64,
-        silence_duration_ms: ?i64,
-    },
+    type: ?[]const u8,
+    threshold: ?f64,
+    prefix_padding_ms: ?i64,
+    silence_duration_ms: ?i64,
+},
 };
 pub const RealtimeTranscriptionSessionCreateResponseGA = struct {
     type: []const u8,
@@ -4285,20 +4271,20 @@ pub const RealtimeTranscriptionSessionCreateResponseGA = struct {
     expires_at: ?i64,
     include: ?[]const []const u8,
     audio: ?struct {
-        input: ?struct {
-            format: ?RealtimeAudioFormats,
-            transcription: ?AudioTranscription,
-            noise_reduction: ?struct {
-                type: ?NoiseReductionType,
-            },
-            turn_detection: ?struct {
-                type: ?[]const u8,
-                threshold: ?f64,
-                prefix_padding_ms: ?i64,
-                silence_duration_ms: ?i64,
-            },
-        },
-    },
+    input: ?struct {
+    format: ?RealtimeAudioFormats,
+    transcription: ?AudioTranscription,
+    noise_reduction: ?struct {
+    type: ?NoiseReductionType,
+},
+    turn_detection: ?struct {
+    type: ?[]const u8,
+    threshold: ?f64,
+    prefix_padding_ms: ?i64,
+    silence_duration_ms: ?i64,
+},
+},
+},
 };
 pub const RealtimeTruncation = std.json.Value;
 pub const RealtimeTurnDetection = std.json.Value;
@@ -4453,11 +4439,11 @@ pub const ResponseFormatJsonObject = struct {
 pub const ResponseFormatJsonSchema = struct {
     type: []const u8,
     json_schema: struct {
-        description: ?[]const u8,
-        name: []const u8,
-        schema: ?ResponseFormatJsonSchemaSchema,
-        strict: ?std.json.Value,
-    },
+    description: ?[]const u8,
+    name: []const u8,
+    schema: ?ResponseFormatJsonSchemaSchema,
+    strict: ?std.json.Value,
+},
 };
 pub const ResponseFormatJsonSchemaSchema = std.json.Value;
 pub const ResponseFormatText = struct {
@@ -4532,9 +4518,9 @@ pub const ResponseLogProb = struct {
     token: []const u8,
     logprob: f64,
     top_logprobs: ?[]const struct {
-        token: ?[]const u8,
-        logprob: ?f64,
-    },
+    token: ?[]const u8,
+    logprob: ?f64,
+},
 };
 pub const ResponseMCPCallArgumentsDeltaEvent = struct {
     type: []const u8,
@@ -4639,9 +4625,9 @@ pub const ResponseReasoningSummaryPartAddedEvent = struct {
     summary_index: i64,
     sequence_number: i64,
     part: struct {
-        type: []const u8,
-        text: []const u8,
-    },
+    type: []const u8,
+    text: []const u8,
+},
 };
 pub const ResponseReasoningSummaryPartDoneEvent = struct {
     type: []const u8,
@@ -4650,9 +4636,9 @@ pub const ResponseReasoningSummaryPartDoneEvent = struct {
     summary_index: i64,
     sequence_number: i64,
     part: struct {
-        type: []const u8,
-        text: []const u8,
-    },
+    type: []const u8,
+    text: []const u8,
+},
 };
 pub const ResponseReasoningSummaryTextDeltaEvent = struct {
     type: []const u8,
@@ -4729,12 +4715,12 @@ pub const ResponseTextParam = struct {
 pub const ResponseUsage = struct {
     input_tokens: i64,
     input_tokens_details: struct {
-        cached_tokens: i64,
-    },
+    cached_tokens: i64,
+},
     output_tokens: i64,
     output_tokens_details: struct {
-        reasoning_tokens: i64,
-    },
+    reasoning_tokens: i64,
+},
     total_tokens: i64,
 };
 pub const ResponseWebSearchCallCompletedEvent = struct {
@@ -4784,29 +4770,29 @@ pub const RunGraderRequest = struct {
 pub const RunGraderResponse = struct {
     reward: f64,
     metadata: struct {
-        name: []const u8,
-        type: []const u8,
-        errors: struct {
-            formula_parse_error: bool,
-            sample_parse_error: bool,
-            truncated_observation_error: bool,
-            unresponsive_reward_error: bool,
-            invalid_variable_error: bool,
-            other_error: bool,
-            python_grader_server_error: bool,
-            python_grader_server_error_type: std.json.Value,
-            python_grader_runtime_error: bool,
-            python_grader_runtime_error_details: std.json.Value,
-            model_grader_server_error: bool,
-            model_grader_refusal_error: bool,
-            model_grader_parse_error: bool,
-            model_grader_server_error_details: std.json.Value,
-        },
-        execution_time: f64,
-        scores: std.json.Value,
-        token_usage: std.json.Value,
-        sampled_model_name: std.json.Value,
-    },
+    name: []const u8,
+    type: []const u8,
+    errors: struct {
+    formula_parse_error: bool,
+    sample_parse_error: bool,
+    truncated_observation_error: bool,
+    unresponsive_reward_error: bool,
+    invalid_variable_error: bool,
+    other_error: bool,
+    python_grader_server_error: bool,
+    python_grader_server_error_type: std.json.Value,
+    python_grader_runtime_error: bool,
+    python_grader_runtime_error_details: std.json.Value,
+    model_grader_server_error: bool,
+    model_grader_refusal_error: bool,
+    model_grader_parse_error: bool,
+    model_grader_server_error_details: std.json.Value,
+},
+    execution_time: f64,
+    scores: std.json.Value,
+    token_usage: std.json.Value,
+    sampled_model_name: std.json.Value,
+},
     sub_rewards: std.json.Value,
     model_grader_token_usage_per_model: std.json.Value,
 };
@@ -4818,23 +4804,23 @@ pub const RunObject = struct {
     assistant_id: []const u8,
     status: RunStatus,
     required_action: struct {
-        type: []const u8,
-        submit_tool_outputs: struct {
-            tool_calls: []const RunToolCallObject,
-        },
-    },
+    type: []const u8,
+    submit_tool_outputs: struct {
+    tool_calls: []const RunToolCallObject,
+},
+},
     last_error: struct {
-        code: []const u8,
-        message: []const u8,
-    },
+    code: []const u8,
+    message: []const u8,
+},
     expires_at: i64,
     started_at: i64,
     cancelled_at: i64,
     failed_at: i64,
     completed_at: i64,
     incomplete_details: struct {
-        reason: ?[]const u8,
-    },
+    reason: ?[]const u8,
+},
     model: []const u8,
     instructions: []const u8,
     tools: []const AssistantTool,
@@ -4862,8 +4848,8 @@ pub const RunStepDeltaObjectDelta = struct {
 pub const RunStepDeltaStepDetailsMessageCreationObject = struct {
     type: []const u8,
     message_creation: ?struct {
-        message_id: ?[]const u8,
-    },
+    message_id: ?[]const u8,
+},
 };
 pub const RunStepDeltaStepDetailsToolCall = std.json.Value;
 pub const RunStepDeltaStepDetailsToolCallsCodeObject = struct {
@@ -4871,16 +4857,16 @@ pub const RunStepDeltaStepDetailsToolCallsCodeObject = struct {
     id: ?[]const u8,
     type: []const u8,
     code_interpreter: ?struct {
-        input: ?[]const u8,
-        outputs: ?[]const std.json.Value,
-    },
+    input: ?[]const u8,
+    outputs: ?[]const std.json.Value,
+},
 };
 pub const RunStepDeltaStepDetailsToolCallsCodeOutputImageObject = struct {
     index: i64,
     type: []const u8,
     image: ?struct {
-        file_id: ?[]const u8,
-    },
+    file_id: ?[]const u8,
+},
 };
 pub const RunStepDeltaStepDetailsToolCallsCodeOutputLogsObject = struct {
     index: i64,
@@ -4898,10 +4884,10 @@ pub const RunStepDeltaStepDetailsToolCallsFunctionObject = struct {
     id: ?[]const u8,
     type: []const u8,
     function: ?struct {
-        name: ?[]const u8,
-        arguments: ?[]const u8,
-        output: ?std.json.Value,
-    },
+    name: ?[]const u8,
+    arguments: ?[]const u8,
+    output: ?std.json.Value,
+},
 };
 pub const RunStepDeltaStepDetailsToolCallsObject = struct {
     type: []const u8,
@@ -4910,23 +4896,23 @@ pub const RunStepDeltaStepDetailsToolCallsObject = struct {
 pub const RunStepDetailsMessageCreationObject = struct {
     type: []const u8,
     message_creation: struct {
-        message_id: []const u8,
-    },
+    message_id: []const u8,
+},
 };
 pub const RunStepDetailsToolCall = std.json.Value;
 pub const RunStepDetailsToolCallsCodeObject = struct {
     id: []const u8,
     type: []const u8,
     code_interpreter: struct {
-        input: []const u8,
-        outputs: []const std.json.Value,
-    },
+    input: []const u8,
+    outputs: []const std.json.Value,
+},
 };
 pub const RunStepDetailsToolCallsCodeOutputImageObject = struct {
     type: []const u8,
     image: struct {
-        file_id: []const u8,
-    },
+    file_id: []const u8,
+},
 };
 pub const RunStepDetailsToolCallsCodeOutputLogsObject = struct {
     type: []const u8,
@@ -4936,9 +4922,9 @@ pub const RunStepDetailsToolCallsFileSearchObject = struct {
     id: []const u8,
     type: []const u8,
     file_search: struct {
-        ranking_options: ?RunStepDetailsToolCallsFileSearchRankingOptionsObject,
-        results: ?[]const RunStepDetailsToolCallsFileSearchResultObject,
-    },
+    ranking_options: ?RunStepDetailsToolCallsFileSearchRankingOptionsObject,
+    results: ?[]const RunStepDetailsToolCallsFileSearchResultObject,
+},
 };
 pub const RunStepDetailsToolCallsFileSearchRankingOptionsObject = struct {
     ranker: FileSearchRanker,
@@ -4949,18 +4935,18 @@ pub const RunStepDetailsToolCallsFileSearchResultObject = struct {
     file_name: []const u8,
     score: f64,
     content: ?[]const struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+},
 };
 pub const RunStepDetailsToolCallsFunctionObject = struct {
     id: []const u8,
     type: []const u8,
     function: struct {
-        name: []const u8,
-        arguments: []const u8,
-        output: std.json.Value,
-    },
+    name: []const u8,
+    arguments: []const u8,
+    output: std.json.Value,
+},
 };
 pub const RunStepDetailsToolCallsObject = struct {
     type: []const u8,
@@ -4990,9 +4976,9 @@ pub const RunToolCallObject = struct {
     id: []const u8,
     type: []const u8,
     function: struct {
-        name: []const u8,
-        arguments: []const u8,
-    },
+    name: []const u8,
+    arguments: []const u8,
+},
 };
 pub const Screenshot = struct {
     type: []const u8,
@@ -5019,10 +5005,10 @@ pub const SpeechAudioDeltaEvent = struct {
 pub const SpeechAudioDoneEvent = struct {
     type: []const u8,
     usage: struct {
-        input_tokens: i64,
-        output_tokens: i64,
-        total_tokens: i64,
-    },
+    input_tokens: i64,
+    output_tokens: i64,
+    total_tokens: i64,
+},
 };
 pub const StaticChunkingStrategy = struct {
     max_chunk_size_tokens: i64,
@@ -5039,16 +5025,16 @@ pub const StaticChunkingStrategyResponseParam = struct {
 pub const StopConfiguration = std.json.Value;
 pub const SubmitToolOutputsRunRequest = struct {
     tool_outputs: []const struct {
-        tool_call_id: ?[]const u8,
-        output: ?[]const u8,
-    },
+    tool_call_id: ?[]const u8,
+    output: ?[]const u8,
+},
     stream: ?std.json.Value,
 };
 pub const SubmitToolOutputsRunRequestWithoutStream = struct {
     tool_outputs: []const struct {
-        tool_call_id: ?[]const u8,
-        output: ?[]const u8,
-    },
+    tool_call_id: ?[]const u8,
+    output: ?[]const u8,
+},
 };
 pub const Summary = struct {
     type: []const u8,
@@ -5184,20 +5170,20 @@ pub const TranscriptTextDeltaEvent = struct {
     type: []const u8,
     delta: []const u8,
     logprobs: ?[]const struct {
-        token: ?[]const u8,
-        logprob: ?f64,
-        bytes: ?[]const i64,
-    },
+    token: ?[]const u8,
+    logprob: ?f64,
+    bytes: ?[]const i64,
+},
     segment_id: ?[]const u8,
 };
 pub const TranscriptTextDoneEvent = struct {
     type: []const u8,
     text: []const u8,
     logprobs: ?[]const struct {
-        token: ?[]const u8,
-        logprob: ?f64,
-        bytes: ?[]const i64,
-    },
+    token: ?[]const u8,
+    logprob: ?f64,
+    bytes: ?[]const i64,
+},
     usage: ?TranscriptTextUsageTokens,
 };
 pub const TranscriptTextSegmentEvent = struct {
@@ -5216,9 +5202,9 @@ pub const TranscriptTextUsageTokens = struct {
     type: []const u8,
     input_tokens: i64,
     input_token_details: ?struct {
-        text_tokens: ?i64,
-        audio_tokens: ?i64,
-    },
+    text_tokens: ?i64,
+    audio_tokens: ?i64,
+},
     output_tokens: i64,
     total_tokens: i64,
 };
@@ -5471,19 +5457,19 @@ pub const VectorStoreFileBatchObject = struct {
     vector_store_id: []const u8,
     status: []const u8,
     file_counts: struct {
-        in_progress: i64,
-        completed: i64,
-        failed: i64,
-        cancelled: i64,
-        total: i64,
-    },
+    in_progress: i64,
+    completed: i64,
+    failed: i64,
+    cancelled: i64,
+    total: i64,
+},
 };
 pub const VectorStoreFileContentResponse = struct {
     object: []const u8,
     data: []const struct {
-        type: ?[]const u8,
-        text: ?[]const u8,
-    },
+    type: ?[]const u8,
+    text: ?[]const u8,
+},
     has_more: bool,
     next_page: std.json.Value,
 };
@@ -5505,12 +5491,12 @@ pub const VectorStoreObject = struct {
     name: []const u8,
     usage_bytes: i64,
     file_counts: struct {
-        in_progress: i64,
-        completed: i64,
-        failed: i64,
-        cancelled: i64,
-        total: i64,
-    },
+    in_progress: i64,
+    completed: i64,
+    failed: i64,
+    cancelled: i64,
+    total: i64,
+},
     status: []const u8,
     expires_after: ?VectorStoreExpirationAfter,
     expires_at: ?std.json.Value,
@@ -5523,9 +5509,9 @@ pub const VectorStoreSearchRequest = struct {
     max_num_results: ?i64,
     filters: ?std.json.Value,
     ranking_options: ?struct {
-        ranker: ?[]const u8,
-        score_threshold: ?f64,
-    },
+    ranker: ?[]const u8,
+    score_threshold: ?f64,
+},
 };
 pub const VectorStoreSearchResultContentObject = struct {
     type: []const u8,
@@ -5615,9 +5601,9 @@ pub const WebSearchActionSearch = struct {
     type: []const u8,
     query: []const u8,
     sources: ?[]const struct {
-        type: []const u8,
-        url: []const u8,
-    },
+    type: []const u8,
+    url: []const u8,
+},
 };
 pub const WebSearchApproximateLocation = std.json.Value;
 pub const WebSearchContextSize = []const u8;
@@ -5648,8 +5634,8 @@ pub const WebhookBatchCancelled = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5657,8 +5643,8 @@ pub const WebhookBatchCompleted = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5666,8 +5652,8 @@ pub const WebhookBatchExpired = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5675,8 +5661,8 @@ pub const WebhookBatchFailed = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5684,8 +5670,8 @@ pub const WebhookEvalRunCanceled = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5693,8 +5679,8 @@ pub const WebhookEvalRunFailed = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5702,8 +5688,8 @@ pub const WebhookEvalRunSucceeded = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5711,8 +5697,8 @@ pub const WebhookFineTuningJobCancelled = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5720,8 +5706,8 @@ pub const WebhookFineTuningJobFailed = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5729,8 +5715,8 @@ pub const WebhookFineTuningJobSucceeded = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5738,12 +5724,12 @@ pub const WebhookRealtimeCallIncoming = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        call_id: []const u8,
-        sip_headers: []const struct {
-            name: []const u8,
-            value: []const u8,
-        },
-    },
+    call_id: []const u8,
+    sip_headers: []const struct {
+    name: []const u8,
+    value: []const u8,
+},
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5751,8 +5737,8 @@ pub const WebhookResponseCancelled = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5760,8 +5746,8 @@ pub const WebhookResponseCompleted = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5769,8 +5755,8 @@ pub const WebhookResponseFailed = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };
@@ -5778,8 +5764,8 @@ pub const WebhookResponseIncomplete = struct {
     created_at: i64,
     id: []const u8,
     data: struct {
-        id: []const u8,
-    },
+    id: []const u8,
+},
     object: ?[]const u8,
     type: []const u8,
 };

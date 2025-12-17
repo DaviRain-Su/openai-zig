@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 /// Minimal request shape for POST /chat/completions (text content only).
 pub const ChatMessage = struct {
@@ -29,16 +30,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
     ) errors.Error!std.json.Parsed(gen.ChatCompletionList) {
-        const resp = try self.transport.request(.GET, "/chat/completions", &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.ChatCompletionList, allocator, body, .{}) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendNoBodyTyped(self.transport, allocator, .GET, "/chat/completions", gen.ChatCompletionList);
     }
 
     /// POST /chat/completions -> dynamic JSON.
@@ -47,25 +39,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         req: CreateChatCompletionRequest,
     ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(req) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
-
-        const resp = try self.transport.request(.POST, "/chat/completions", &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.CreateChatCompletionResponse, allocator, body, .{}) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendJsonTyped(self.transport, allocator, .POST, "/chat/completions", req, gen.CreateChatCompletionResponse);
     }
 
     /// GET /chat/completions/{completion_id}
@@ -78,17 +52,7 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}", .{completion_id}) catch {
             return errors.Error.SerializeError;
         };
-
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.CreateChatCompletionResponse, allocator, body, .{}) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendNoBodyTyped(self.transport, allocator, .GET, path, gen.CreateChatCompletionResponse);
     }
 
     /// POST /chat/completions/{completion_id} (generic JSON payload)
@@ -102,15 +66,13 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}", .{completion_id}) catch {
             return errors.Error.SerializeError;
         };
-
         const resp = try self.transport.request(.POST, path, &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = "application/json" },
         }, payload);
         const body = resp.body;
         defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.CreateChatCompletionResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateChatCompletionResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -126,17 +88,7 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}", .{completion_id}) catch {
             return errors.Error.SerializeError;
         };
-
-        const resp = try self.transport.request(.DELETE, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.ChatCompletionDeleted, allocator, body, .{}) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendNoBodyTyped(self.transport, allocator, .DELETE, path, gen.ChatCompletionDeleted);
     }
 
     /// GET /chat/completions/{completion_id}/messages
@@ -149,16 +101,6 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}/messages", .{completion_id}) catch {
             return errors.Error.SerializeError;
         };
-
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.ChatCompletionMessageList, allocator, body, .{}) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendNoBodyTyped(self.transport, allocator, .GET, path, gen.ChatCompletionMessageList);
     }
 };
