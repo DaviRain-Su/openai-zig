@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
 """
-Minimal OpenAPI → IR → Zig stub generator.
+OpenAPI → IR + typed schema outlines.
+
 Reads spec/openapi.documented.yml and produces:
   - generated/ir.json (normalized operations + schemas)
-  - stub resource files for a small set of tags to keep the SDK compiling
+  - generated/types.zig (coarse Zig type hints from schemas)
 
-This is intentionally conservative: it resolves parameters/requestBody/responses
-into a small IR without attempting to fully lower schemas. The goal is to have
-an inspectable IR and a starting point for fleshing out models and resources.
+This is for inspection and future codegen; it no longer emits stub resources.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import pathlib
-from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
 import yaml
@@ -34,7 +33,78 @@ def to_snake(name: str) -> str:
     return "".join(out)
 
 
-def collect_parameters(raw_params: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+def sanitize_ident(name: str) -> str:
+    out = []
+    for ch in name:
+        if ch.isalnum() or ch == "_":
+            out.append(ch)
+        else:
+            out.append("_")
+    ident = "".join(out)
+    if ident and ident[0].isdigit():
+        ident = "_" + ident
+    return ident
+
+
+ZIG_KEYWORDS = {
+    "addrspace",
+    "align",
+    "allowzero",
+    "and",
+    "anyframe",
+    "asm",
+    "async",
+    "await",
+    "break",
+    "catch",
+    "comptime",
+    "const",
+    "continue",
+    "defer",
+    "else",
+    "enum",
+    "errdefer",
+    "error",
+    "export",
+    "extern",
+    "fn",
+    "for",
+    "if",
+    "inline",
+    "noalias",
+    "nosuspend",
+    "or",
+    "orelse",
+    "packed",
+    "pub",
+    "resume",
+    "return",
+    "linksection",
+    "struct",
+    "suspend",
+    "switch",
+    "test",
+    "threadlocal",
+    "try",
+    "union",
+    "unreachable",
+    "usingnamespace",
+    "var",
+    "volatile",
+    "while",
+}
+
+
+def safe_ident(name: str) -> str:
+    ident = sanitize_ident(name)
+    if ident in ZIG_KEYWORDS:
+        ident = "_" + ident
+    return ident
+
+
+def collect_parameters(
+    raw_params: List[Dict[str, Any]],
+) -> Dict[str, List[Dict[str, Any]]]:
     grouped: Dict[str, List[Dict[str, Any]]] = {"path": [], "query": [], "header": []}
     for p in raw_params:
         location = p.get("in")
@@ -51,7 +121,9 @@ def collect_parameters(raw_params: List[Dict[str, Any]]) -> Dict[str, List[Dict[
     return grouped
 
 
-def normalize_operation(path: str, method: str, op: Dict[str, Any], inherited_params: List[Dict[str, Any]]):
+def normalize_operation(
+    path: str, method: str, op: Dict[str, Any], inherited_params: List[Dict[str, Any]]
+):
     params = collect_parameters(inherited_params + op.get("parameters", []))
 
     def normalize_request_body(body: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -70,7 +142,10 @@ def normalize_operation(path: str, method: str, op: Dict[str, Any], inherited_pa
             entries = []
             for ctype, schema in content.items():
                 entries.append({"content_type": ctype, "schema": schema.get("schema")})
-            normalized[status] = {"description": resp.get("description"), "content": entries}
+            normalized[status] = {
+                "description": resp.get("description"),
+                "content": entries,
+            }
         return normalized
 
     return {
@@ -94,7 +169,15 @@ def build_ir(spec: Dict[str, Any]) -> Dict[str, Any]:
             continue
         inherited_params = path_item.get("parameters", [])
         for method, op in path_item.items():
-            if method.lower() not in {"get", "post", "put", "patch", "delete", "options", "head"}:
+            if method.lower() not in {
+                "get",
+                "post",
+                "put",
+                "patch",
+                "delete",
+                "options",
+                "head",
+            }:
                 continue
             if not isinstance(op, dict):
                 continue
@@ -108,84 +191,90 @@ def build_ir(spec: Dict[str, Any]) -> Dict[str, Any]:
 
 def write_ir(ir: Dict[str, Any], out_dir: pathlib.Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "ir.json").write_text(json.dumps(ir, indent=2, ensure_ascii=False), encoding="utf-8")
+    (out_dir / "ir.json").write_text(
+        json.dumps(ir, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
 
 
-STUB_TAGS = {"Audio", "Chat", "Models", "Files"}
+def zig_type_from_schema(name: str, schema: Dict[str, Any]) -> str:
+    """Coarse mapper from OpenAPI schema to Zig type string. Falls back to std.json.Value."""
+    if not schema:
+        return "std.json.Value"
+    if "$ref" in schema:
+        ref = schema["$ref"].split("/")[-1]
+        return safe_ident(ref)
+    t = schema.get("type")
+    if t == "string":
+        return "[]const u8"
+    if t == "integer":
+        return "i64"
+    if t == "number":
+        return "f64"
+    if t == "boolean":
+        return "bool"
+    if t == "array":
+        item_ty = zig_type_from_schema(name + "_item", schema.get("items") or {})
+        return "[]const " + item_ty
+    if t == "object":
+        props = schema.get("properties") or {}
+        required = set(schema.get("required") or [])
+        if not props:
+            return "std.json.Value"
+        fields = []
+        for prop_name, prop_schema in props.items():
+            field_name = safe_ident(to_snake(prop_name))
+            field_ty = zig_type_from_schema(prop_name, prop_schema)
+            if prop_name not in required:
+                field_ty = "?" + field_ty
+            fields.append(f"    {field_name}: {field_ty},")
+        return "struct {\n" + "\n".join(fields) + "\n}"
+    if "enum" in schema:
+        return "[]const u8"
+    if "anyOf" in schema or "oneOf" in schema or "allOf" in schema:
+        return "std.json.Value"
+    if schema.get("nullable"):
+        inner = zig_type_from_schema(
+            name, {k: v for k, v in schema.items() if k != "nullable"}
+        )
+        return "?" + inner
+    return "std.json.Value"
 
 
-def emit_stub_resources(ir: Dict[str, Any], src_dir: pathlib.Path) -> None:
-    resources_dir = src_dir / "resources"
-    resources_dir.mkdir(parents=True, exist_ok=True)
-
-    operations_by_tag: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for op in ir["operations"]:
-        operations_by_tag[op["tag"]].append(op)
-
-    for tag, ops in operations_by_tag.items():
-        if tag not in STUB_TAGS:
-            continue
-        name_snake = to_snake(tag)
-        zig_path = resources_dir / f"{name_snake}.zig"
-        with zig_path.open("w", encoding="utf-8") as f:
-            f.write(
-                """const errors = @import("../errors.zig");
-const transport_mod = @import("../transport/http.zig");
-
-pub const Resource = struct {
-    transport: *transport_mod.Transport;
-
-    pub fn init(transport: *transport_mod.Transport) Resource {
-        return Resource{ .transport = transport };
-    }
-
-"""
-            )
-            for op in ops:
-                fn_name = to_snake(op["id"])
-                f.write(f"    pub fn {fn_name}(self: *const Resource) errors.Error!void {{\n")
-                f.write("        _ = self;\n")
-                f.write(f"        return errors.unimplemented(\"{tag}.{op['id']}\");\n")
-                f.write("    }\n\n")
-            f.write("};\n")
-
-    # Master resources.zig that re-exports generated stubs.
-    aggregator = [
-        'const audio_mod = @import("resources/audio.zig");',
-        'const chat_mod = @import("resources/chat.zig");',
-        'const models_mod = @import("resources/models.zig");',
-        'const files_mod = @import("resources/files.zig");',
-        "",
-        "pub const audio = audio_mod;",
-        "pub const chat = chat_mod;",
-        "pub const models = models_mod;",
-        "pub const files = files_mod;",
-        "",
-        "pub const AudioResource = audio_mod.Resource;",
-        "pub const ChatResource = chat_mod.Resource;",
-        "pub const ModelsResource = models_mod.Resource;",
-        "pub const FilesResource = files_mod.Resource;",
-        "",
-    ]
-    (src_dir / "resources.zig").write_text("\n".join(aggregator), encoding="utf-8")
+def emit_schema_types(ir: Dict[str, Any], out_dir: pathlib.Path) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "types.zig"
+    lines = ['const std = @import("std");', ""]
+    for name, schema in sorted(ir["schemas"].items()):
+        ident = safe_ident(name)
+        ty = zig_type_from_schema(name, schema)
+        lines.append(f"pub const {ident} = {ty};")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Generate Zig SDK stubs from OpenAPI spec")
-    parser.add_argument("--spec", type=pathlib.Path, default=pathlib.Path("spec/openapi.documented.yml"))
-    parser.add_argument("--out", type=pathlib.Path, default=pathlib.Path("generated"))
-    parser.add_argument("--src", type=pathlib.Path, default=pathlib.Path("src"))
+    parser = argparse.ArgumentParser(
+        description="Generate IR and type hints from OpenAPI spec"
+    )
+    parser.add_argument(
+        "--spec", type=pathlib.Path, default=pathlib.Path("spec/openapi.documented.yml")
+    )
+    parser.add_argument(
+        "--ir-out", type=pathlib.Path, default=pathlib.Path("generated"), help="Directory for ir.json"
+    )
+    parser.add_argument(
+        "--types-out", type=pathlib.Path, default=pathlib.Path("src/generated"), help="Directory for types.zig"
+    )
     args = parser.parse_args()
 
     spec = load_spec(args.spec)
     ir = build_ir(spec)
-    write_ir(ir, args.out)
-    emit_stub_resources(ir, args.src)
+    write_ir(ir, args.ir_out)
+    emit_schema_types(ir, args.types_out)
 
     print(f"operations: {len(ir['operations'])}")
     print(f"schemas: {len(ir['schemas'])}")
-    print(f"stub tags: {', '.join(sorted(STUB_TAGS))}")
-    print(f"IR written to {args.out/'ir.json'}")
+    print(f"IR written to {args.ir_out / 'ir.json'}")
+    print(f"Types written to {args.types_out / 'types.zig'}")
 
 
 if __name__ == "__main__":

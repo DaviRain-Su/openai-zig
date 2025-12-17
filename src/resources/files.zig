@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const MultipartRequest = struct {
     content_type: []const u8,
@@ -35,7 +36,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListFilesParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ListFilesResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const writer = fbs.writer();
@@ -65,7 +66,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ListFilesResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -76,7 +77,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
         const resp = try self.transport.request(.POST, "/files", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
@@ -84,7 +85,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.OpenAIFile, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -95,7 +96,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         file_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeleteFileResponse) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
             return errors.Error.SerializeError;
@@ -107,7 +108,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.DeleteFileResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -118,7 +119,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         file_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
             return errors.Error.SerializeError;
@@ -130,7 +131,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.OpenAIFile, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
