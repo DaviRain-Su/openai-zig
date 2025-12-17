@@ -1,3 +1,4 @@
+const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 
@@ -8,28 +9,43 @@ pub const Resource = struct {
         return Resource{ .transport = transport };
     }
 
-    pub fn list_files(self: *const Resource) !void {
-        _ = self;
-        return errors.unimplemented("Files.listFiles");
+    /// GET /files
+    pub fn list_files(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+    ) errors.Error!std.json.Parsed(std.json.Value) {
+        const resp = try self.transport.request(.GET, "/files", &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
+
+        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 
-    pub fn create_file(self: *const Resource) !void {
-        _ = self;
-        return errors.unimplemented("Files.createFile");
-    }
+    /// GET /files/{file_id}
+    pub fn retrieve_file(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        file_id: []const u8,
+    ) errors.Error!std.json.Parsed(std.json.Value) {
+        var path_buf: [256]u8 = undefined;
+        const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
+            return errors.Error.SerializeError;
+        };
 
-    pub fn delete_file(self: *const Resource) !void {
-        _ = self;
-        return errors.unimplemented("Files.deleteFile");
-    }
+        const resp = try self.transport.request(.GET, path, &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        const body = resp.body;
+        defer self.transport.allocator.free(body);
 
-    pub fn retrieve_file(self: *const Resource) !void {
-        _ = self;
-        return errors.unimplemented("Files.retrieveFile");
-    }
-
-    pub fn download_file(self: *const Resource) !void {
-        _ = self;
-        return errors.unimplemented("Files.downloadFile");
+        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+            return errors.Error.DeserializeError;
+        };
+        return parsed;
     }
 };

@@ -10,6 +10,11 @@ pub fn main() !void {
     const api_key = try readApiKey(gpa, "config/api_key.txt");
     defer gpa.free(api_key);
 
+    if (api_key.len == 0) {
+        std.debug.print("API key missing; set config/api_key.txt to run live calls.\n", .{});
+        return;
+    }
+
     var client = try sdk.initClient(gpa, .{
         .base_url = "https://api.deepseek.com/v1",
         .api_key = api_key,
@@ -32,6 +37,28 @@ pub fn main() !void {
     const rendered = out.written();
 
     std.debug.print("Models list JSON:\n{s}\n", .{rendered});
+
+    // Simple chat completion call.
+    const messages = [_]sdk.resources.chat.ChatMessage{
+        .{ .role = "user", .content = "你是谁？" },
+    };
+    var chat = client.chat().create_chat_completion(gpa, .{
+        .model = "deepseek-chat",
+        .messages = &messages,
+    }) catch |err| {
+        if (err == errors.Error.HttpError) {
+            std.debug.print("Chat call failed (HTTP error)\n", .{});
+            return;
+        }
+        return err;
+    };
+    defer chat.deinit();
+
+    var chat_out: std.io.Writer.Allocating = .init(gpa);
+    defer chat_out.deinit();
+    var chat_stream: std.json.Stringify = .{ .writer = &chat_out.writer, .options = .{} };
+    try chat_stream.write(chat.value);
+    std.debug.print("Chat completion JSON:\n{s}\n", .{chat_out.written()});
 }
 
 test "client init/deinit" {
