@@ -11,7 +11,7 @@ pub fn main() !void {
     defer gpa.free(api_key);
 
     var client = try sdk.initClient(gpa, .{
-        .base_url = "https://api.openai.com/v1",
+        .base_url = "https://api.deepseek.com/v1",
         .api_key = api_key,
     });
     defer client.deinit();
