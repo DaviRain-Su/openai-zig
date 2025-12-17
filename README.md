@@ -29,6 +29,7 @@ zig build -Dexamples=true run-examples  # build + run example binaries
 - `examples/chat_completion.zig`
 - `examples/chat_list.zig`
 - `examples/files_list.zig`
+- `examples/audio_speech.zig`
 
 ## Generator
 ```sh

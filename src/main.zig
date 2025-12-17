@@ -64,7 +64,7 @@ pub fn main() !void {
 
 test "client init/deinit" {
     const gpa = std.heap.page_allocator;
-    const client = try sdk.initClient(gpa, .{
+    var client = try sdk.initClient(gpa, .{
         .base_url = "https://api.openai.com/v1",
         .api_key = null,
     });

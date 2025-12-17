@@ -21,19 +21,20 @@ pub fn main() !void {
     });
     defer client.deinit();
 
-    var chats = client.chat().list_chat_completions(gpa) catch |err| {
+    var resp = client.audio().create_speech(gpa, .{
+        .model = "gpt-oss-20b", // change to a valid TTS model you have access to
+        .input = "Hello from Zig",
+        .voice = "alloy",
+        .response_format = "mp3",
+    }) catch |err| {
         if (err == errors.Error.HttpError) {
-            std.debug.print("HTTP error (likely invalid key)\n", .{});
+            std.debug.print("HTTP error (likely invalid key/model)\n", .{});
             return;
         }
         return err;
     };
-    defer chats.deinit();
+    defer resp.deinit();
 
-    var out: std.io.Writer.Allocating = .init(gpa);
-    defer out.deinit();
-    var stream: std.json.Stringify = .{ .writer = &out.writer, .options = .{} };
-    try stream.write(chats.value);
-
-    std.debug.print("Chat completions list:\n{s}\n", .{out.written()});
+    try std.fs.cwd().writeFile(.{ .sub_path = "speech.mp3", .data = resp.data });
+    std.debug.print("Wrote speech.mp3 ({d} bytes)\n", .{resp.data.len});
 }

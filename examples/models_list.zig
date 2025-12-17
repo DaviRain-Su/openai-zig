@@ -1,6 +1,6 @@
 const std = @import("std");
 const sdk = @import("openai_zig");
-const config = @import("config.zig");
+const config = @import("config");
 
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};

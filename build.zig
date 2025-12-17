@@ -31,6 +31,14 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    const config_mod = b.createModule(.{
+        .root_source_file = b.path("src/config.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "toml", .module = toml_mod },
+        },
+    });
 
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
@@ -91,6 +99,7 @@ pub fn build(b: *std.Build) void {
                 // importing modules from different packages).
                 .{ .name = "openai_zig", .module = mod },
                 .{ .name = "toml", .module = toml_mod },
+                .{ .name = "config", .module = config_mod },
             },
         }),
     });
@@ -162,6 +171,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "chat_completion", .path = "examples/chat_completion.zig" },
             .{ .name = "files_list", .path = "examples/files_list.zig" },
             .{ .name = "chat_list", .path = "examples/chat_list.zig" },
+            .{ .name = "audio_speech", .path = "examples/audio_speech.zig" },
         };
         const run_examples = b.step("run-examples", "Run all examples");
         inline for (examples) |ex| {
@@ -174,6 +184,7 @@ pub fn build(b: *std.Build) void {
                     .imports = &.{
                         .{ .name = "openai_zig", .module = mod },
                         .{ .name = "toml", .module = toml_mod },
+                        .{ .name = "config", .module = config_mod },
                     },
                 }),
             });

@@ -53,8 +53,9 @@ pub const Client = struct {
 
     /// Simple helper to validate connectivity by calling GET /models (stubbed).
     pub fn ping(self: *Client) !void {
-        _ = self;
-        // TODO: replace with a real models.list call once generated.
-        return errors.unimplemented("ping");
+        const resp = try self.transport.request(.GET, "/models", &.{
+            .{ .name = "Accept", .value = "application/json" },
+        }, null);
+        self.transport.allocator.free(resp.body);
     }
 };
