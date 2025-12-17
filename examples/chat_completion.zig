@@ -27,7 +27,7 @@ pub fn main() !void {
     };
 
     var chat = client.chat().create_chat_completion(gpa, .{
-        .model = "gpt-oss-20b",
+        .model = conf.model,
         .messages = &messages,
     }) catch |err| {
         if (err == errors.Error.HttpError) {

@@ -4,10 +4,12 @@ const toml = @import("toml");
 pub const Config = struct {
     api_key: []const u8,
     base_url: []const u8,
+    model: []const u8,
 
     pub fn deinit(self: *Config, allocator: std.mem.Allocator) void {
         allocator.free(self.api_key);
         allocator.free(self.base_url);
+        allocator.free(self.model);
     }
 };
 
@@ -15,12 +17,15 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
     const defaults = .{
         .api_key = "",
         .base_url = "https://api.deepseek.com/v1",
+        .model = "deepseek-chat",
     };
 
     var api_key: ?[]const u8 = null;
     var base_url: ?[]const u8 = null;
+    var model: ?[]const u8 = null;
     errdefer if (api_key) |val| allocator.free(val);
     errdefer if (base_url) |val| allocator.free(val);
+    errdefer if (model) |val| allocator.free(val);
 
     if (std.fs.cwd().openFile(path, .{})) |file| {
         defer file.close();
@@ -44,13 +49,20 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
             break :blk defaults.base_url;
         } else defaults.base_url;
 
+        const model_src = if (table.keys.get("model")) |val| blk: {
+            if (val == .String) break :blk val.String;
+            break :blk defaults.model;
+        } else defaults.model;
+
         // Copy while the parsed table is still alive to avoid dangling references.
         api_key = try allocator.dupe(u8, api_key_src);
         base_url = try allocator.dupe(u8, base_url_src);
+        model = try allocator.dupe(u8, model_src);
     } else |_| {
         api_key = try allocator.dupe(u8, defaults.api_key);
         base_url = try allocator.dupe(u8, defaults.base_url);
+        model = try allocator.dupe(u8, defaults.model);
     }
 
-    return Config{ .api_key = api_key.?, .base_url = base_url.? };
+    return Config{ .api_key = api_key.?, .base_url = base_url.?, .model = model.? };
 }
