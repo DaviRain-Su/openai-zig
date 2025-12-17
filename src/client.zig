@@ -139,6 +139,10 @@ pub const Client = struct {
         return resources.DefaultResource.init(&self.transport);
     }
 
+    pub fn conversations(self: *Client) resources.ConversationsResource {
+        return resources.ConversationsResource.init(&self.transport);
+    }
+
     pub fn rawTransport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }

@@ -25,6 +25,7 @@ const assistants_mod = @import("resources/assistants.zig");
 const videos_mod = @import("resources/videos.zig");
 const fine_tuning_mod = @import("resources/fine_tuning.zig");
 const default_mod = @import("resources/default.zig");
+const conversations_mod = @import("resources/conversations.zig");
 
 pub const audio = audio_mod;
 pub const chat = chat_mod;
@@ -53,6 +54,7 @@ pub const assistants = assistants_mod;
 pub const videos = videos_mod;
 pub const fine_tuning = fine_tuning_mod;
 pub const defaults = default_mod;
+pub const conversations = conversations_mod;
 
 pub const AudioResource = audio_mod.Resource;
 pub const ChatResource = chat_mod.Resource;
@@ -81,3 +83,4 @@ pub const AssistantsResource = assistants_mod.Resource;
 pub const VideosResource = videos_mod.Resource;
 pub const FineTuningResource = fine_tuning_mod.Resource;
 pub const DefaultResource = default_mod.Resource;
+pub const ConversationsResource = conversations_mod.Resource;

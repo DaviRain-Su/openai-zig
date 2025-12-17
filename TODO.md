@@ -8,7 +8,7 @@ Track remaining OpenAPI tags to implement. Check off as resources are filled out
 - [ ] Certificates (10)
 - [x] Chat (6)
 - [x] Completions (1)
-- [ ] Conversations (8)
+- [x] Conversations (8)
 - [x] Embeddings (1)
 - [ ] Evals (12)
 - [x] Files (5)
