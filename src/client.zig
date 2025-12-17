@@ -79,6 +79,50 @@ pub const Client = struct {
         return resources.BatchResource.init(&self.transport);
     }
 
+    pub fn audit_logs(self: *Client) resources.AuditLogsResource {
+        return resources.AuditLogsResource.init(&self.transport);
+    }
+
+    pub fn invites(self: *Client) resources.InvitesResource {
+        return resources.InvitesResource.init(&self.transport);
+    }
+
+    pub fn roles(self: *Client) resources.RolesResource {
+        return resources.RolesResource.init(&self.transport);
+    }
+
+    pub fn users(self: *Client) resources.UsersResource {
+        return resources.UsersResource.init(&self.transport);
+    }
+
+    pub fn user_role_assignments(self: *Client) resources.UserRoleAssignmentsResource {
+        return resources.UserRoleAssignmentsResource.init(&self.transport);
+    }
+
+    pub fn group_users(self: *Client) resources.GroupUsersResource {
+        return resources.GroupUsersResource.init(&self.transport);
+    }
+
+    pub fn groups(self: *Client) resources.GroupsResource {
+        return resources.GroupsResource.init(&self.transport);
+    }
+
+    pub fn group_role_assignments(self: *Client) resources.GroupRoleAssignmentsResource {
+        return resources.GroupRoleAssignmentsResource.init(&self.transport);
+    }
+
+    pub fn project_groups(self: *Client) resources.ProjectGroupsResource {
+        return resources.ProjectGroupsResource.init(&self.transport);
+    }
+
+    pub fn project_group_role_assignments(self: *Client) resources.ProjectGroupRoleAssignmentsResource {
+        return resources.ProjectGroupRoleAssignmentsResource.init(&self.transport);
+    }
+
+    pub fn project_user_role_assignments(self: *Client) resources.ProjectUserRoleAssignmentsResource {
+        return resources.ProjectUserRoleAssignmentsResource.init(&self.transport);
+    }
+
     pub fn rawTransport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }
