@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const Range = struct {
     gt: ?u64 = null,
@@ -33,7 +34,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListAuditLogsParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ListAuditLogsResponse) {
         var buf: [1024]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const writer = fbs.writer();
@@ -109,7 +110,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ListAuditLogsResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

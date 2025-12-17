@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const CreateBatchRequest = struct {
     input_file_id: []const u8,
@@ -27,7 +28,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateBatchRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Batch) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -43,7 +44,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -54,7 +55,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListBatchesParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.ListBatchesResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const writer = fbs.writer();
@@ -76,7 +77,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ListBatchesResponse, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -87,7 +88,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         batch_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Batch) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/batches/{s}", .{batch_id}) catch {
             return errors.Error.SerializeError;
@@ -99,7 +100,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -110,7 +111,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         batch_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Batch) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/batches/{s}/cancel", .{batch_id}) catch {
             return errors.Error.SerializeError;
@@ -122,7 +123,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
