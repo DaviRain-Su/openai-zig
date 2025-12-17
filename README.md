@@ -16,7 +16,14 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
 ```sh
 zig build          # compile
 zig build run      # run the demo (models list + chat completion)
+zig build -Dexamples=true run-examples  # build + run example binaries
 ```
+
+## Examples
+- `examples/models_list.zig`
+- `examples/chat_completion.zig`
+- `examples/chat_list.zig`
+- `examples/files_list.zig`
 
 ## Generator
 ```sh

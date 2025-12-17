@@ -11,7 +11,7 @@ pub fn main() !void {
     defer gpa.free(api_key);
 
     if (api_key.len == 0) {
-        std.debug.print("API key missing; set config/api_key.txt to run live calls.\n", .{});
+        std.debug.print("API key missing; set config/api_key.txt\n", .{});
         return;
     }
 
@@ -21,53 +21,28 @@ pub fn main() !void {
     });
     defer client.deinit();
 
-    var models = client.models().list_models(gpa) catch |err| {
-        if (err == errors.Error.HttpError) {
-            std.debug.print("HTTP error (check API key/base URL)\n", .{});
-            return;
-        }
-        return err;
-    };
-    defer models.deinit();
-
-    var out: std.io.Writer.Allocating = .init(gpa);
-    defer out.deinit();
-    var stream: std.json.Stringify = .{ .writer = &out.writer, .options = .{} };
-    try stream.write(models.value);
-    const rendered = out.written();
-
-    std.debug.print("Models list JSON:\n{s}\n", .{rendered});
-
-    // Simple chat completion call.
     const messages = [_]sdk.resources.chat.ChatMessage{
         .{ .role = "user", .content = "Say hello from Zig" },
     };
+
     var chat = client.chat().create_chat_completion(gpa, .{
         .model = "deepseek-chat",
         .messages = &messages,
     }) catch |err| {
         if (err == errors.Error.HttpError) {
-            std.debug.print("Chat call failed (HTTP error)\n", .{});
+            std.debug.print("HTTP error (likely invalid key)\n", .{});
             return;
         }
         return err;
     };
     defer chat.deinit();
 
-    var chat_out: std.io.Writer.Allocating = .init(gpa);
-    defer chat_out.deinit();
-    var chat_stream: std.json.Stringify = .{ .writer = &chat_out.writer, .options = .{} };
-    try chat_stream.write(chat.value);
-    std.debug.print("Chat completion JSON:\n{s}\n", .{chat_out.written()});
-}
+    var out: std.io.Writer.Allocating = .init(gpa);
+    defer out.deinit();
+    var stream: std.json.Stringify = .{ .writer = &out.writer, .options = .{} };
+    try stream.write(chat.value);
 
-test "client init/deinit" {
-    const gpa = std.heap.page_allocator;
-    const client = try sdk.initClient(gpa, .{
-        .base_url = "https://api.openai.com/v1",
-        .api_key = null,
-    });
-    defer client.deinit();
+    std.debug.print("Chat completion:\n{s}\n", .{out.written()});
 }
 
 fn readApiKey(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
