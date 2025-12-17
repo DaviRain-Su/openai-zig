@@ -16,6 +16,7 @@ pub const CreateChatCompletionRequest = struct {
     max_tokens: ?u32 = null,
     temperature: ?f64 = null,
     stream: ?bool = null,
+    response_format: ?std.json.Value = null,
 };
 
 pub const Resource = struct {
