@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const ListParams = struct {
     limit: ?u32 = null,
@@ -55,25 +56,7 @@ pub const Resource = struct {
         value: anytype,
         comptime T: type,
     ) errors.Error!std.json.Parsed(T) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(value) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
-
-        const resp = try self.transport.request(method, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendJsonTyped(self.transport, allocator, method, path, value, T);
     }
 
     fn sendNoBodyTyped(
@@ -83,16 +66,7 @@ pub const Resource = struct {
         path: []const u8,
         comptime T: type,
     ) errors.Error!std.json.Parsed(T) {
-        const resp = try self.transport.request(method, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendNoBodyTyped(self.transport, allocator, method, path, T);
     }
 
     /// Projects

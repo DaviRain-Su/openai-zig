@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const Resource = struct {
     transport: *transport_mod.Transport,
@@ -17,25 +18,7 @@ pub const Resource = struct {
         body: anytype,
         comptime T: type,
     ) errors.Error!std.json.Parsed(T) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(body) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
-
-        const resp = try self.transport.request(.POST, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const resp_body = resp.body;
-        defer self.transport.allocator.free(resp_body);
-
-        const parsed = std.json.parseFromSlice(T, allocator, resp_body, .{}) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendJsonTyped(self.transport, allocator, .POST, path, body, T);
     }
 
     pub fn create_realtime_call(self: *const Resource, allocator: std.mem.Allocator, body: gen.RealtimeCallCreateRequest) errors.Error!std.json.Parsed(std.json.Value) {
