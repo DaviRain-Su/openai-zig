@@ -44,7 +44,7 @@ pub fn main() !void {
         .{ .role = "user", .content = "Say hello from Zig" },
     };
     var chat = client.chat().create_chat_completion(gpa, .{
-        .model = "deepseek-chat",
+        .model = "gpt-oss-20b",
         .messages = &messages,
     }) catch |err| {
         if (err == errors.Error.HttpError) {

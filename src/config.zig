@@ -17,8 +17,10 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
         .base_url = "https://api.deepseek.com/v1",
     };
 
-    var api_key_src: []const u8 = defaults.api_key;
-    var base_url_src: []const u8 = defaults.base_url;
+    var api_key: ?[]const u8 = null;
+    var base_url: ?[]const u8 = null;
+    errdefer if (api_key) |val| allocator.free(val);
+    errdefer if (base_url) |val| allocator.free(val);
 
     if (std.fs.cwd().openFile(path, .{})) |file| {
         defer file.close();
@@ -32,27 +34,23 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
         var table = try parser.parse();
         defer table.deinit();
 
-        if (table.keys.get("api_key")) |val| {
-            if (val == .String) {
-                api_key_src = val.String;
-            }
-        }
-        if (table.keys.get("base_url")) |val| {
-            if (val == .String) {
-                base_url_src = val.String;
-            }
-        }
+        const api_key_src = if (table.keys.get("api_key")) |val| blk: {
+            if (val == .String) break :blk val.String;
+            break :blk defaults.api_key;
+        } else defaults.api_key;
+
+        const base_url_src = if (table.keys.get("base_url")) |val| blk: {
+            if (val == .String) break :blk val.String;
+            break :blk defaults.base_url;
+        } else defaults.base_url;
+
+        // Copy while the parsed table is still alive to avoid dangling references.
+        api_key = try allocator.dupe(u8, api_key_src);
+        base_url = try allocator.dupe(u8, base_url_src);
     } else |_| {
-        // missing config file: keep defaults
+        api_key = try allocator.dupe(u8, defaults.api_key);
+        base_url = try allocator.dupe(u8, defaults.base_url);
     }
 
-    const api_key = try dup(allocator, api_key_src);
-    const base_url = try dup(allocator, base_url_src);
-    return Config{ .api_key = api_key, .base_url = base_url };
-}
-
-fn dup(allocator: std.mem.Allocator, src: []const u8) ![]const u8 {
-    const buf = try allocator.alloc(u8, src.len);
-    @memcpy(buf, src);
-    return buf;
+    return Config{ .api_key = api_key.?, .base_url = base_url.? };
 }
