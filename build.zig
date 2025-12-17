@@ -21,6 +21,17 @@ pub fn build(b: *std.Build) void {
     // target and optimize options) will be listed when running `zig build --help`
     // in this directory.
 
+    // Dependencies
+    const zig_toml = b.dependency("zig_toml", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const toml_mod = b.createModule(.{
+        .root_source_file = zig_toml.path("src/toml.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
     // Zig modules are the preferred way of making Zig code available to consumers.
@@ -79,6 +90,7 @@ pub fn build(b: *std.Build) void {
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
                 .{ .name = "openai_zig", .module = mod },
+                .{ .name = "toml", .module = toml_mod },
             },
         }),
     });
@@ -159,7 +171,10 @@ pub fn build(b: *std.Build) void {
                     .root_source_file = b.path(ex.path),
                     .target = target,
                     .optimize = optimize,
-                    .imports = &.{.{ .name = "openai_zig", .module = mod }},
+                    .imports = &.{
+                        .{ .name = "openai_zig", .module = mod },
+                        .{ .name = "toml", .module = toml_mod },
+                    },
                 }),
             });
             const run_ex = b.addRunArtifact(exe_example);

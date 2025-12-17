@@ -10,7 +10,12 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
 
 ## Prerequisites
 - Zig 0.15.x (matches the lib path in this environment).
-- Place your API key in `config/api_key.txt` (single line, no quotes). Empty or invalid keys will return HTTP 401.
+- Config is read from `config/config.toml`:
+  ```toml
+  api_key = "sk-..."
+  base_url = "https://api.deepseek.com/v1"
+  ```
+  `api_key` is required for live calls; `base_url` defaults to DeepSeek if omitted.
 
 ## Build and run
 ```sh

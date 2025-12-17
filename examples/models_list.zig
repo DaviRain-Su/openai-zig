@@ -1,22 +1,23 @@
 const std = @import("std");
 const sdk = @import("openai_zig");
+const config = @import("config.zig");
 
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa_impl.deinit();
     const gpa = gpa_impl.allocator();
 
-    const api_key = try readApiKey(gpa, "config/api_key.txt");
-    defer gpa.free(api_key);
+    var conf = try config.load(gpa, "config/config.toml");
+    defer conf.deinit(gpa);
 
-    if (api_key.len == 0) {
-        std.debug.print("API key missing; set config/api_key.txt\n", .{});
+    if (conf.api_key.len == 0) {
+        std.debug.print("API key missing; set config/config.toml\n", .{});
         return;
     }
 
     var client = try sdk.initClient(gpa, .{
-        .base_url = "https://api.deepseek.com/v1",
-        .api_key = api_key,
+        .base_url = conf.base_url,
+        .api_key = conf.api_key,
     });
     defer client.deinit();
 
@@ -31,13 +32,17 @@ pub fn main() !void {
     std.debug.print("Models list:\n{s}\n", .{out.written()});
 }
 
-fn readApiKey(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
-    var file = try std.fs.cwd().openFile(path, .{});
-    defer file.close();
-    const data = try file.readToEndAlloc(allocator, 4 * 1024);
-    const trimmed = std.mem.trim(u8, data, " \t\r\n");
-    const copy = try allocator.alloc(u8, trimmed.len);
-    @memcpy(copy, trimmed);
-    allocator.free(data);
-    return copy;
+fn readBaseUrl(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
+    const file_result = std.fs.cwd().openFile(path, .{});
+    if (file_result) |file| {
+        defer file.close();
+        const data = try file.readToEndAlloc(allocator, 512);
+        const trimmed = std.mem.trim(u8, data, " \t\r\n");
+        const copy = try allocator.alloc(u8, trimmed.len);
+        @memcpy(copy, trimmed);
+        allocator.free(data);
+        return copy;
+    } else |_| {
+        return allocator.alloc(u8, 0);
+    }
 }
