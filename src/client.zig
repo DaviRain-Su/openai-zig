@@ -127,6 +127,18 @@ pub const Client = struct {
         return resources.AssistantsResource.init(&self.transport);
     }
 
+    pub fn videos(self: *Client) resources.VideosResource {
+        return resources.VideosResource.init(&self.transport);
+    }
+
+    pub fn fine_tuning(self: *Client) resources.FineTuningResource {
+        return resources.FineTuningResource.init(&self.transport);
+    }
+
+    pub fn defaults(self: *Client) resources.DefaultResource {
+        return resources.DefaultResource.init(&self.transport);
+    }
+
     pub fn rawTransport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }
