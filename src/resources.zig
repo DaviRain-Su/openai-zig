@@ -5,6 +5,9 @@ const files_mod = @import("resources/files.zig");
 const completions_mod = @import("resources/completions.zig");
 const embeddings_mod = @import("resources/embeddings.zig");
 const images_mod = @import("resources/images.zig");
+const moderations_mod = @import("resources/moderations.zig");
+const usage_mod = @import("resources/usage.zig");
+const uploads_mod = @import("resources/uploads.zig");
 
 pub const audio = audio_mod;
 pub const chat = chat_mod;
@@ -13,6 +16,9 @@ pub const files = files_mod;
 pub const completions = completions_mod;
 pub const embeddings = embeddings_mod;
 pub const images = images_mod;
+pub const moderations = moderations_mod;
+pub const usage = usage_mod;
+pub const uploads = uploads_mod;
 
 pub const AudioResource = audio_mod.Resource;
 pub const ChatResource = chat_mod.Resource;
@@ -21,3 +27,6 @@ pub const FilesResource = files_mod.Resource;
 pub const CompletionsResource = completions_mod.Resource;
 pub const EmbeddingsResource = embeddings_mod.Resource;
 pub const ImagesResource = images_mod.Resource;
+pub const ModerationsResource = moderations_mod.Resource;
+pub const UsageResource = usage_mod.Resource;
+pub const UploadsResource = uploads_mod.Resource;

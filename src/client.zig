@@ -59,6 +59,18 @@ pub const Client = struct {
         return resources.ImagesResource.init(&self.transport);
     }
 
+    pub fn moderations(self: *Client) resources.ModerationsResource {
+        return resources.ModerationsResource.init(&self.transport);
+    }
+
+    pub fn usage(self: *Client) resources.UsageResource {
+        return resources.UsageResource.init(&self.transport);
+    }
+
+    pub fn uploads(self: *Client) resources.UploadsResource {
+        return resources.UploadsResource.init(&self.transport);
+    }
+
     pub fn rawTransport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }
