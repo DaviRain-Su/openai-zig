@@ -4,7 +4,7 @@ Track remaining OpenAPI tags to implement. Check off as resources are filled out
 
 - [ ] Assistants (23)
 - [ ] Audit Logs (1)
-- [ ] Batch (4)
+- [x] Batch (4)
 - [ ] Certificates (10)
 - [x] Chat (6)
 - [x] Completions (1)
@@ -25,7 +25,7 @@ Track remaining OpenAPI tags to implement. Check off as resources are filled out
 - [ ] Project user role assignments (3)
 - [ ] Projects (19)
 - [ ] Realtime (8)
-- [ ] Responses (5)
+- [x] Responses (5)
 - [ ] Roles (8)
 - [x] Uploads (4)
 - [x] Usage (9)

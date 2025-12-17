@@ -8,6 +8,8 @@ const images_mod = @import("resources/images.zig");
 const moderations_mod = @import("resources/moderations.zig");
 const usage_mod = @import("resources/usage.zig");
 const uploads_mod = @import("resources/uploads.zig");
+const responses_mod = @import("resources/responses.zig");
+const batch_mod = @import("resources/batch.zig");
 
 pub const audio = audio_mod;
 pub const chat = chat_mod;
@@ -19,6 +21,8 @@ pub const images = images_mod;
 pub const moderations = moderations_mod;
 pub const usage = usage_mod;
 pub const uploads = uploads_mod;
+pub const responses = responses_mod;
+pub const batch = batch_mod;
 
 pub const AudioResource = audio_mod.Resource;
 pub const ChatResource = chat_mod.Resource;
@@ -30,3 +34,5 @@ pub const ImagesResource = images_mod.Resource;
 pub const ModerationsResource = moderations_mod.Resource;
 pub const UsageResource = usage_mod.Resource;
 pub const UploadsResource = uploads_mod.Resource;
+pub const ResponsesResource = responses_mod.Resource;
+pub const BatchResource = batch_mod.Resource;

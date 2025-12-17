@@ -71,6 +71,14 @@ pub const Client = struct {
         return resources.UploadsResource.init(&self.transport);
     }
 
+    pub fn responses(self: *Client) resources.ResponsesResource {
+        return resources.ResponsesResource.init(&self.transport);
+    }
+
+    pub fn batch(self: *Client) resources.BatchResource {
+        return resources.BatchResource.init(&self.transport);
+    }
+
     pub fn rawTransport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }
