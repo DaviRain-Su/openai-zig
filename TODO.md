@@ -2,7 +2,7 @@
 
 Track remaining OpenAPI tags to implement. Check off as resources are filled out.
 
-- [ ] Assistants (23)
+- [x] Assistants (23)
 - [x] Audit Logs (1)
 - [x] Batch (4)
 - [ ] Certificates (10)

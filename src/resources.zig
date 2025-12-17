@@ -21,6 +21,7 @@ const group_roles_mod = @import("resources/group_role_assignments.zig");
 const project_groups_mod = @import("resources/project_groups.zig");
 const project_group_roles_mod = @import("resources/project_group_role_assignments.zig");
 const project_user_roles_mod = @import("resources/project_user_role_assignments.zig");
+const assistants_mod = @import("resources/assistants.zig");
 
 pub const audio = audio_mod;
 pub const chat = chat_mod;
@@ -45,6 +46,7 @@ pub const group_role_assignments = group_roles_mod;
 pub const project_groups = project_groups_mod;
 pub const project_group_role_assignments = project_group_roles_mod;
 pub const project_user_role_assignments = project_user_roles_mod;
+pub const assistants = assistants_mod;
 
 pub const AudioResource = audio_mod.Resource;
 pub const ChatResource = chat_mod.Resource;
@@ -69,3 +71,4 @@ pub const GroupRoleAssignmentsResource = group_roles_mod.Resource;
 pub const ProjectGroupsResource = project_groups_mod.Resource;
 pub const ProjectGroupRoleAssignmentsResource = project_group_roles_mod.Resource;
 pub const ProjectUserRoleAssignmentsResource = project_user_roles_mod.Resource;
+pub const AssistantsResource = assistants_mod.Resource;

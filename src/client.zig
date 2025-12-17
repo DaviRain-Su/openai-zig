@@ -123,6 +123,10 @@ pub const Client = struct {
         return resources.ProjectUserRoleAssignmentsResource.init(&self.transport);
     }
 
+    pub fn assistants(self: *Client) resources.AssistantsResource {
+        return resources.AssistantsResource.init(&self.transport);
+    }
+
     pub fn rawTransport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }
