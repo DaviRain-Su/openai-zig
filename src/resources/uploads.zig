@@ -1,23 +1,11 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
-pub const CreateUploadRequest = struct {
-    filename: []const u8,
-    purpose: []const u8,
-    bytes: u64,
-    mime_type: []const u8,
-    expires_after: ?ExpiresAfter = null,
-};
-
-pub const ExpiresAfter = struct {
-    anchor: []const u8,
-    seconds: u32,
-};
-
-pub const CompleteUploadRequest = struct {
-    part_ids: []const []const u8,
-};
+pub const CreateUploadRequest = gen.CreateUploadRequest;
+pub const ExpiresAfter = gen.ExpiresAfterParam;
+pub const CompleteUploadRequest = gen.CompleteUploadRequest;
 
 pub const MultipartPart = struct {
     content_type: []const u8,
@@ -36,7 +24,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateUploadRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Upload) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -52,7 +40,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -63,7 +51,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         upload_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Upload) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/uploads/{s}/cancel", .{upload_id}) catch {
             return errors.Error.SerializeError;
@@ -75,7 +63,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -87,7 +75,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         upload_id: []const u8,
         req: CompleteUploadRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Upload) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -108,7 +96,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -120,7 +108,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         upload_id: []const u8,
         part: MultipartPart,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.UploadPart) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/uploads/{s}/parts", .{upload_id}) catch {
             return errors.Error.SerializeError;
@@ -133,7 +121,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.UploadPart, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

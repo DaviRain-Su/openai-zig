@@ -1,18 +1,11 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
-pub const CreateRoleRequest = struct {
-    role_name: []const u8,
-    permissions: []const []const u8,
-    description: ?[]const u8 = null,
-};
+pub const CreateRoleRequest = gen.PublicCreateOrganizationRoleBody;
 
-pub const UpdateRoleRequest = struct {
-    role_name: ?[]const u8 = null,
-    permissions: ?[]const []const u8 = null,
-    description: ?[]const u8 = null,
-};
+pub const UpdateRoleRequest = gen.PublicUpdateOrganizationRoleBody;
 
 pub const ListRolesParams = struct {
     limit: ?u32 = null,
@@ -46,13 +39,14 @@ pub const Resource = struct {
         return fbs.getWritten();
     }
 
-    fn sendJson(
+    fn sendJsonTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
         value: anytype,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -68,7 +62,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -79,7 +73,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListRolesParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.PublicRoleListResource) {
         var buf: [256]u8 = undefined;
         const path = buildListPath(&buf, "/organization/roles", params) catch {
             return errors.Error.SerializeError;
@@ -91,7 +85,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.PublicRoleListResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -102,8 +96,8 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateRoleRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/organization/roles", req);
+    ) errors.Error!std.json.Parsed(gen.Role) {
+        return self.sendJsonTyped(allocator, .POST, "/organization/roles", req, gen.Role);
     }
 
     /// POST /organization/roles/{role_id}
@@ -112,12 +106,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         role_id: []const u8,
         req: UpdateRoleRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Role) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/roles/{s}", .{role_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, req);
+        return self.sendJsonTyped(allocator, .POST, path, req, gen.Role);
     }
 
     /// DELETE /organization/roles/{role_id}
@@ -125,7 +119,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         role_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeletedRoleAssignmentResource) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/roles/{s}", .{role_id}) catch {
             return errors.Error.SerializeError;
@@ -137,7 +131,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.DeletedRoleAssignmentResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -149,7 +143,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         params: ListRolesParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.PublicRoleListResource) {
         var path_buf: [256]u8 = undefined;
         const base = std.fmt.bufPrint(&path_buf, "/projects/{s}/roles", .{project_id}) catch {
             return errors.Error.SerializeError;
@@ -165,7 +159,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.PublicRoleListResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -177,12 +171,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         req: CreateRoleRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Role) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/projects/{s}/roles", .{project_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, req);
+        return self.sendJsonTyped(allocator, .POST, path, req, gen.Role);
     }
 
     /// POST /projects/{project_id}/roles/{role_id}
@@ -192,12 +186,12 @@ pub const Resource = struct {
         project_id: []const u8,
         role_id: []const u8,
         req: UpdateRoleRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.Role) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/projects/{s}/roles/{s}", .{ project_id, role_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, req);
+        return self.sendJsonTyped(allocator, .POST, path, req, gen.Role);
     }
 
     /// DELETE /projects/{project_id}/roles/{role_id}

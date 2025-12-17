@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const MultipartRequest = struct {
     content_type: []const u8,
@@ -22,17 +23,9 @@ pub const ListVideosParams = struct {
     after: ?[]const u8 = null,
 };
 
-pub const CreateVideoRequest = struct {
-    prompt: []const u8,
-    model: ?[]const u8 = null,
-    input_reference: ?[]const u8 = null, // for JSON requests; for binaries use multipart
-    seconds: ?[]const u8 = null,
-    size: ?[]const u8 = null,
-};
+pub const CreateVideoRequest = gen.CreateVideoBody;
 
-pub const CreateVideoRemixRequest = struct {
-    prompt: []const u8,
-};
+pub const CreateVideoRemixRequest = gen.CreateVideoRemixBody;
 
 pub const Resource = struct {
     transport: *transport_mod.Transport,
@@ -46,7 +39,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListVideosParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VideoListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -71,7 +64,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoListResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -82,7 +75,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateVideoRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -98,7 +91,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -109,7 +102,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
         const resp = try self.transport.request(.POST, "/videos", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
@@ -117,7 +110,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -128,7 +121,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         video_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/videos/{s}", .{video_id}) catch {
             return errors.Error.SerializeError;
@@ -140,7 +133,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -151,7 +144,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         video_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeletedVideoResource) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/videos/{s}", .{video_id}) catch {
             return errors.Error.SerializeError;
@@ -163,7 +156,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.DeletedVideoResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -192,7 +185,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         video_id: []const u8,
         req: CreateVideoRemixRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -213,7 +206,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -225,7 +218,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         video_id: []const u8,
         payload: MultipartRequest,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/videos/{s}/remix", .{video_id}) catch {
             return errors.Error.SerializeError;
@@ -238,7 +231,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

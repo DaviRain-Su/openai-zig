@@ -1,6 +1,7 @@
 const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
+const gen = @import("../generated/types.zig");
 
 pub const ListParams = struct {
     limit: ?u32 = null,
@@ -35,13 +36,14 @@ pub const Resource = struct {
         }
     }
 
-    fn sendJson(
+    fn sendJsonTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
         value: anytype,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -57,80 +59,81 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
     }
 
-    fn sendNoBody(
+    fn sendNoBodyTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
         method: std.http.Method,
         path: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
         const resp = try self.transport.request(method, path, &.{
             .{ .name = "Accept", .value = "application/json" },
         }, null);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
     }
 
     /// Vector stores
-    pub fn list_vector_stores(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(std.json.Value) {
+    pub fn list_vector_stores(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(gen.ListVectorStoresResponse) {
         var buf: [200]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/vector_stores");
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.ListVectorStoresResponse);
     }
 
-    pub fn create_vector_store(self: *const Resource, allocator: std.mem.Allocator, body: std.json.Value) errors.Error!std.json.Parsed(std.json.Value) {
-        return self.sendJson(allocator, .POST, "/vector_stores", body);
+    pub fn create_vector_store(self: *const Resource, allocator: std.mem.Allocator, body: gen.CreateVectorStoreRequest) errors.Error!std.json.Parsed(gen.VectorStoreObject) {
+        return self.sendJsonTyped(allocator, .POST, "/vector_stores", body, gen.VectorStoreObject);
     }
 
     pub fn get_vector_store(
         self: *const Resource,
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VectorStoreObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}", .{vector_store_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.VectorStoreObject);
     }
 
     pub fn modify_vector_store(
         self: *const Resource,
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.UpdateVectorStoreRequest,
+    ) errors.Error!std.json.Parsed(gen.VectorStoreObject) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}", .{vector_store_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.VectorStoreObject);
     }
 
     pub fn delete_vector_store(
         self: *const Resource,
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeleteVectorStoreResponse) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}", .{vector_store_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.DeleteVectorStoreResponse);
     }
 
     /// File batches
@@ -138,13 +141,13 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.CreateVectorStoreFileBatchRequest,
+    ) errors.Error!std.json.Parsed(gen.VectorStoreFileBatchObject) {
         var buf: [260]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}/file_batches", .{vector_store_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.VectorStoreFileBatchObject);
     }
 
     pub fn get_vector_store_file_batch(
@@ -152,12 +155,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
         batch_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VectorStoreFileBatchObject) {
         var buf: [300]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}/file_batches/{s}", .{ vector_store_id, batch_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.VectorStoreFileBatchObject);
     }
 
     pub fn cancel_vector_store_file_batch(
@@ -165,12 +168,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
         batch_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VectorStoreFileBatchObject) {
         var buf: [320]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}/file_batches/{s}/cancel", .{ vector_store_id, batch_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .POST, path);
+        return self.sendNoBodyTyped(allocator, .POST, path, gen.VectorStoreFileBatchObject);
     }
 
     pub fn list_files_in_vector_store_batch(
@@ -179,14 +182,14 @@ pub const Resource = struct {
         vector_store_id: []const u8,
         batch_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VectorStoreFileObject) {
         var buf: [340]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/vector_stores/{s}/file_batches/{s}/files", .{ vector_store_id, batch_id });
         try appendListParams(w, params, "?");
         const path = fbs.getWritten();
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.VectorStoreFileObject);
     }
 
     /// Files
@@ -195,7 +198,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
         params: ListParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VectorStoreFileObject) {
         var buf: [260]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -209,13 +212,13 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.CreateVectorStoreFileRequest,
+    ) errors.Error!std.json.Parsed(gen.VectorStoreFileObject) {
         var buf: [260]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}/files", .{vector_store_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.VectorStoreFileObject);
     }
 
     pub fn get_vector_store_file(
@@ -223,12 +226,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
         file_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.VectorStoreFileObject) {
         var buf: [300]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}/files/{s}", .{ vector_store_id, file_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .GET, path);
+        return self.sendNoBodyTyped(allocator, .GET, path, gen.VectorStoreFileObject);
     }
 
     pub fn delete_vector_store_file(
@@ -236,12 +239,12 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
         file_id: []const u8,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.DeleteVectorStoreFileResponse) {
         var buf: [300]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}/files/{s}", .{ vector_store_id, file_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBody(allocator, .DELETE, path);
+        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.DeleteVectorStoreFileResponse);
     }
 
     pub fn update_vector_store_file_attributes(
@@ -249,13 +252,13 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         vector_store_id: []const u8,
         file_id: []const u8,
-        body: std.json.Value,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+        body: gen.UpdateVectorStoreFileRequest,
+    ) errors.Error!std.json.Parsed(gen.VectorStoreFileObject) {
         var buf: [320]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/vector_stores/{s}/files/{s}", .{ vector_store_id, file_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJson(allocator, .POST, path, body);
+        return self.sendJsonTyped(allocator, .POST, path, body, gen.VectorStoreFileObject);
     }
 
     pub fn retrieve_vector_store_file_content(
