@@ -63,31 +63,63 @@ pub const Resource = struct {
         return fbs.getWritten();
     }
 
-    fn sendAssign(
+    fn sendJsonTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
+        method: std.http.Method,
         path: []const u8,
-        req: AssignRoleRequest,
-    ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(req) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
+        value: anytype,
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
+        return self.sendJsonTypedWithOptions(allocator, method, path, value, T, null);
+    }
 
-        const resp = try self.transport.request(.POST, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
+    fn sendJsonTypedWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        value: anytype,
+        comptime T: type,
+        req_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            value,
+            T,
+            req_opts,
+        );
+    }
 
-        const parsed = std.json.parseFromSlice(gen.GroupRoleAssignment, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    fn sendNoBodyTyped(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
+        return self.sendNoBodyTypedWithOptions(allocator, method, path, T, null);
+    }
+
+    fn sendNoBodyTypedWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        comptime T: type,
+        req_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            T,
+            req_opts,
+        );
     }
 
     /// GET /projects/{project_id}/groups/{group_id}/roles
@@ -98,21 +130,22 @@ pub const Resource = struct {
         group_id: []const u8,
         params: ListAssignmentsParams,
     ) errors.Error!std.json.Parsed(gen.RoleListResource) {
+        return self.list_project_group_role_assignments_with_options(allocator, project_id, group_id, params, null);
+    }
+
+    pub fn list_project_group_role_assignments_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        group_id: []const u8,
+        params: ListAssignmentsParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.RoleListResource) {
         var buf: [256]u8 = undefined;
         const path = buildListPath(&buf, project_id, group_id, params) catch {
             return errors.Error.SerializeError;
         };
-
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.RoleListResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return self.sendNoBodyTypedWithOptions(allocator, .GET, path, gen.RoleListResource, request_opts);
     }
 
     /// POST /projects/{project_id}/groups/{group_id}/roles
@@ -123,11 +156,22 @@ pub const Resource = struct {
         group_id: []const u8,
         req: AssignRoleRequest,
     ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
+        return self.assign_project_group_role_with_options(allocator, project_id, group_id, req, null);
+    }
+
+    pub fn assign_project_group_role_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        group_id: []const u8,
+        req: AssignRoleRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
         var path_buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/projects/{s}/groups/{s}/roles", .{ project_id, group_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendAssign(allocator, path, req);
+        return self.sendJsonTypedWithOptions(allocator, .POST, path, req, gen.GroupRoleAssignment, request_opts);
     }
 
     /// DELETE /projects/{project_id}/groups/{group_id}/roles/{role_id}
@@ -138,20 +182,54 @@ pub const Resource = struct {
         group_id: []const u8,
         role_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.DeletedRoleAssignmentResource) {
+        return self.unassign_project_group_role_with_options(allocator, project_id, group_id, role_id, null);
+    }
+
+    pub fn unassign_project_group_role_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        group_id: []const u8,
+        role_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.DeletedRoleAssignmentResource) {
         var path_buf: [280]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/projects/{s}/groups/{s}/roles/{s}", .{ project_id, group_id, role_id }) catch {
             return errors.Error.SerializeError;
         };
+        return self.sendNoBodyTypedWithOptions(allocator, .DELETE, path, gen.DeletedRoleAssignmentResource, request_opts);
+    }
 
-        const resp = try self.transport.request(.DELETE, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
+    pub fn list_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        group_id: []const u8,
+        params: ListAssignmentsParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.RoleListResource) {
+        return self.list_project_group_role_assignments_with_options(allocator, project_id, group_id, params, request_opts);
+    }
 
-        const parsed = std.json.parseFromSlice(gen.DeletedRoleAssignmentResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    pub fn assign_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        group_id: []const u8,
+        req: AssignRoleRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
+        return self.assign_project_group_role_with_options(allocator, project_id, group_id, req, request_opts);
+    }
+
+    pub fn unassign_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        group_id: []const u8,
+        role_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.DeletedRoleAssignmentResource) {
+        return self.unassign_project_group_role_with_options(allocator, project_id, group_id, role_id, request_opts);
     }
 };

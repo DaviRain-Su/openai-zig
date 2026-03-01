@@ -32,7 +32,7 @@
 ### 2.1 资源通用化（减少重复实现）
 - [ ] 将各资源中的发送逻辑统一到 `common` 的 `sendJsonTypedWithOptions` / `sendNoBodyTypedWithOptions`（逐步推进）。
 - [x] 统一 query 构建/URL 编码逻辑（分页字段 `limit/after/before/order` 等）。
-- [x] 批量接入 `request options` 到核心资源方法：`chat`、`completions`、`models`、`files`、`images`、`responses`、`audio`、`embeddings`、`moderations`、`batch`、`users`、`groups`、`group_users`。
+- [x] 批量接入 `request options` 到核心资源方法：`chat`、`completions`、`models`、`files`、`images`、`responses`、`audio`、`embeddings`、`moderations`、`batch`、`users`、`groups`、`group_users`、`invites`、`user_role_assignments`、`group_role_assignments`、`project_user_role_assignments`、`project_group_role_assignments`。
 
 ### 2.2 流式能力统一
 - [ ] 抽象 SSE/parsing 工具，统一 `text/event-stream` 处理。
