@@ -31,9 +31,17 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.CreateCompletionResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateCompletionResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: gen.CreateCompletionRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateCompletionResponse) {
+        return self.create_completion(allocator, req);
     }
 };

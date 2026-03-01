@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const MultipartRequest = struct {
     content_type: []const u8,
@@ -42,21 +43,20 @@ pub const Resource = struct {
         const writer = fbs.writer();
         try writer.writeAll("/files");
 
-        var sep: []const u8 = "?";
+        var first = true;
         if (params.purpose) |purpose| {
-            try writer.print("{s}purpose={s}", .{ sep, purpose });
-            sep = "&";
+            try common.appendQueryParam(writer, &first, "purpose", purpose);
         }
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            var value_buf: [32]u8 = undefined;
+            const value = try std.fmt.bufPrint(&value_buf, "{d}", .{limit});
+            try common.appendQueryParam(writer, &first, "limit", value);
         }
         if (params.order) |order| {
-            try writer.print("{s}order={s}", .{ sep, order });
-            sep = "&";
+            try common.appendQueryParam(writer, &first, "order", order);
         }
         if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
+            try common.appendQueryParam(writer, &first, "after", after);
         }
         const path = fbs.getWritten();
 
@@ -66,10 +66,15 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.ListFilesResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ListFilesResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// GET /files
+    pub fn list(self: *const Resource, allocator: std.mem.Allocator, params: ListFilesParams) errors.Error!std.json.Parsed(gen.ListFilesResponse) {
+        return self.list_files(allocator, params);
     }
 
     /// POST /files (multipart)
@@ -85,10 +90,19 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.OpenAIFile, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.OpenAIFile, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// POST /files (multipart)
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
+        return self.create_file(allocator, payload);
     }
 
     /// DELETE /files/{file_id}
@@ -108,10 +122,15 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.DeleteFileResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.DeleteFileResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// DELETE /files/{file_id}
+    pub fn delete(self: *const Resource, allocator: std.mem.Allocator, file_id: []const u8) errors.Error!std.json.Parsed(gen.DeleteFileResponse) {
+        return self.delete_file(allocator, file_id);
     }
 
     /// GET /files/{file_id}
@@ -131,10 +150,15 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.OpenAIFile, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.OpenAIFile, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// GET /files/{file_id}
+    pub fn retrieve(self: *const Resource, allocator: std.mem.Allocator, file_id: []const u8) errors.Error!std.json.Parsed(gen.OpenAIFile) {
+        return self.retrieve_file(allocator, file_id);
     }
 
     /// GET /files/{file_id}/content -> binary body.
@@ -152,5 +176,10 @@ pub const Resource = struct {
             .allocator = self.transport.allocator,
             .data = resp.body,
         };
+    }
+
+    /// GET /files/{file_id}/content -> binary body.
+    pub fn download(self: *const Resource, file_id: []const u8) errors.Error!BinaryResponse {
+        return self.download_file(file_id);
     }
 };

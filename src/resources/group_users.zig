@@ -2,11 +2,38 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const ListGroupUsersParams = struct {
     limit: ?u32 = null,
     after: ?[]const u8 = null,
     order: ?[]const u8 = null,
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        params: ListGroupUsersParams,
+    ) errors.Error!std.json.Parsed(gen.UserListResource) {
+        return self.list_group_users(allocator, group_id, params);
+    }
+
+    pub fn add(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        req: CreateGroupUserRequest,
+    ) errors.Error!std.json.Parsed(gen.GroupUserAssignment) {
+        return self.add_group_user(allocator, group_id, req);
+    }
+
+    pub fn remove(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        user_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.GroupUserDeletedResource) {
+        return self.remove_group_user(allocator, group_id, user_id);
+    }
 };
 
 pub const CreateGroupUserRequest = struct {
@@ -26,23 +53,17 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         params: ListGroupUsersParams,
-    ) errors.Error!std.json.Parsed(std.json.Value) {
+    ) errors.Error!std.json.Parsed(gen.UserListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const writer = fbs.writer();
         try writer.print("/organization/groups/{s}/users", .{group_id});
-        var sep: []const u8 = "?";
+        var first = true;
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, &first, "limit", @as(u64, limit));
         }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
-        }
-        if (params.order) |order| {
-            try writer.print("{s}order={s}", .{ sep, order });
-        }
+        try common.appendOptionalQueryParam(writer, &first, "after", params.after);
+        try common.appendOptionalQueryParam(writer, &first, "order", params.order);
         const path = fbs.getWritten();
 
         const resp = try self.transport.request(.GET, path, &.{
@@ -51,7 +72,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(std.json.Value, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.UserListResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -84,7 +105,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.GroupUserAssignment, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.GroupUserAssignment, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -108,7 +129,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.GroupUserDeletedResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.GroupUserDeletedResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

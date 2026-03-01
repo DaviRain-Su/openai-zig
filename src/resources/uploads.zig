@@ -40,10 +40,18 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateUploadRequest,
+    ) errors.Error!std.json.Parsed(gen.Upload) {
+        return self.create_upload(allocator, req);
     }
 
     /// POST /uploads/{upload_id}/cancel
@@ -63,10 +71,18 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    pub fn cancel(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        upload_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.Upload) {
+        return self.cancel_upload(allocator, upload_id);
     }
 
     /// POST /uploads/{upload_id}/complete
@@ -96,10 +112,19 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Upload, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    pub fn complete(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        upload_id: []const u8,
+        req: CompleteUploadRequest,
+    ) errors.Error!std.json.Parsed(gen.Upload) {
+        return self.complete_upload(allocator, upload_id, req);
     }
 
     /// POST /uploads/{upload_id}/parts (multipart)
@@ -121,9 +146,18 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.UploadPart, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.UploadPart, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    pub fn add_part(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        upload_id: []const u8,
+        part: MultipartPart,
+    ) errors.Error!std.json.Parsed(gen.UploadPart) {
+        return self.add_upload_part(allocator, upload_id, part);
     }
 };

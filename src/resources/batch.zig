@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const CreateBatchRequest = struct {
     input_file_id: []const u8,
@@ -9,6 +10,37 @@ pub const CreateBatchRequest = struct {
     completion_window: []const u8 = "24h",
     metadata: ?std.json.Value = null,
     output_expires_after: ?std.json.Value = null,
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateBatchRequest,
+    ) errors.Error!std.json.Parsed(gen.Batch) {
+        return self.create_batch(allocator, req);
+    }
+
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListBatchesParams,
+    ) errors.Error!std.json.Parsed(gen.ListBatchesResponse) {
+        return self.list_batches(allocator, params);
+    }
+
+    pub fn retrieve(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        batch_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.Batch) {
+        return self.retrieve_batch(allocator, batch_id);
+    }
+
+    pub fn cancel(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        batch_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.Batch) {
+        return self.cancel_batch(allocator, batch_id);
+    }
 };
 
 pub const ListBatchesParams = struct {
@@ -44,7 +76,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -61,13 +93,10 @@ pub const Resource = struct {
         const writer = fbs.writer();
         try writer.writeAll("/batches");
 
-        var sep: []const u8 = "?";
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
-        }
+        var first = true;
+        try common.appendOptionalQueryParam(writer, &first, "after", params.after);
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
+            try common.appendOptionalQueryParamU64(writer, &first, "limit", @as(u64, limit));
         }
         const path = fbs.getWritten();
 
@@ -77,7 +106,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.ListBatchesResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ListBatchesResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -100,7 +129,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -123,7 +152,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Batch, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

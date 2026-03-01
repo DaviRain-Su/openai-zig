@@ -31,9 +31,17 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.CreateModerationResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateModerationResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: gen.CreateModerationRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateModerationResponse) {
+        return self.create_moderation(allocator, req);
     }
 };

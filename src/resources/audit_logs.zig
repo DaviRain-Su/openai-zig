@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const Range = struct {
     gt: ?u64 = null,
@@ -40,67 +41,53 @@ pub const Resource = struct {
         const writer = fbs.writer();
         try writer.writeAll("/organization/audit_logs");
 
-        var sep: []const u8 = "?";
+        var first = true;
         if (params.effective_at) |range| {
             if (range.gt) |v| {
-                try writer.print("{s}effective_at[gt]={d}", .{ sep, v });
-                sep = "&";
+                try common.appendOptionalQueryParamU64(writer, &first, "effective_at[gt]", v);
             }
             if (range.gte) |v| {
-                try writer.print("{s}effective_at[gte]={d}", .{ sep, v });
-                sep = "&";
+                try common.appendOptionalQueryParamU64(writer, &first, "effective_at[gte]", v);
             }
             if (range.lt) |v| {
-                try writer.print("{s}effective_at[lt]={d}", .{ sep, v });
-                sep = "&";
+                try common.appendOptionalQueryParamU64(writer, &first, "effective_at[lt]", v);
             }
             if (range.lte) |v| {
-                try writer.print("{s}effective_at[lte]={d}", .{ sep, v });
-                sep = "&";
+                try common.appendOptionalQueryParamU64(writer, &first, "effective_at[lte]", v);
             }
         }
 
         if (params.project_ids) |vals| {
             for (vals) |v| {
-                try writer.print("{s}project_ids[]={s}", .{ sep, v });
-                sep = "&";
+                try common.appendQueryParam(writer, &first, "project_ids[]", v);
             }
         }
+
         if (params.event_types) |vals| {
             for (vals) |v| {
-                try writer.print("{s}event_types[]={s}", .{ sep, v });
-                sep = "&";
+                try common.appendQueryParam(writer, &first, "event_types[]", v);
             }
         }
         if (params.actor_ids) |vals| {
             for (vals) |v| {
-                try writer.print("{s}actor_ids[]={s}", .{ sep, v });
-                sep = "&";
+                try common.appendQueryParam(writer, &first, "actor_ids[]", v);
             }
         }
         if (params.actor_emails) |vals| {
             for (vals) |v| {
-                try writer.print("{s}actor_emails[]={s}", .{ sep, v });
-                sep = "&";
+                try common.appendQueryParam(writer, &first, "actor_emails[]", v);
             }
         }
         if (params.resource_ids) |vals| {
             for (vals) |v| {
-                try writer.print("{s}resource_ids[]={s}", .{ sep, v });
-                sep = "&";
+                try common.appendQueryParam(writer, &first, "resource_ids[]", v);
             }
         }
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, &first, "limit", @as(u64, limit));
         }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
-        }
-        if (params.before) |before| {
-            try writer.print("{s}before={s}", .{ sep, before });
-        }
+        try common.appendOptionalQueryParam(writer, &first, "after", params.after);
+        try common.appendOptionalQueryParam(writer, &first, "before", params.before);
 
         const path = fbs.getWritten();
 
@@ -110,9 +97,17 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.ListAuditLogsResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ListAuditLogsResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListAuditLogsParams,
+    ) errors.Error!std.json.Parsed(gen.ListAuditLogsResponse) {
+        return self.list_audit_logs(allocator, params);
     }
 };

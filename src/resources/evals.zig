@@ -9,6 +9,111 @@ pub const ListParams = struct {
     order: ?[]const u8 = null,
     after: ?[]const u8 = null,
     before: ?[]const u8 = null,
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListParams,
+    ) errors.Error!std.json.Parsed(gen.EvalList) {
+        return self.list_evals(allocator, params);
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.CreateEvalRequest,
+    ) errors.Error!std.json.Parsed(gen.EvalObject) {
+        return self.create_eval(allocator, body);
+    }
+
+    pub fn get(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.EvalObject) {
+        return self.get_eval(allocator, eval_id);
+    }
+
+    pub fn update(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+        body: gen.CreateEvalRequest,
+    ) errors.Error!std.json.Parsed(gen.EvalObject) {
+        return self.update_eval(allocator, eval_id, body);
+    }
+
+    pub fn delete(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.EvalObject) {
+        return self.delete_eval(allocator, eval_id);
+    }
+
+    pub fn list_runs(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+        params: ListParams,
+    ) errors.Error!std.json.Parsed(gen.EvalRunList) {
+        return self.get_eval_runs(allocator, eval_id, params);
+    }
+
+    pub fn create_run(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+        body: gen.CreateEvalRunRequest,
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
+        return self.create_eval_run(allocator, eval_id, body);
+    }
+
+    pub fn get_run(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+        run_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
+        return self.get_eval_run(allocator, eval_id, run_id);
+    }
+
+    pub fn cancel_run(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+        run_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
+        return self.cancel_eval_run(allocator, eval_id, run_id);
+    }
+
+    pub fn delete_run(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+        run_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
+        return self.delete_eval_run(allocator, eval_id, run_id);
+    }
+
+    pub fn list_run_output_items(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+        run_id: []const u8,
+        params: ListParams,
+    ) errors.Error!std.json.Parsed(gen.EvalRunOutputItemList) {
+        return self.get_eval_run_output_items(allocator, eval_id, run_id, params);
+    }
+
+    pub fn get_run_output_item(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        eval_id: []const u8,
+        run_id: []const u8,
+        output_item_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.EvalRunOutputItem) {
+        return self.get_eval_run_output_item(allocator, eval_id, run_id, output_item_id);
+    }
 };
 
 pub const Resource = struct {
@@ -18,23 +123,13 @@ pub const Resource = struct {
         return Resource{ .transport = transport };
     }
 
-    fn appendListParams(writer: anytype, params: ListParams, sep_start: []const u8) !void {
-        var sep = sep_start;
+    fn appendListParams(writer: anytype, params: ListParams, first: *bool) !void {
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, first, "limit", @as(u64, limit));
         }
-        if (params.order) |order| {
-            try writer.print("{s}order={s}", .{ sep, order });
-            sep = "&";
-        }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
-        }
-        if (params.before) |before| {
-            try writer.print("{s}before={s}", .{ sep, before });
-        }
+        try common.appendOptionalQueryParam(writer, first, "order", params.order);
+        try common.appendOptionalQueryParam(writer, first, "after", params.after);
+        try common.appendOptionalQueryParam(writer, first, "before", params.before);
     }
 
     fn sendJsonTyped(
@@ -64,7 +159,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/evals");
-        try appendListParams(w, params, "?");
+        var first = true;
+        try appendListParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalList);
     }
@@ -121,7 +217,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/evals/{s}/runs", .{eval_id});
-        try appendListParams(w, params, "?");
+        var first = true;
+        try appendListParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalRunList);
     }
@@ -190,7 +287,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/evals/{s}/runs/{s}/output_items", .{ eval_id, run_id });
-        try appendListParams(w, params, "?");
+        var first = true;
+        try appendListParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.EvalRunOutputItemList);
     }

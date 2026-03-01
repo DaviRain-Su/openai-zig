@@ -7,6 +7,174 @@ const common = @import("common.zig");
 pub const ListParams = struct {
     limit: ?u32 = null,
     after: ?[]const u8 = null,
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListParams,
+    ) errors.Error!std.json.Parsed(gen.ProjectListResponse) {
+        return self.list_projects(allocator, params);
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.ProjectCreateRequest,
+    ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.create_project(allocator, body);
+    }
+
+    pub fn retrieve(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.retrieve_project(allocator, project_id);
+    }
+
+    pub fn modify(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        body: gen.ProjectCreateRequest,
+    ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.modify_project(allocator, project_id, body);
+    }
+
+    pub fn archive(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.archive_project(allocator, project_id);
+    }
+
+    pub fn list_api_keys(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListOrderParams,
+    ) errors.Error!std.json.Parsed(gen.ProjectApiKeyListResponse) {
+        return self.list_project_api_keys(allocator, project_id, params);
+    }
+
+    pub fn retrieve_api_key(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        key_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ProjectApiKey) {
+        return self.retrieve_project_api_key(allocator, project_id, key_id);
+    }
+
+    pub fn delete_api_key(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        key_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ProjectApiKeyDeleteResponse) {
+        return self.delete_project_api_key(allocator, project_id, key_id);
+    }
+
+    pub fn list_rate_limits(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListOrderParams,
+    ) errors.Error!std.json.Parsed(gen.ProjectRateLimitListResponse) {
+        return self.list_project_rate_limits(allocator, project_id, params);
+    }
+
+    pub fn update_rate_limits(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        rate_limit_id: []const u8,
+        body: gen.ProjectRateLimit,
+    ) errors.Error!std.json.Parsed(gen.ProjectRateLimit) {
+        return self.update_project_rate_limits(allocator, project_id, rate_limit_id, body);
+    }
+
+    pub fn list_service_accounts(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListOrderParams,
+    ) errors.Error!std.json.Parsed(gen.ProjectServiceAccountListResponse) {
+        return self.list_project_service_accounts(allocator, project_id, params);
+    }
+
+    pub fn create_service_account(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        body: gen.ProjectServiceAccount,
+    ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
+        return self.create_project_service_account(allocator, project_id, body);
+    }
+
+    pub fn retrieve_service_account(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        service_account_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
+        return self.retrieve_project_service_account(allocator, project_id, service_account_id);
+    }
+
+    pub fn delete_service_account(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        service_account_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
+        return self.delete_project_service_account(allocator, project_id, service_account_id);
+    }
+
+    pub fn list_users(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListOrderParams,
+    ) errors.Error!std.json.Parsed(gen.ProjectUserListResponse) {
+        return self.list_project_users(allocator, project_id, params);
+    }
+
+    pub fn create_user(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        body: gen.ProjectUserCreateRequest,
+    ) errors.Error!std.json.Parsed(gen.ProjectUser) {
+        return self.create_project_user(allocator, project_id, body);
+    }
+
+    pub fn retrieve_user(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        user_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ProjectUser) {
+        return self.retrieve_project_user(allocator, project_id, user_id);
+    }
+
+    pub fn modify_user(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        user_id: []const u8,
+        body: gen.ProjectUser,
+    ) errors.Error!std.json.Parsed(gen.ProjectUser) {
+        return self.modify_project_user(allocator, project_id, user_id, body);
+    }
+
+    pub fn delete_user(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        user_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ProjectUser) {
+        return self.delete_project_user(allocator, project_id, user_id);
+    }
 };
 
 pub const ListOrderParams = struct {
@@ -22,30 +190,19 @@ pub const Resource = struct {
         return Resource{ .transport = transport };
     }
 
-    fn appendListParams(writer: anytype, params: ListParams, sep_start: []const u8) !void {
-        var sep = sep_start;
+    fn appendListParams(writer: anytype, params: ListParams, first: *bool) !void {
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, first, "limit", @as(u64, limit));
         }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-        }
+        try common.appendOptionalQueryParam(writer, first, "after", params.after);
     }
 
-    fn appendListOrderParams(writer: anytype, params: ListOrderParams, sep_start: []const u8) !void {
-        var sep = sep_start;
+    fn appendListOrderParams(writer: anytype, params: ListOrderParams, first: *bool) !void {
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, first, "limit", @as(u64, limit));
         }
-        if (params.order) |order| {
-            try writer.print("{s}order={s}", .{ sep, order });
-            sep = "&";
-        }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-        }
+        try common.appendOptionalQueryParam(writer, first, "order", params.order);
+        try common.appendOptionalQueryParam(writer, first, "after", params.after);
     }
 
     fn sendJsonTyped(
@@ -75,7 +232,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/organization/projects");
-        try appendListParams(w, params, "?");
+        var first = true;
+        try appendListParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectListResponse);
     }
@@ -132,7 +290,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/organization/projects/{s}/api_keys", .{project_id});
-        try appendListOrderParams(w, params, "?");
+        var first = true;
+        try appendListOrderParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectApiKeyListResponse);
     }
@@ -174,7 +333,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/organization/projects/{s}/rate_limits", .{project_id});
-        try appendListOrderParams(w, params, "?");
+        var first = true;
+        try appendListOrderParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectRateLimitListResponse);
     }
@@ -204,7 +364,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/organization/projects/{s}/service_accounts", .{project_id});
-        try appendListOrderParams(w, params, "?");
+        var first = true;
+        try appendListOrderParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectServiceAccountListResponse);
     }
@@ -259,7 +420,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/organization/projects/{s}/users", .{project_id});
-        try appendListOrderParams(w, params, "?");
+        var first = true;
+        try appendListOrderParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectUserListResponse);
     }

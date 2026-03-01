@@ -169,6 +169,7 @@ pub fn build(b: *std.Build) void {
         const examples = [_]struct { name: []const u8, path: []const u8 }{
             .{ .name = "models_list", .path = "examples/models_list.zig" },
             .{ .name = "chat_completion", .path = "examples/chat_completion.zig" },
+            .{ .name = "chat_completion_stream", .path = "examples/chat_completion_stream.zig" },
             .{ .name = "chat_multiturn", .path = "examples/chat_multiturn.zig" },
             .{ .name = "chat_json_extract", .path = "examples/chat_json_extract.zig" },
             .{ .name = "files_list", .path = "examples/files_list.zig" },

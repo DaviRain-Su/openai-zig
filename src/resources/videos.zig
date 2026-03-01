@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const MultipartRequest = struct {
     content_type: []const u8,
@@ -44,18 +45,12 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/videos");
-        var sep: []const u8 = "?";
+        var first = true;
         if (params.limit) |limit| {
-            try w.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(w, &first, "limit", @as(u64, limit));
         }
-        if (params.order) |order| {
-            try w.print("{s}order={s}", .{ sep, order });
-            sep = "&";
-        }
-        if (params.after) |after| {
-            try w.print("{s}after={s}", .{ sep, after });
-        }
+        try common.appendOptionalQueryParam(w, &first, "order", params.order);
+        try common.appendOptionalQueryParam(w, &first, "after", params.after);
         const path = fbs.getWritten();
 
         const resp = try self.transport.request(.GET, path, &.{
@@ -64,7 +59,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.VideoListResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoListResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -91,10 +86,28 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// POST /videos (JSON)
+    pub fn create_video(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateVideoRequest,
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
+        return self.create_video_json(allocator, req);
+    }
+
+    /// POST /videos (multipart body)
+    pub fn create_video_with_payload(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
+        return self.create_video_multipart(allocator, payload);
     }
 
     /// POST /videos (multipart)
@@ -110,7 +123,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -133,7 +146,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -156,7 +169,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.DeletedVideoResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.DeletedVideoResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -206,7 +219,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -231,9 +244,74 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.VideoResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListVideosParams,
+    ) errors.Error!std.json.Parsed(gen.VideoListResource) {
+        return self.list_videos(allocator, params);
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateVideoRequest,
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
+        return self.create_video(allocator, req);
+    }
+
+    pub fn create_multipart(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
+        return self.create_video_with_payload(allocator, payload);
+    }
+
+    pub fn get(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        video_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
+        return self.get_video(allocator, video_id);
+    }
+
+    pub fn delete(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        video_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.DeletedVideoResource) {
+        return self.delete_video(allocator, video_id);
+    }
+
+    pub fn content(
+        self: *const Resource,
+        video_id: []const u8,
+    ) errors.Error!BinaryResponse {
+        return self.retrieve_video_content(video_id);
+    }
+
+    pub fn remix(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        video_id: []const u8,
+        req: CreateVideoRemixRequest,
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
+        return self.create_video_remix(allocator, video_id, req);
+    }
+
+    pub fn remix_multipart(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        video_id: []const u8,
+        payload: MultipartRequest,
+    ) errors.Error!std.json.Parsed(gen.VideoResource) {
+        return self.create_video_remix_multipart(allocator, video_id, payload);
     }
 };

@@ -2,11 +2,44 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const ListUsersParams = struct {
     limit: ?u32 = null,
     after: ?[]const u8 = null,
     emails: ?[]const []const u8 = null,
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListUsersParams,
+    ) errors.Error!std.json.Parsed(gen.UserListResponse) {
+        return self.list_users(allocator, params);
+    }
+
+    pub fn retrieve(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.User) {
+        return self.retrieve_user(allocator, user_id);
+    }
+
+    pub fn modify(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+        req: UpdateUserRoleRequest,
+    ) errors.Error!std.json.Parsed(gen.User) {
+        return self.modify_user(allocator, user_id, req);
+    }
+
+    pub fn delete(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.User) {
+        return self.delete_user(allocator, user_id);
+    }
 };
 
 pub const UpdateUserRoleRequest = gen.UpdateUserRoleRequest;
@@ -41,7 +74,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(T, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(T, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -58,19 +91,14 @@ pub const Resource = struct {
         const writer = fbs.writer();
         try writer.writeAll("/organization/users");
 
-        var sep: []const u8 = "?";
+        var first = true;
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, &first, "limit", @as(u64, limit));
         }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
-        }
+        try common.appendOptionalQueryParam(writer, &first, "after", params.after);
         if (params.emails) |emails| {
             for (emails) |email| {
-                try writer.print("{s}emails[]={s}", .{ sep, email });
-                sep = "&";
+                try common.appendQueryParam(writer, &first, "emails[]", email);
             }
         }
         const path = fbs.getWritten();
@@ -81,7 +109,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.UserListResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.UserListResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -104,7 +132,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.User, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.User, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -141,7 +169,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.User, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.User, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

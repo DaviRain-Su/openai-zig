@@ -24,7 +24,16 @@ pub const HttpErrorDetail = struct {
 };
 
 pub fn unexpectedStatus(detail: HttpErrorDetail) Error {
-    std.debug.print("http status {d}, body: {s}\n", .{ detail.status, detail.body });
+    const max_preview = 2048;
+    const preview = if (detail.body.len > max_preview)
+        detail.body[0..max_preview]
+    else
+        detail.body;
+    if (detail.body.len > max_preview) {
+        std.debug.print("http status {d}, body (truncated): {s}...\n", .{ detail.status, preview });
+    } else {
+        std.debug.print("http status {d}, body: {s}\n", .{ detail.status, detail.body });
+    }
     return Error.HttpError;
 }
 

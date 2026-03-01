@@ -2,11 +2,38 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const ListProjectGroupsParams = struct {
     limit: ?u32 = null,
     after: ?[]const u8 = null,
     order: ?[]const u8 = null,
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListProjectGroupsParams,
+    ) errors.Error!std.json.Parsed(gen.ProjectGroupListResource) {
+        return self.list_project_groups(allocator, project_id, params);
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        req: InviteProjectGroupRequest,
+    ) errors.Error!std.json.Parsed(gen.ProjectGroup) {
+        return self.add_project_group(allocator, project_id, req);
+    }
+
+    pub fn remove(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        group_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ProjectGroupDeletedResource) {
+        return self.remove_project_group(allocator, project_id, group_id);
+    }
 };
 
 pub const InviteProjectGroupRequest = struct {
@@ -32,18 +59,12 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const writer = fbs.writer();
         try writer.print("/organization/projects/{s}/groups", .{project_id});
-        var sep: []const u8 = "?";
+        var first = true;
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, &first, "limit", @as(u64, limit));
         }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
-        }
-        if (params.order) |order| {
-            try writer.print("{s}order={s}", .{ sep, order });
-        }
+        try common.appendOptionalQueryParam(writer, &first, "after", params.after);
+        try common.appendOptionalQueryParam(writer, &first, "order", params.order);
         const path = fbs.getWritten();
 
         const resp = try self.transport.request(.GET, path, &.{
@@ -52,7 +73,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.ProjectGroupListResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ProjectGroupListResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -85,7 +106,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.ProjectGroup, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ProjectGroup, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -109,7 +130,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.ProjectGroupDeletedResource, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ProjectGroupDeletedResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

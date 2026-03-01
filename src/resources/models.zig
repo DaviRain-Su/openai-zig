@@ -21,10 +21,15 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.ListModelsResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.ListModelsResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// GET /models
+    pub fn list(self: *const Resource, allocator: std.mem.Allocator) errors.Error!std.json.Parsed(gen.ListModelsResponse) {
+        return self.list_models(allocator);
     }
 
     /// GET /models/{model}
@@ -44,10 +49,15 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Model, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Model, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// GET /models/{model}
+    pub fn retrieve(self: *const Resource, allocator: std.mem.Allocator, model: []const u8) errors.Error!std.json.Parsed(gen.Model) {
+        return self.retrieve_model(allocator, model);
     }
 
     /// DELETE /models/{model}
@@ -67,9 +77,14 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.DeleteModelResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.DeleteModelResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// DELETE /models/{model}
+    pub fn delete(self: *const Resource, allocator: std.mem.Allocator, model: []const u8) errors.Error!std.json.Parsed(gen.DeleteModelResponse) {
+        return self.delete_model(allocator, model);
     }
 };

@@ -31,9 +31,20 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.CreateEmbeddingResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.CreateEmbeddingResponse, allocator, body, .{
+            .ignore_unknown_fields = true,
+        }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
+    }
+
+    /// POST /embeddings -> dynamic JSON
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: gen.CreateEmbeddingRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateEmbeddingResponse) {
+        return self.create_embedding(allocator, req);
     }
 };
