@@ -298,22 +298,52 @@ fn parseProxy(allocator: std.mem.Allocator, raw_proxy_url: []const u8) !?*std.ht
     const host = try uri.getHostAlloc(allocator);
     const authorization = if (uri.user != null or uri.password != null) blk: {
         const authorization_len = std.http.Client.basic_authorization.valueLengthFromUri(uri);
-        var authorization = try allocator.alloc(u8, authorization_len);
-        _ = std.http.Client.basic_authorization.value(uri, authorization);
-        break :blk authorization;
+        const authorization_value = try allocator.alloc(u8, authorization_len);
+        _ = std.http.Client.basic_authorization.value(uri, authorization_value);
+        break :blk authorization_value;
     } else null;
 
     const proxy = try allocator.create(std.http.Client.Proxy);
     proxy.* = .{
-        .protocol = protocol,
-        .host = host,
-        .authorization = authorization,
-        .port = uriPort(uri, protocol),
-        .supports_connect = true,
-    };
-    return proxy;
+            .protocol = protocol,
+            .host = host,
+            .authorization = authorization,
+            .port = uriPort(raw_proxy_url, protocol),
+            .supports_connect = true,
+        };
+        return proxy;
 }
 
-fn uriPort(uri: std.Uri, protocol: std.http.Client.Protocol) u16 {
-    return uri.port orelse protocol.port();
+fn uriPort(raw_proxy_url: []const u8, protocol: std.http.Client.Protocol) u16 {
+    const default_port: u16 = switch (protocol) {
+        .plain => 80,
+        .tls => 443,
+    };
+    const scheme_end = std.mem.indexOf(u8, raw_proxy_url, "://") orelse 0;
+    const after_scheme = raw_proxy_url[scheme_end + if (scheme_end == 0) @as(usize, 0) else @as(usize, 3)..];
+    const authority_end = std.mem.indexOfAny(u8, after_scheme, "/?#") orelse after_scheme.len;
+    var authority = after_scheme[0..authority_end];
+
+    if (std.mem.lastIndexOf(u8, authority, "@")) |at| {
+        authority = authority[at + 1 ..];
+    }
+
+    if (authority.len == 0) {
+        return default_port;
+    }
+
+    if (std.mem.startsWith(u8, authority, "[")) {
+        if (std.mem.lastIndexOf(u8, authority, "]:")) |close| {
+            const port_text = authority[close + 2 ..];
+            return std.fmt.parseInt(u16, port_text, 10) catch default_port;
+        }
+        return default_port;
+    }
+
+    if (std.mem.lastIndexOf(u8, authority, ":")) |colon| {
+        const port_text = authority[colon + 1 ..];
+        return std.fmt.parseInt(u16, port_text, 10) catch default_port;
+    }
+
+    return default_port;
 }
