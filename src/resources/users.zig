@@ -59,25 +59,55 @@ pub const Resource = struct {
         value: anytype,
         comptime T: type,
     ) errors.Error!std.json.Parsed(T) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(value) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
+        return self.sendJsonTypedWithOptions(allocator, method, path, value, T, null);
+    }
 
-        const resp = try self.transport.request(method, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
+    fn sendJsonTypedWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        value: anytype,
+        comptime T: type,
+        req_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            value,
+            T,
+            req_opts,
+        );
+    }
 
-        const parsed = std.json.parseFromSlice(T, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    fn sendNoBodyTyped(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
+        return self.sendNoBodyTypedWithOptions(allocator, method, path, T, null);
+    }
+
+    fn sendNoBodyTypedWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        comptime T: type,
+        req_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            T,
+            req_opts,
+        );
     }
 
     /// GET /organization/users
@@ -85,6 +115,15 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListUsersParams,
+    ) errors.Error!std.json.Parsed(gen.UserListResponse) {
+        return self.list_users_with_options(allocator, params, null);
+    }
+
+    pub fn list_users_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListUsersParams,
+        request_opts: transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.UserListResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -103,16 +142,7 @@ pub const Resource = struct {
         }
         const path = fbs.getWritten();
 
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.UserListResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return self.sendNoBodyTypedWithOptions(allocator, .GET, path, gen.UserListResponse, request_opts);
     }
 
     /// GET /organization/users/{user_id}
@@ -121,21 +151,21 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         user_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.User) {
+        return self.retrieve_user_with_options(allocator, user_id, null);
+    }
+
+    pub fn retrieve_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.User) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/users/{s}", .{user_id}) catch {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.User, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return self.sendNoBodyTypedWithOptions(allocator, .GET, path, gen.User, request_opts);
     }
 
     /// POST /organization/users/{user_id}
@@ -145,11 +175,21 @@ pub const Resource = struct {
         user_id: []const u8,
         req: UpdateUserRoleRequest,
     ) errors.Error!std.json.Parsed(gen.User) {
+        return self.modify_user_with_options(allocator, user_id, req, null);
+    }
+
+    pub fn modify_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+        req: UpdateUserRoleRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.User) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/users/{s}", .{user_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJsonTyped(allocator, .POST, path, req, gen.User);
+        return self.sendJsonTypedWithOptions(allocator, .POST, path, req, gen.User, request_opts);
     }
 
     /// DELETE /organization/users/{user_id}
@@ -158,20 +198,57 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         user_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.User) {
+        return self.delete_user_with_options(allocator, user_id, null);
+    }
+
+    pub fn delete_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.User) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/users/{s}", .{user_id}) catch {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.DELETE, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
+        return self.sendNoBodyTypedWithOptions(allocator, .DELETE, path, gen.User, request_opts);
+    }
 
-        const parsed = std.json.parseFromSlice(gen.User, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    pub fn list_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListUsersParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UserListResponse) {
+        return self.list_users_with_options(allocator, params, request_opts);
+    }
+
+    pub fn retrieve_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.User) {
+        return self.retrieve_user_with_options(allocator, user_id, request_opts);
+    }
+
+    pub fn modify_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+        req: UpdateUserRoleRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.User) {
+        return self.modify_user_with_options(allocator, user_id, req, request_opts);
+    }
+
+    pub fn delete_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        user_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.User) {
+        return self.delete_user_with_options(allocator, user_id, request_opts);
     }
 };
