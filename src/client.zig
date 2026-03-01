@@ -261,6 +261,18 @@ pub const Client = struct {
         return self.defaults();
     }
 
+    pub fn organization(self: *Client) resources.DefaultResource {
+        return self.defaults();
+    }
+
+    pub fn org(self: *Client) resources.DefaultResource {
+        return self.organization();
+    }
+
+    pub fn admin(self: *Client) resources.DefaultResource {
+        return self.defaults();
+    }
+
     pub fn beta(self: *Client) resources.DefaultResource {
         return self.defaults();
     }
