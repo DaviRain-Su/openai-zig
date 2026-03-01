@@ -19,7 +19,32 @@ pub const CreateChatCompletionRequest = struct {
     response_format: ?std.json.Value = null,
 };
 
-pub const CreateChatCompletionStreamResponse = gen.CreateChatCompletionStreamResponse;
+const StreamResponseDelta = struct {
+    content: ?std.json.Value = null,
+    function_call: ?std.json.Value = null,
+    tool_calls: ?std.json.Value = null,
+    role: ?[]const u8 = null,
+    refusal: ?std.json.Value = null,
+};
+
+const StreamResponseChoice = struct {
+    delta: StreamResponseDelta = .{},
+    finish_reason: ?std.json.Value = null,
+    index: i64 = 0,
+    logprobs: ?std.json.Value = null,
+};
+
+pub const CreateChatCompletionStreamResponse = struct {
+    id: ?[]const u8 = null,
+    choices: []const StreamResponseChoice = &.{},
+    created: ?i64 = null,
+    model: ?[]const u8 = null,
+    service_tier: ?std.json.Value = null,
+    system_fingerprint: ?[]const u8 = null,
+    object: ?[]const u8 = null,
+    usage: ?std.json.Value = null,
+};
+
 pub const StreamEventHandler = *const fn (
     user_ctx: ?*anyopaque,
     event: std.json.Parsed(CreateChatCompletionStreamResponse),
@@ -40,12 +65,12 @@ const StreamChunkParser = struct {
             .allocator = allocator,
             .handler = handler,
             .user_ctx = user_ctx,
-            .line_buf = std.ArrayList(u8).init(allocator),
+            .line_buf = std.ArrayList(u8).initCapacity(allocator, 0) catch unreachable,
         };
     }
 
     fn deinit(self: *StreamChunkParser) void {
-        self.line_buf.deinit();
+        self.line_buf.deinit(self.allocator);
     }
 
     fn onTransportChunk(context: ?*anyopaque, chunk: []const u8) errors.Error!void {
@@ -65,7 +90,9 @@ const StreamChunkParser = struct {
             }
 
             if (byte == '\r') continue;
-            try self.line_buf.append(byte);
+            self.line_buf.append(self.allocator, byte) catch {
+                return errors.Error.HttpError;
+            };
         }
     }
 

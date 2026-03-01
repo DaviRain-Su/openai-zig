@@ -40,8 +40,10 @@ pub const Resource = struct {
     ) errors.Error!std.json.Parsed(gen.ListFilesResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
-        const writer = fbs.writer();
-        try writer.writeAll("/files");
+        var writer = fbs.writer();
+        writer.writeAll("/files") catch {
+            return errors.Error.SerializeError;
+        };
 
         var first = true;
         if (params.purpose) |purpose| {
@@ -49,7 +51,9 @@ pub const Resource = struct {
         }
         if (params.limit) |limit| {
             var value_buf: [32]u8 = undefined;
-            const value = try std.fmt.bufPrint(&value_buf, "{d}", .{limit});
+            const value = std.fmt.bufPrint(&value_buf, "{d}", .{limit}) catch {
+                return errors.Error.SerializeError;
+            };
             try common.appendQueryParam(writer, &first, "limit", value);
         }
         if (params.order) |order| {

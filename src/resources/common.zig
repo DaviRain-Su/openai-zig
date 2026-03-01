@@ -61,16 +61,27 @@ pub fn appendQueryParam(
     first: *bool,
     key: []const u8,
     value: []const u8,
-) !void {
+) errors.Error!void {
+    var mutable_writer = writer;
     if (first.*) {
-        try writer.writeAll("?");
+        mutable_writer.writeAll("?") catch {
+            return errors.Error.SerializeError;
+        };
         first.* = false;
     } else {
-        try writer.writeAll("&");
+        mutable_writer.writeAll("&") catch {
+            return errors.Error.SerializeError;
+        };
     }
-    try (std.Uri.Component{ .raw = key }).formatQuery(&writer);
-    try writer.writeAll("=");
-    try (std.Uri.Component{ .raw = value }).formatQuery(&writer);
+    mutable_writer.writeAll(key) catch {
+        return errors.Error.SerializeError;
+    };
+    mutable_writer.writeAll("=") catch {
+        return errors.Error.SerializeError;
+    };
+    mutable_writer.writeAll(value) catch {
+        return errors.Error.SerializeError;
+    };
 }
 
 pub fn appendOptionalQueryParam(
@@ -78,7 +89,7 @@ pub fn appendOptionalQueryParam(
     first: *bool,
     key: []const u8,
     value: ?[]const u8,
-) !void {
+) errors.Error!void {
     if (value) |v| {
         try appendQueryParam(writer, first, key, v);
     }
@@ -89,7 +100,7 @@ pub fn appendOptionalQueryParamU64(
     first: *bool,
     key: []const u8,
     value: ?u64,
-) !void {
+) errors.Error!void {
     if (value) |v| {
         var buf: [32]u8 = undefined;
         const token = try std.fmt.bufPrint(&buf, "{d}", .{v});
@@ -102,7 +113,7 @@ pub fn appendOptionalQueryParamBool(
     first: *bool,
     key: []const u8,
     value: ?bool,
-) !void {
+) errors.Error!void {
     if (value) |v| {
         if (v) {
             try appendQueryParam(writer, first, key, "true");
@@ -117,7 +128,7 @@ pub fn appendOptionalQueryParamList(
     first: *bool,
     key: []const u8,
     values: ?[]const []const u8,
-) !void {
+) errors.Error!void {
     if (values) |vals| {
         for (vals) |v| {
             try appendQueryParam(writer, first, key, v);

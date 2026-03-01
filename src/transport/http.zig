@@ -105,17 +105,7 @@ pub const Transport = struct {
         on_chunk: StreamChunk,
         chunk_ctx: ?*anyopaque,
     ) errors.Error!void {
-        return self.requestStreamInternal(method, path, headers, body, on_chunk, chunk_ctx) catch |err| {
-            return switch (err) {
-                errors.Error.HttpError,
-                errors.Error.DeserializeError,
-                errors.Error.SerializeError,
-                errors.Error.Timeout,
-                errors.Error.Unimplemented,
-                => err,
-                else => errors.Error.HttpError,
-            };
-        };
+        return self.requestStreamInternal(method, path, headers, body, on_chunk, chunk_ctx);
     }
 
     fn requestInternal(
@@ -188,20 +178,28 @@ pub const Transport = struct {
         body: ?[]const u8,
         on_chunk: StreamChunk,
         chunk_ctx: ?*anyopaque,
-    ) !void {
+    ) errors.Error!void {
         var arena = std.heap.ArenaAllocator.init(self.allocator);
         defer arena.deinit();
         const alloc = arena.allocator();
 
-        const url = try buildUrl(alloc, self.base_url, path);
+        const url = buildUrl(alloc, self.base_url, path) catch {
+            return errors.Error.HttpError;
+        };
 
-        var header_list = try std.ArrayList(std.http.Header).initCapacity(alloc, 0);
+        var header_list = std.ArrayList(std.http.Header).initCapacity(alloc, 0) catch {
+            return errors.Error.HttpError;
+        };
         defer header_list.deinit(alloc);
         if (self.extra_headers.len > 0) {
-            try header_list.appendSlice(alloc, self.extra_headers);
+            header_list.appendSlice(alloc, self.extra_headers) catch {
+                return errors.Error.HttpError;
+            };
         }
         if (headers.len > 0) {
-            try header_list.appendSlice(alloc, headers);
+            header_list.appendSlice(alloc, headers) catch {
+                return errors.Error.HttpError;
+            };
         }
 
         if (self.api_key) |raw_key| {
@@ -210,13 +208,23 @@ pub const Transport = struct {
             const header_value = if (std.mem.startsWith(u8, key, bearer_prefix))
                 key
             else blk: {
-                var auth_buf = try std.ArrayList(u8).initCapacity(alloc, bearer_prefix.len + key.len);
+                var auth_buf = std.ArrayList(u8).initCapacity(alloc, bearer_prefix.len + key.len) catch {
+                    return errors.Error.HttpError;
+                };
                 defer auth_buf.deinit(alloc);
-                try auth_buf.appendSlice(alloc, bearer_prefix);
-                try auth_buf.appendSlice(alloc, key);
-                break :blk try auth_buf.toOwnedSlice(alloc);
+                auth_buf.appendSlice(alloc, bearer_prefix) catch {
+                    return errors.Error.HttpError;
+                };
+                auth_buf.appendSlice(alloc, key) catch {
+                    return errors.Error.HttpError;
+                };
+                break :blk auth_buf.toOwnedSlice(alloc) catch {
+                    return errors.Error.HttpError;
+                };
             };
-            try header_list.append(alloc, .{ .name = "Authorization", .value = header_value });
+            header_list.append(alloc, .{ .name = "Authorization", .value = header_value }) catch {
+                return errors.Error.HttpError;
+            };
         }
 
         var stream_ctx = StreamWriterContext{
@@ -233,7 +241,7 @@ pub const Transport = struct {
         var raw_buf: [8192]u8 = undefined;
         var adapter = writer.adaptToNewApi(&raw_buf);
 
-        const fetch_result = try self.client.fetch(.{
+        const fetch_result = self.client.fetch(.{
             .location = .{ .url = url },
             .method = method,
             .payload = body,
@@ -244,7 +252,7 @@ pub const Transport = struct {
             if (err == error.WriteFailed and stream_ctx.err != null) {
                 return stream_ctx.err.?;
             }
-            return err;
+            return errors.Error.HttpError;
         };
 
         const status = @intFromEnum(fetch_result.status);

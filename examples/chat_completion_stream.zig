@@ -11,8 +11,7 @@ fn onChunk(
         if (choice.delta.content) |content| {
             switch (content) {
                 .string => |text| {
-                    const stdout = std.io.getStdOut().writer();
-                    try stdout.print("{s}", .{text});
+                    std.debug.print("{s}", .{text});
                 },
                 else => {},
             }
@@ -57,4 +56,3 @@ pub fn main() !void {
 
     std.debug.print("\n", .{});
 }
-

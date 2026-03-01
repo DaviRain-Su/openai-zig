@@ -22,10 +22,13 @@ pub fn main() !void {
     defer client.deinit();
 
     var resp = client.audio().create_speech(gpa, .{
-        .model = "gpt-oss-20b", // change to a valid TTS model you have access to
+        .model = .{ .string = "tts-1" }, // change to a valid TTS model you have access to
         .input = "Hello from Zig",
-        .voice = "alloy",
+        .instructions = null,
+        .speed = 1.0,
+        .voice = .{ .string = "alloy" },
         .response_format = "mp3",
+        .stream_format = null,
     }) catch |err| {
         if (err == errors.Error.HttpError) {
             std.debug.print("HTTP error (likely invalid key/model)\n", .{});
