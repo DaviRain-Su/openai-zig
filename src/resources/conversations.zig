@@ -18,23 +18,13 @@ pub const Resource = struct {
         return Resource{ .transport = transport };
     }
 
-    fn appendListParams(writer: anytype, params: ListParams, sep_start: []const u8) !void {
-        var sep = sep_start;
+    fn appendListParams(writer: anytype, params: ListParams, first: *bool) !void {
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, first, "limit", @as(u64, limit));
         }
-        if (params.order) |order| {
-            try writer.print("{s}order={s}", .{ sep, order });
-            sep = "&";
-        }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
-        }
-        if (params.before) |before| {
-            try writer.print("{s}before={s}", .{ sep, before });
-        }
+        try common.appendOptionalQueryParam(writer, first, "order", params.order);
+        try common.appendOptionalQueryParam(writer, first, "after", params.after);
+        try common.appendOptionalQueryParam(writer, first, "before", params.before);
     }
 
     fn sendJsonTyped(
@@ -128,7 +118,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/conversations/{s}/items", .{conversation_id});
-        try appendListParams(w, params, "?");
+        var first = true;
+        try appendListParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ConversationItemList);
     }
@@ -157,5 +148,83 @@ pub const Resource = struct {
             return errors.Error.SerializeError;
         };
         return self.sendNoBodyTyped(allocator, .DELETE, path, gen.DeletedConversationResource);
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.CreateConversationBody,
+    ) errors.Error!std.json.Parsed(gen.ConversationResource) {
+        return self.create_conversation(allocator, body);
+    }
+
+    pub fn get(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        conversation_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ConversationResource) {
+        return self.get_conversation(allocator, conversation_id);
+    }
+
+    pub fn create_conversation_items(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        conversation_id: []const u8,
+        body: gen.ConversationItem,
+    ) errors.Error!std.json.Parsed(gen.ConversationItem) {
+        return self.create_conversation_item(allocator, conversation_id, body);
+    }
+
+    pub fn update(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        conversation_id: []const u8,
+        body: gen.CreateConversationBody,
+    ) errors.Error!std.json.Parsed(gen.ConversationResource) {
+        return self.update_conversation(allocator, conversation_id, body);
+    }
+
+    pub fn delete(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        conversation_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.DeletedConversationResource) {
+        return self.delete_conversation(allocator, conversation_id);
+    }
+
+    pub fn create_item(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        conversation_id: []const u8,
+        body: gen.ConversationItem,
+    ) errors.Error!std.json.Parsed(gen.ConversationItem) {
+        return self.create_conversation_item(allocator, conversation_id, body);
+    }
+
+    pub fn list_items(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        conversation_id: []const u8,
+        params: ListParams,
+    ) errors.Error!std.json.Parsed(gen.ConversationItemList) {
+        return self.list_conversation_items(allocator, conversation_id, params);
+    }
+
+    pub fn get_item(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        conversation_id: []const u8,
+        item_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ConversationItem) {
+        return self.get_conversation_item(allocator, conversation_id, item_id);
+    }
+
+    pub fn delete_item(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        conversation_id: []const u8,
+        item_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.DeletedConversationResource) {
+        return self.delete_conversation_item(allocator, conversation_id, item_id);
     }
 };

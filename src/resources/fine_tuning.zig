@@ -27,30 +27,24 @@ pub const Resource = struct {
         return Resource{ .transport = transport };
     }
 
-    fn appendListParams(writer: anytype, params: ListParams, sep_start: []const u8) !void {
-        var sep = sep_start;
+    fn appendListParams(writer: anytype, params: ListParams, first: *bool) !void {
         if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
+            try common.appendOptionalQueryParam(writer, first, "after", after);
         }
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, first, "limit", @as(u64, limit));
         }
         if (params.metadata) |meta| {
-            // Metadata filter is freeform: delegate to caller to build query if needed.
             _ = meta;
         }
     }
 
-    fn appendBasicList(writer: anytype, after: ?[]const u8, limit: ?u32, sep_start: []const u8) !void {
-        var sep = sep_start;
+    fn appendBasicList(writer: anytype, after: ?[]const u8, limit: ?u32, first: *bool) !void {
         if (after) |a| {
-            try writer.print("{s}after={s}", .{ sep, a });
-            sep = "&";
+            try common.appendOptionalQueryParam(writer, first, "after", a);
         }
         if (limit) |l| {
-            try writer.print("{s}limit={d}", .{ sep, l });
+            try common.appendOptionalQueryParamU64(writer, first, "limit", @as(u64, l));
         }
     }
 
@@ -76,6 +70,24 @@ pub const Resource = struct {
     }
 
     /// POST /fine_tuning/alpha/graders/run
+    pub fn run(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.CreateEvalRunRequest,
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
+        return self.run_grader(allocator, body);
+    }
+
+    /// POST /fine_tuning/alpha/graders/validate
+    pub fn validate(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.CreateEvalRunRequest,
+    ) errors.Error!std.json.Parsed(gen.EvalRun) {
+        return self.validate_grader(allocator, body);
+    }
+
+    /// POST /fine_tuning/alpha/graders/run
     pub fn run_grader(
         self: *const Resource,
         allocator: std.mem.Allocator,
@@ -91,6 +103,33 @@ pub const Resource = struct {
         body: gen.CreateEvalRunRequest,
     ) errors.Error!std.json.Parsed(gen.EvalRun) {
         return self.sendJsonTyped(allocator, .POST, "/fine_tuning/alpha/graders/validate", body, gen.EvalRun);
+    }
+
+    pub fn create_fine_tuning_checkpoint_permission(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        checkpoint_id: []const u8,
+        body: gen.CreateFineTuningCheckpointPermissionRequest,
+    ) errors.Error!std.json.Parsed(gen.FineTuningCheckpointPermission) {
+        return self.create_checkpoint_permission(allocator, checkpoint_id, body);
+    }
+
+    pub fn delete_fine_tuning_checkpoint_permission(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        checkpoint_id: []const u8,
+        permission_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.DeleteFineTuningCheckpointPermissionResponse) {
+        return self.delete_checkpoint_permission(allocator, checkpoint_id, permission_id);
+    }
+
+    pub fn list_fine_tuning_checkpoint_permissions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        checkpoint_id: []const u8,
+        params: ListCheckpointsParams,
+    ) errors.Error!std.json.Parsed(gen.ListFineTuningCheckpointPermissionResponse) {
+        return self.list_checkpoint_permissions(allocator, checkpoint_id, params);
     }
 
     /// POST /fine_tuning/checkpoints/{fine_tuned_model_checkpoint}/permissions
@@ -132,7 +171,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/fine_tuning/checkpoints/{s}/permissions", .{checkpoint_id});
-        try appendBasicList(w, params.after, params.limit, "?");
+        var first = true;
+        try appendBasicList(w, params.after, params.limit, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ListFineTuningCheckpointPermissionResponse);
     }
@@ -146,6 +186,14 @@ pub const Resource = struct {
         return self.sendJsonTyped(allocator, .POST, "/fine_tuning/jobs", body, gen.FineTuningJob);
     }
 
+    pub fn create_fine_tuning_job(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.CreateFineTuningJobRequest,
+    ) errors.Error!std.json.Parsed(gen.FineTuningJob) {
+        return self.create_job(allocator, body);
+    }
+
     /// GET /fine_tuning/jobs
     pub fn list_jobs(
         self: *const Resource,
@@ -156,9 +204,18 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/fine_tuning/jobs");
-        try appendListParams(w, params, "?");
+        var first = true;
+        try appendListParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ListPaginatedFineTuningJobsResponse);
+    }
+
+    pub fn list_paginated_fine_tuning_jobs(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListParams,
+    ) errors.Error!std.json.Parsed(gen.ListPaginatedFineTuningJobsResponse) {
+        return self.list_jobs(allocator, params);
     }
 
     /// GET /fine_tuning/jobs/{fine_tuning_job_id}
@@ -174,6 +231,14 @@ pub const Resource = struct {
         return self.sendNoBodyTyped(allocator, .GET, path, gen.FineTuningJob);
     }
 
+    pub fn retrieve_fine_tuning_job(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        job_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.FineTuningJob) {
+        return self.retrieve_job(allocator, job_id);
+    }
+
     /// POST /fine_tuning/jobs/{fine_tuning_job_id}/cancel
     pub fn cancel_job(
         self: *const Resource,
@@ -185,6 +250,14 @@ pub const Resource = struct {
             return errors.Error.SerializeError;
         };
         return self.sendNoBodyTyped(allocator, .POST, path, gen.FineTuningJob);
+    }
+
+    pub fn cancel_fine_tuning_job(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        job_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.FineTuningJob) {
+        return self.cancel_job(allocator, job_id);
     }
 
     /// POST /fine_tuning/jobs/{fine_tuning_job_id}/pause
@@ -200,6 +273,14 @@ pub const Resource = struct {
         return self.sendNoBodyTyped(allocator, .POST, path, gen.FineTuningJob);
     }
 
+    pub fn pause_fine_tuning_job(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        job_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.FineTuningJob) {
+        return self.pause_job(allocator, job_id);
+    }
+
     /// POST /fine_tuning/jobs/{fine_tuning_job_id}/resume
     pub fn resume_job(
         self: *const Resource,
@@ -213,6 +294,14 @@ pub const Resource = struct {
         return self.sendNoBodyTyped(allocator, .POST, path, gen.FineTuningJob);
     }
 
+    pub fn resume_fine_tuning_job(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        job_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.FineTuningJob) {
+        return self.resume_job(allocator, job_id);
+    }
+
     /// GET /fine_tuning/jobs/{fine_tuning_job_id}/checkpoints
     pub fn list_job_checkpoints(
         self: *const Resource,
@@ -224,9 +313,19 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/fine_tuning/jobs/{s}/checkpoints", .{job_id});
-        try appendBasicList(w, params.after, params.limit, "?");
+        var first = true;
+        try appendBasicList(w, params.after, params.limit, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ListFineTuningJobCheckpointsResponse);
+    }
+
+    pub fn list_fine_tuning_job_checkpoints(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        job_id: []const u8,
+        params: ListCheckpointsParams,
+    ) errors.Error!std.json.Parsed(gen.ListFineTuningJobCheckpointsResponse) {
+        return self.list_job_checkpoints(allocator, job_id, params);
     }
 
     /// GET /fine_tuning/jobs/{fine_tuning_job_id}/events
@@ -240,8 +339,18 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/fine_tuning/jobs/{s}/events", .{job_id});
-        try appendBasicList(w, params.after, params.limit, "?");
+        var first = true;
+        try appendBasicList(w, params.after, params.limit, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ListFineTuningJobEventsResponse);
+    }
+
+    pub fn list_fine_tuning_events(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        job_id: []const u8,
+        params: ListEventsParams,
+    ) errors.Error!std.json.Parsed(gen.ListFineTuningJobEventsResponse) {
+        return self.list_job_events(allocator, job_id, params);
     }
 };

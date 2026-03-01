@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const ProjectGrant = gen.InviteProjectGroupBody;
 pub const InviteRequest = gen.InviteRequest;
@@ -9,6 +10,45 @@ pub const InviteRequest = gen.InviteRequest;
 pub const ListInvitesParams = struct {
     limit: ?u32 = null,
     after: ?[]const u8 = null,
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListInvitesParams,
+    ) errors.Error!std.json.Parsed(gen.InviteListResponse) {
+        return self.list_invites(allocator, params);
+    }
+
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: InviteRequest,
+    ) errors.Error!std.json.Parsed(gen.Invite) {
+        return self.create_invite(allocator, req);
+    }
+
+    pub fn invite_user(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: InviteRequest,
+    ) errors.Error!std.json.Parsed(gen.Invite) {
+        return self.create_invite(allocator, req);
+    }
+
+    pub fn retrieve(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        invite_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.Invite) {
+        return self.retrieve_invite(allocator, invite_id);
+    }
+
+    pub fn delete(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        invite_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.InviteDeleteResponse) {
+        return self.delete_invite(allocator, invite_id);
+    }
 };
 
 pub const Resource = struct {
@@ -29,14 +69,11 @@ pub const Resource = struct {
         const writer = fbs.writer();
         try writer.writeAll("/organization/invites");
 
-        var sep: []const u8 = "?";
+        var first = true;
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, &first, "limit", @as(u64, limit));
         }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-        }
+        try common.appendOptionalQueryParam(writer, &first, "after", params.after);
         const path = fbs.getWritten();
 
         const resp = try self.transport.request(.GET, path, &.{
@@ -45,7 +82,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.InviteListResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.InviteListResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -72,7 +109,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Invite, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Invite, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -95,7 +132,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.Invite, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.Invite, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;
@@ -118,7 +155,7 @@ pub const Resource = struct {
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
-        const parsed = std.json.parseFromSlice(gen.InviteDeleteResponse, allocator, body, .{}) catch {
+        const parsed = std.json.parseFromSlice(gen.InviteDeleteResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
             return errors.Error.DeserializeError;
         };
         return parsed;

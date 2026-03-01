@@ -32,25 +32,13 @@ pub const Resource = struct {
         return Resource{ .transport = transport };
     }
 
-    fn appendListParams(writer: anytype, params: ListParams, sep_start: []const u8) ![]const u8 {
-        var sep = sep_start;
+    fn appendListParams(writer: anytype, params: ListParams, first: *bool) !void {
         if (params.limit) |limit| {
-            try writer.print("{s}limit={d}", .{ sep, limit });
-            sep = "&";
+            try common.appendOptionalQueryParamU64(writer, first, "limit", @as(u64, limit));
         }
-        if (params.order) |order| {
-            try writer.print("{s}order={s}", .{ sep, order });
-            sep = "&";
-        }
-        if (params.after) |after| {
-            try writer.print("{s}after={s}", .{ sep, after });
-            sep = "&";
-        }
-        if (params.before) |before| {
-            try writer.print("{s}before={s}", .{ sep, before });
-            sep = "&";
-        }
-        return sep;
+        try common.appendOptionalQueryParam(writer, first, "order", params.order);
+        try common.appendOptionalQueryParam(writer, first, "after", params.after);
+        try common.appendOptionalQueryParam(writer, first, "before", params.before);
     }
 
     fn sendJson(
@@ -103,7 +91,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.writeAll("/assistants");
-        _ = try appendListParams(w, params, "?");
+        var first = true;
+        try appendListParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ListAssistantsResponse);
     }
@@ -226,9 +215,10 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/threads/{s}/messages", .{thread_id});
-        const sep = try appendListParams(w, params.base, "?");
+        var first = true;
+        try appendListParams(w, params.base, &first);
         if (params.run_id) |run_id| {
-            try w.print("{s}run_id={s}", .{ sep, run_id });
+            try common.appendQueryParam(w, &first, "run_id", run_id);
         }
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ListMessagesResponse);
@@ -302,7 +292,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/threads/{s}/runs", .{thread_id});
-        _ = try appendListParams(w, params, "?");
+        var first = true;
+        try appendListParams(w, params, &first);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ListRunsResponse);
     }
@@ -319,12 +310,9 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/threads/{s}/runs", .{thread_id});
-        var sep: []const u8 = "?";
+        var first = true;
         if (query.include) |incs| {
-            for (incs) |inc| {
-                try w.print("{s}include[]={s}", .{ sep, inc });
-                sep = "&";
-            }
+            try common.appendOptionalQueryParamList(w, &first, "include[]", incs);
         }
         const path = fbs.getWritten();
         return self.sendJsonTyped(allocator, .POST, path, body, gen.RunObject);
@@ -385,12 +373,10 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/threads/{s}/runs/{s}/steps", .{ thread_id, run_id });
-        var sep = try appendListParams(w, params.base, "?");
+        var first = true;
+        try appendListParams(w, params.base, &first);
         if (params.include) |incs| {
-            for (incs) |inc| {
-                try w.print("{s}include[]={s}", .{ sep, inc });
-                sep = "&";
-            }
+            try common.appendOptionalQueryParamList(w, &first, "include[]", incs);
         }
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.ListRunStepsResponse);
@@ -409,13 +395,8 @@ pub const Resource = struct {
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
         try w.print("/threads/{s}/runs/{s}/steps/{s}", .{ thread_id, run_id, step_id });
-        var sep: []const u8 = "?";
-        if (include) |incs| {
-            for (incs) |inc| {
-                try w.print("{s}include[]={s}", .{ sep, inc });
-                sep = "&";
-            }
-        }
+        var first = true;
+        try common.appendOptionalQueryParamList(w, &first, "include[]", include);
         const path = fbs.getWritten();
         return self.sendNoBodyTyped(allocator, .GET, path, gen.RunStepObject);
     }
@@ -433,5 +414,97 @@ pub const Resource = struct {
             return errors.Error.SerializeError;
         };
         return self.sendJsonTyped(allocator, .POST, path, body, gen.RunObject);
+    }
+
+    pub fn submit_tool_ouputs_to_run(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        thread_id: []const u8,
+        run_id: []const u8,
+        body: gen.SubmitToolOutputsRequest,
+    ) errors.Error!std.json.Parsed(gen.RunObject) {
+        return self.submit_tool_outputs_to_run(allocator, thread_id, run_id, body);
+    }
+
+    /// GET /assistants
+    pub fn list(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListParams,
+    ) errors.Error!std.json.Parsed(gen.ListAssistantsResponse) {
+        return self.list_assistants(allocator, params);
+    }
+
+    /// POST /assistants
+    pub fn create(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.CreateAssistantRequest,
+    ) errors.Error!std.json.Parsed(gen.AssistantObject) {
+        return self.create_assistant(allocator, body);
+    }
+
+    /// GET /assistants/{assistant_id}
+    pub fn get(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        assistant_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.AssistantObject) {
+        return self.get_assistant(allocator, assistant_id);
+    }
+
+    /// GET /assistants/{assistant_id}
+    pub fn retrieve(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        assistant_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.AssistantObject) {
+        return self.get_assistant(allocator, assistant_id);
+    }
+
+    /// POST /assistants/{assistant_id}
+    pub fn update(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        assistant_id: []const u8,
+        body: gen.ModifyAssistantRequest,
+    ) errors.Error!std.json.Parsed(gen.AssistantObject) {
+        return self.modify_assistant(allocator, assistant_id, body);
+    }
+
+    /// DELETE /assistants/{assistant_id}
+    pub fn delete(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        assistant_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.DeleteAssistantResponse) {
+        return self.delete_assistant(allocator, assistant_id);
+    }
+
+    /// POST /threads
+    pub fn create_thread_alias(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.CreateThreadRequest,
+    ) errors.Error!std.json.Parsed(gen.ThreadObject) {
+        return self.create_thread(allocator, body);
+    }
+
+    /// GET /threads/{thread_id}
+    pub fn retrieve_thread(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        thread_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ThreadObject) {
+        return self.get_thread(allocator, thread_id);
+    }
+
+    /// GET /threads/{thread_id}
+    pub fn get_thread_alias(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        thread_id: []const u8,
+    ) errors.Error!std.json.Parsed(gen.ThreadObject) {
+        return self.get_thread(allocator, thread_id);
     }
 };

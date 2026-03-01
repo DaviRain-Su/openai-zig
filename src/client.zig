@@ -10,6 +10,7 @@ pub const Client = struct {
     pub const Options = struct {
         base_url: []const u8,
         api_key: ?[]const u8 = null,
+        extra_headers: ?[]const std.http.Header = null,
         proxy: ?[]const u8 = null,
         timeout_ms: ?u64 = null,
     };
@@ -18,6 +19,7 @@ pub const Client = struct {
         const transport = try transport_mod.Transport.init(allocator, .{
             .base_url = opts.base_url,
             .api_key = opts.api_key,
+            .extra_headers = opts.extra_headers,
             .proxy = opts.proxy,
             .timeout_ms = opts.timeout_ms,
         });
@@ -47,20 +49,40 @@ pub const Client = struct {
         return resources.FilesResource.init(&self.transport);
     }
 
+    pub fn file(self: *Client) resources.FilesResource {
+        return self.files();
+    }
+
     pub fn completions(self: *Client) resources.CompletionsResource {
         return resources.CompletionsResource.init(&self.transport);
     }
 
-    pub fn embeddings(self: *Client) resources.EmbeddingsResource {
-        return resources.EmbeddingsResource.init(&self.transport);
+    pub fn completion(self: *Client) resources.CompletionsResource {
+        return self.completions();
     }
 
     pub fn images(self: *Client) resources.ImagesResource {
         return resources.ImagesResource.init(&self.transport);
     }
 
+    pub fn image(self: *Client) resources.ImagesResource {
+        return self.images();
+    }
+
+    pub fn embeddings(self: *Client) resources.EmbeddingsResource {
+        return resources.EmbeddingsResource.init(&self.transport);
+    }
+
+    pub fn embedding(self: *Client) resources.EmbeddingsResource {
+        return self.embeddings();
+    }
+
     pub fn moderations(self: *Client) resources.ModerationsResource {
         return resources.ModerationsResource.init(&self.transport);
+    }
+
+    pub fn moderation(self: *Client) resources.ModerationsResource {
+        return self.moderations();
     }
 
     pub fn usage(self: *Client) resources.UsageResource {
@@ -79,8 +101,16 @@ pub const Client = struct {
         return resources.BatchResource.init(&self.transport);
     }
 
+    pub fn batches(self: *Client) resources.BatchResource {
+        return resources.BatchResource.init(&self.transport);
+    }
+
     pub fn audit_logs(self: *Client) resources.AuditLogsResource {
         return resources.AuditLogsResource.init(&self.transport);
+    }
+
+    pub fn auditlogs(self: *Client) resources.AuditLogsResource {
+        return self.audit_logs();
     }
 
     pub fn invites(self: *Client) resources.InvitesResource {
@@ -127,8 +157,16 @@ pub const Client = struct {
         return resources.AssistantsResource.init(&self.transport);
     }
 
+    pub fn threads(self: *Client) resources.AssistantsResource {
+        return resources.AssistantsResource.init(&self.transport);
+    }
+
     pub fn videos(self: *Client) resources.VideosResource {
         return resources.VideosResource.init(&self.transport);
+    }
+
+    pub fn video(self: *Client) resources.VideosResource {
+        return self.videos();
     }
 
     pub fn fine_tuning(self: *Client) resources.FineTuningResource {
@@ -137,6 +175,18 @@ pub const Client = struct {
 
     pub fn defaults(self: *Client) resources.DefaultResource {
         return resources.DefaultResource.init(&self.transport);
+    }
+
+    pub fn containers(self: *Client) resources.DefaultResource {
+        return self.defaults();
+    }
+
+    pub fn beta(self: *Client) resources.DefaultResource {
+        return self.defaults();
+    }
+
+    pub fn chatkit(self: *Client) resources.DefaultResource {
+        return self.defaults();
     }
 
     pub fn conversations(self: *Client) resources.ConversationsResource {
@@ -161,6 +211,10 @@ pub const Client = struct {
 
     pub fn vector_stores(self: *Client) resources.VectorStoresResource {
         return resources.VectorStoresResource.init(&self.transport);
+    }
+
+    pub fn vectorstores(self: *Client) resources.VectorStoresResource {
+        return self.vector_stores();
     }
 
     pub fn rawTransport(self: *Client) *transport_mod.Transport {

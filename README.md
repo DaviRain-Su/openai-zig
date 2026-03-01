@@ -5,6 +5,7 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
 ## Status
 - Implemented runtime: `src/transport/http.zig`, `src/errors.zig`, `src/client.zig`.
 - Implemented resources: `models` (list/retrieve/delete), `files` (list/retrieve), `chat` (create_chat_completion JSON), plus stubs for other tags.
+- Streaming support: `chat.create_chat_completion_stream` parses SSE chunks and calls an event callback per streamed chunk.
 - Generator: `tools/generate.py` builds `generated/ir.json` and stub resources from the OpenAPI spec.
 - Sample entrypoint: `src/main.zig` demonstrates models.list and chat.completions.
 
@@ -23,11 +24,13 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
 zig build          # compile
 zig build run      # run the demo (models list + chat completion)
 zig build -Dexamples=true run-examples  # build + run example binaries
+bash scripts/check-op-coverage.sh     # verify operation coverage against generated/ir.json
 ```
 
 ## Examples
 - `examples/models_list.zig`
 - `examples/chat_completion.zig`
+- `examples/chat_completion_stream.zig`
 - `examples/chat_list.zig`
 - `examples/files_list.zig`
 - `examples/audio_speech.zig`
