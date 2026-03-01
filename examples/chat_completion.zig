@@ -23,7 +23,7 @@ pub fn main() !void {
     defer client.deinit();
 
     const messages = [_]sdk.resources.chat.ChatMessage{
-        .{ .role = "user", .content = "Say hello from Zig" },
+        .{ .role = "user", .content = "用中文说你是谁" },
     };
 
     var chat = client.chat().create_chat_completion(gpa, .{

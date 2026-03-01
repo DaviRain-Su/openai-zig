@@ -14,6 +14,7 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
   ```toml
   api_key = "sk-..."
   base_url = "https://api.deepseek.com/v1"
+  model = "deepseek-chat"
   ```
   `api_key` is required for live calls; `base_url` defaults to DeepSeek if omitted.
 
