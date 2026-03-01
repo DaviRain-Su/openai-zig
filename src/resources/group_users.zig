@@ -47,12 +47,81 @@ pub const Resource = struct {
         return Resource{ .transport = transport };
     }
 
+    fn sendJsonTyped(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        value: anytype,
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
+        return self.sendJsonTypedWithOptions(allocator, method, path, value, T, null);
+    }
+
+    fn sendJsonTypedWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        value: anytype,
+        comptime T: type,
+        req_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            value,
+            T,
+            req_opts,
+        );
+    }
+
+    fn sendNoBodyTyped(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
+        return self.sendNoBodyTypedWithOptions(allocator, method, path, T, null);
+    }
+
+    fn sendNoBodyTypedWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        comptime T: type,
+        req_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            T,
+            req_opts,
+        );
+    }
+
     /// GET /organization/groups/{group_id}/users
     pub fn list_group_users(
         self: *const Resource,
         allocator: std.mem.Allocator,
         group_id: []const u8,
         params: ListGroupUsersParams,
+    ) errors.Error!std.json.Parsed(gen.UserListResource) {
+        return self.list_group_users_with_options(allocator, group_id, params, null);
+    }
+
+    pub fn list_group_users_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        params: ListGroupUsersParams,
+        request_opts: transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.UserListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -66,16 +135,7 @@ pub const Resource = struct {
         try common.appendOptionalQueryParam(writer, &first, "order", params.order);
         const path = fbs.getWritten();
 
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.UserListResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return self.sendNoBodyTypedWithOptions(allocator, .GET, path, gen.UserListResource, request_opts);
     }
 
     /// POST /organization/groups/{group_id}/users
@@ -85,30 +145,22 @@ pub const Resource = struct {
         group_id: []const u8,
         req: CreateGroupUserRequest,
     ) errors.Error!std.json.Parsed(gen.GroupUserAssignment) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(req) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
+        return self.add_group_user_with_options(allocator, group_id, req, null);
+    }
 
+    pub fn add_group_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        req: CreateGroupUserRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.GroupUserAssignment) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/groups/{s}/users", .{group_id}) catch {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.POST, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.GroupUserAssignment, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return self.sendJsonTypedWithOptions(allocator, .POST, path, req, gen.GroupUserAssignment, request_opts);
     }
 
     /// DELETE /organization/groups/{group_id}/users/{user_id}
@@ -118,20 +170,51 @@ pub const Resource = struct {
         group_id: []const u8,
         user_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.GroupUserDeletedResource) {
+        return self.remove_group_user_with_options(allocator, group_id, user_id, null);
+    }
+
+    pub fn remove_group_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        user_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.GroupUserDeletedResource) {
         var path_buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/groups/{s}/users/{s}", .{ group_id, user_id }) catch {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.DELETE, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
+        return self.sendNoBodyTypedWithOptions(allocator, .DELETE, path, gen.GroupUserDeletedResource, request_opts);
+    }
 
-        const parsed = std.json.parseFromSlice(gen.GroupUserDeletedResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    pub fn list_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        params: ListGroupUsersParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UserListResource) {
+        return self.list_group_users_with_options(allocator, group_id, params, request_opts);
+    }
+
+    pub fn add_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        req: CreateGroupUserRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.GroupUserAssignment) {
+        return self.add_group_user_with_options(allocator, group_id, req, request_opts);
+    }
+
+    pub fn remove_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        group_id: []const u8,
+        user_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.GroupUserDeletedResource) {
+        return self.remove_group_user_with_options(allocator, group_id, user_id, request_opts);
     }
 };
