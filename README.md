@@ -4,7 +4,7 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
 
 ## Status
 - Implemented runtime: `src/transport/http.zig`, `src/errors.zig`, `src/client.zig`.
-- Implemented resources: `models` (list/retrieve/delete), `files` (list/retrieve), `chat` (create_chat_completion JSON), plus stubs for other tags.
+- Implemented resource wrappers for the generated OpenAPI operation surface in `src/resources/*.zig` (all operations present according to `generated/ir.json`).
 - Streaming support: `chat.create_chat_completion_stream` parses SSE chunks and calls an event callback per streamed chunk.
 - Generator: `tools/generate.py` builds `generated/ir.json` and stub resources from the OpenAPI spec.
 - Sample entrypoint: `src/main.zig` demonstrates models.list and chat.completions.
@@ -16,7 +16,17 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
   api_key = "sk-..."
   base_url = "https://api.deepseek.com/v1"
   model = "deepseek-chat"
+  # organization = "org-id"
+  # project = "project-id"
+  # timeout_ms = 30000
+  # max_retries = 3
+  # retry_base_delay_ms = 500
   ```
+  Env var fallback is supported:
+  - `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`
+  - `OPENAI_BASE_URL`, `OPENAI_MODEL`
+  - `OPENAI_ORGANIZATION`, `OPENAI_PROJECT`
+  - `OPENAI_TIMEOUT_MS`, `OPENAI_MAX_RETRIES`, `OPENAI_RETRY_BASE_DELAY_MS`
   `api_key` is required for live calls; `base_url` defaults to DeepSeek if omitted.
 
 ## Build and run

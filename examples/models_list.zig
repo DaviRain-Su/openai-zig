@@ -18,6 +18,11 @@ pub fn main() !void {
     var client = try sdk.initClient(gpa, .{
         .base_url = conf.base_url,
         .api_key = conf.api_key,
+        .timeout_ms = conf.timeout_ms,
+        .organization = conf.organization,
+        .project = conf.project,
+        .max_retries = conf.max_retries,
+        .retry_base_delay_ms = conf.retry_base_delay_ms,
     });
     defer client.deinit();
 

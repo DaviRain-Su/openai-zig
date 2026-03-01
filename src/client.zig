@@ -10,18 +10,26 @@ pub const Client = struct {
     pub const Options = struct {
         base_url: []const u8,
         api_key: ?[]const u8 = null,
+        organization: ?[]const u8 = null,
+        project: ?[]const u8 = null,
         extra_headers: ?[]const std.http.Header = null,
         proxy: ?[]const u8 = null,
         timeout_ms: ?u64 = null,
+        max_retries: u8 = 2,
+        retry_base_delay_ms: u64 = 500,
     };
 
     pub fn init(allocator: std.mem.Allocator, opts: Options) !Client {
         const transport = try transport_mod.Transport.init(allocator, .{
             .base_url = opts.base_url,
             .api_key = opts.api_key,
+            .organization = opts.organization,
+            .project = opts.project,
             .extra_headers = opts.extra_headers,
             .proxy = opts.proxy,
             .timeout_ms = opts.timeout_ms,
+            .max_retries = opts.max_retries,
+            .retry_base_delay_ms = opts.retry_base_delay_ms,
         });
         return Client{
             .allocator = allocator,

@@ -25,7 +25,7 @@ const ApiErrorEnvelope = struct {
 };
 
 const ApiErrorResponse = struct {
-    error: ?ApiErrorEnvelope = null,
+    @"error": ?ApiErrorEnvelope = null,
     detail: ?[]const u8 = null,
 };
 
@@ -69,7 +69,7 @@ fn logDecodedApiError(status: u16, body: []const u8) bool {
     defer parsed.deinit();
 
     const root = parsed.value;
-    if (root.error) |api_err| {
+    if (root.@"error") |api_err| {
         const message = api_err.message orelse "request failed";
         const typ = api_err.type orelse "unknown";
         std.debug.print(
