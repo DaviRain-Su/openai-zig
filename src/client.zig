@@ -273,6 +273,78 @@ pub const Client = struct {
         return self.defaults();
     }
 
+    pub fn admin_api_keys(self: *Client) resources.DefaultResource {
+        return self.defaults();
+    }
+
+    pub fn admin_api_key(self: *Client) resources.DefaultResource {
+        return self.admin_api_keys();
+    }
+
+    pub fn organization_audit_logs(self: *Client) resources.AuditLogsResource {
+        return self.audit_logs();
+    }
+
+    pub fn organization_audit_log(self: *Client) resources.AuditLogsResource {
+        return self.organization_audit_logs();
+    }
+
+    pub fn organization_certificates(self: *Client) resources.CertificatesResource {
+        return self.certificates();
+    }
+
+    pub fn organization_certificate(self: *Client) resources.CertificatesResource {
+        return self.organization_certificates();
+    }
+
+    pub fn organization_invites(self: *Client) resources.InvitesResource {
+        return self.invites();
+    }
+
+    pub fn organization_invite(self: *Client) resources.InvitesResource {
+        return self.organization_invites();
+    }
+
+    pub fn organization_groups(self: *Client) resources.GroupsResource {
+        return self.groups();
+    }
+
+    pub fn organization_group(self: *Client) resources.GroupsResource {
+        return self.organization_groups();
+    }
+
+    pub fn organization_roles(self: *Client) resources.RolesResource {
+        return self.roles();
+    }
+
+    pub fn organization_role(self: *Client) resources.RolesResource {
+        return self.organization_roles();
+    }
+
+    pub fn organization_users(self: *Client) resources.UsersResource {
+        return self.users();
+    }
+
+    pub fn organization_user(self: *Client) resources.UsersResource {
+        return self.organization_users();
+    }
+
+    pub fn organization_projects(self: *Client) resources.ProjectsResource {
+        return self.projects();
+    }
+
+    pub fn organization_project(self: *Client) resources.ProjectsResource {
+        return self.organization_projects();
+    }
+
+    pub fn organization_usage(self: *Client) resources.UsageResource {
+        return self.usage();
+    }
+
+    pub fn organization_costs(self: *Client) resources.UsageResource {
+        return self.usage();
+    }
+
     pub fn beta(self: *Client) resources.DefaultResource {
         return self.defaults();
     }
