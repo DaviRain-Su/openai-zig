@@ -329,11 +329,17 @@ pub const Client = struct {
         return self.vector_stores();
     }
 
-    pub fn rawTransport(self: *Client) *transport_mod.Transport {
+    /// Backward-compatible snake_case transport accessor.
+    pub fn raw_transport(self: *Client) *transport_mod.Transport {
         return &self.transport;
     }
 
-    /// Simple helper to validate connectivity by calling GET /models (stubbed).
+    /// Backward-compatible camelCase transport accessor.
+    pub fn rawTransport(self: *Client) *transport_mod.Transport {
+        return self.raw_transport();
+    }
+
+    /// Simple helper to validate connectivity by calling GET /models.
     pub fn ping(self: *Client) !void {
         const resp = try self.transport.request(.GET, "/models", &.{
             .{ .name = "Accept", .value = "application/json" },
