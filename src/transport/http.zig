@@ -207,11 +207,11 @@ pub const Transport = struct {
             const bearer_prefix = "Bearer ";
             const header_value = if (std.mem.startsWith(u8, key, bearer_prefix))
                 key
-            else blk: {
-                var auth_buf = std.ArrayList(u8).initCapacity(alloc, bearer_prefix.len + key.len) catch {
-                    return errors.Error.HttpError;
-                };
-                defer auth_buf.deinit(alloc);
+                else blk: {
+                    var auth_buf = std.ArrayList(u8).initCapacity(alloc, bearer_prefix.len + key.len) catch {
+                        return errors.Error.HttpError;
+                    };
+                    defer auth_buf.deinit(alloc);
                 auth_buf.appendSlice(alloc, bearer_prefix) catch {
                     return errors.Error.HttpError;
                 };
@@ -227,9 +227,16 @@ pub const Transport = struct {
             };
         }
 
+        var error_capture = std.ArrayList(u8).initCapacity(alloc, 0) catch {
+            return errors.Error.HttpError;
+        };
+        defer error_capture.deinit(alloc);
+
         var stream_ctx = StreamWriterContext{
             .handler = on_chunk,
             .user_ctx = chunk_ctx,
+            .allocator = alloc,
+            .capture = &error_capture,
         };
 
         const Writer = std.io.GenericWriter(
@@ -257,16 +264,22 @@ pub const Transport = struct {
 
         const status = @intFromEnum(fetch_result.status);
         if (status < 200 or status >= 300) {
-            return errors.Error.HttpError;
+            return errors.unexpectedStatus(.{
+                .status = status,
+                .body = error_capture.items,
+            });
         }
     }
 
     const StreamWriterContext = struct {
         handler: StreamChunk,
         user_ctx: ?*anyopaque,
+        allocator: std.mem.Allocator,
+        capture: *std.ArrayList(u8),
         err: ?errors.Error = null,
 
         pub fn writeChunk(context: *StreamWriterContext, chunk: []const u8) errors.Error!usize {
+            context.capture.appendSlice(context.allocator, chunk) catch {};
             context.handler(context.user_ctx, chunk) catch |callback_err| {
                 context.err = callback_err;
                 return callback_err;
