@@ -19,6 +19,18 @@ pub const Client = struct {
         retry_base_delay_ms: u64 = 500,
     };
 
+    pub const RequestOptions = struct {
+        base_url: ?[]const u8 = null,
+        api_key: ?[]const u8 = null,
+        organization: ?[]const u8 = null,
+        project: ?[]const u8 = null,
+        extra_headers: ?[]const std.http.Header = null,
+        proxy: ?[]const u8 = null,
+        timeout_ms: ?u64 = null,
+        max_retries: ?u8 = null,
+        retry_base_delay_ms: ?u64 = null,
+    };
+
     pub fn init(allocator: std.mem.Allocator, opts: Options) !Client {
         const transport = try transport_mod.Transport.init(allocator, .{
             .base_url = opts.base_url,
@@ -35,6 +47,42 @@ pub const Client = struct {
             .allocator = allocator,
             .transport = transport,
         };
+    }
+
+    pub fn withOptions(
+        self: *const Client,
+        allocator: std.mem.Allocator,
+        overrides: RequestOptions,
+    ) !Client {
+        const base_url = overrides.base_url orelse self.transport.base_url;
+        const api_key = overrides.api_key orelse self.transport.api_key;
+        const organization_id = overrides.organization orelse self.transport.organization;
+        const project_id = overrides.project orelse self.transport.project;
+        const extra_headers = overrides.extra_headers orelse self.transport.extra_headers;
+        const proxy_url = overrides.proxy orelse self.transport.proxy_url;
+        const transport = try transport_mod.Transport.init(allocator, .{
+            .base_url = base_url,
+            .api_key = api_key,
+            .organization = organization_id,
+            .project = project_id,
+            .extra_headers = extra_headers,
+            .proxy = proxy_url,
+            .timeout_ms = overrides.timeout_ms orelse self.transport.timeout_ms,
+            .max_retries = overrides.max_retries orelse self.transport.max_retries,
+            .retry_base_delay_ms = overrides.retry_base_delay_ms orelse self.transport.retry_base_delay_ms,
+        });
+        return Client{
+            .allocator = allocator,
+            .transport = transport,
+        };
+    }
+
+    pub fn with_options(
+        self: *const Client,
+        allocator: std.mem.Allocator,
+        overrides: RequestOptions,
+    ) !Client {
+        return self.withOptions(allocator, overrides);
     }
 
     pub fn deinit(self: *Client) void {

@@ -36,6 +36,15 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         params: ListAuditLogsParams,
     ) errors.Error!std.json.Parsed(gen.ListAuditLogsResponse) {
+        return self.list_audit_logs_with_options(allocator, params, null);
+    }
+
+    pub fn list_audit_logs_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListAuditLogsParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ListAuditLogsResponse) {
         var buf: [1024]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const writer = fbs.writer();
@@ -91,16 +100,14 @@ pub const Resource = struct {
 
         const path = fbs.getWritten();
 
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.ListAuditLogsResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .GET,
+            path,
+            gen.ListAuditLogsResponse,
+            request_opts,
+        );
     }
 
     pub fn list(
@@ -109,5 +116,14 @@ pub const Resource = struct {
         params: ListAuditLogsParams,
     ) errors.Error!std.json.Parsed(gen.ListAuditLogsResponse) {
         return self.list_audit_logs(allocator, params);
+    }
+
+    pub fn list_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListAuditLogsParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ListAuditLogsResponse) {
+        return self.list_audit_logs_with_options(allocator, params, request_opts);
     }
 };

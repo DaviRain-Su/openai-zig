@@ -26,9 +26,13 @@ pub fn main() !void {
     });
     defer client.deinit();
 
-    var files = client.files().list_files(gpa, .{}) catch |err| {
+    const files = client.files().list_files(gpa, .{}) catch |err| {
         if (err == errors.Error.HttpError) {
             std.debug.print("HTTP error (likely invalid key)\n", .{});
+            return;
+        }
+        if (err == errors.Error.NotFoundError) {
+            std.debug.print("files endpoint unavailable on this provider (HTTP 404).\n", .{});
             return;
         }
         return err;

@@ -171,6 +171,23 @@ pub const Resource = struct {
         return common.sendJsonTyped(self.transport, allocator, .POST, "/chat/completions", req, gen.CreateChatCompletionResponse);
     }
 
+    pub fn create_chat_completion_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateChatCompletionRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            .POST,
+            "/chat/completions",
+            req,
+            gen.CreateChatCompletionResponse,
+            request_opts,
+        );
+    }
+
     /// POST /chat/completions -> dynamic JSON.
     pub fn create(
         self: *const Resource,
@@ -178,6 +195,15 @@ pub const Resource = struct {
         req: CreateChatCompletionRequest,
     ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
         return self.create_chat_completion(allocator, req);
+    }
+
+    pub fn create_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateChatCompletionRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
+        return self.create_chat_completion_with_options(allocator, req, request_opts);
     }
 
     /// GET /chat/completions/{completion_id}
@@ -291,5 +317,60 @@ pub const Resource = struct {
             &parser,
         );
         try parser.flush();
+    }
+
+    pub fn create_chat_completion_stream_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateChatCompletionRequest,
+        on_event: StreamEventHandler,
+        user_ctx: ?*anyopaque,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!void {
+        var stream_req = req;
+        stream_req.stream = true;
+
+        var body_writer = std.io.Writer.Allocating.init(allocator);
+        defer body_writer.deinit();
+
+        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
+        json_stream.write(stream_req) catch {
+            return errors.Error.SerializeError;
+        };
+        const payload = body_writer.written();
+
+        var parser = StreamChunkParser.init(allocator, on_event, user_ctx);
+        defer parser.deinit();
+
+        try self.transport.requestStreamWithOptions(
+            .POST,
+            "/chat/completions",
+            &.{
+                .{ .name = "Accept", .value = "text/event-stream" },
+                .{ .name = "Content-Type", .value = "application/json" },
+            },
+            payload,
+            StreamChunkParser.onTransportChunk,
+            &parser,
+            request_opts,
+        );
+        try parser.flush();
+    }
+
+    pub fn create_with_options_stream(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateChatCompletionRequest,
+        on_event: StreamEventHandler,
+        user_ctx: ?*anyopaque,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!void {
+        return self.create_chat_completion_stream_with_options(
+            allocator,
+            req,
+            on_event,
+            user_ctx,
+            request_opts,
+        );
     }
 };

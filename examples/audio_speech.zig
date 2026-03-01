@@ -35,11 +35,17 @@ pub fn main() !void {
         .response_format = "mp3",
         .stream_format = null,
     }) catch |err| {
-        if (err == errors.Error.HttpError) {
-            std.debug.print("HTTP error (likely invalid key/model)\n", .{});
-            return;
+        switch (err) {
+            errors.Error.NotFoundError => {
+                std.debug.print("speech endpoint unavailable on this provider (HTTP 404).\n", .{});
+                return;
+            },
+            errors.Error.HttpError => {
+                std.debug.print("HTTP transport error (likely invalid key/model)\n", .{});
+                return;
+            },
+            else => return err,
         }
-        return err;
     };
     defer resp.deinit();
 

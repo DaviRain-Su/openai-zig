@@ -11,6 +11,18 @@ pub inline fn sendJsonTyped(
     value: anytype,
     comptime T: type,
 ) errors.Error!std.json.Parsed(T) {
+    return sendJsonTypedWithOptions(transport, allocator, method, path, value, T, null);
+}
+
+pub inline fn sendJsonTypedWithOptions(
+    transport: *transport_mod.Transport,
+    allocator: std.mem.Allocator,
+    method: std.http.Method,
+    path: []const u8,
+    value: anytype,
+    comptime T: type,
+    req_opts: ?transport_mod.Transport.RequestOptions,
+) errors.Error!std.json.Parsed(T) {
     var body_writer: std.io.Writer.Allocating = .init(allocator);
     defer body_writer.deinit();
     var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -19,10 +31,10 @@ pub inline fn sendJsonTyped(
     };
     const payload = body_writer.written();
 
-    const resp = try transport.request(method, path, &.{
+    const resp = try transport.requestWithOptions(method, path, &.{
         .{ .name = "Accept", .value = "application/json" },
         .{ .name = "Content-Type", .value = "application/json" },
-    }, payload);
+    }, payload, req_opts);
     const body = resp.body;
     defer transport.allocator.free(body);
 
@@ -42,9 +54,20 @@ pub inline fn sendNoBodyTyped(
     path: []const u8,
     comptime T: type,
 ) errors.Error!std.json.Parsed(T) {
-    const resp = try transport.request(method, path, &.{
+    return sendNoBodyTypedWithOptions(transport, allocator, method, path, T, null);
+}
+
+pub inline fn sendNoBodyTypedWithOptions(
+    transport: *transport_mod.Transport,
+    allocator: std.mem.Allocator,
+    method: std.http.Method,
+    path: []const u8,
+    comptime T: type,
+    req_opts: ?transport_mod.Transport.RequestOptions,
+) errors.Error!std.json.Parsed(T) {
+    const resp = try transport.requestWithOptions(method, path, &.{
         .{ .name = "Accept", .value = "application/json" },
-    }, null);
+    }, null, req_opts);
     const body = resp.body;
     defer transport.allocator.free(body);
 

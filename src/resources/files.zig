@@ -63,22 +63,63 @@ pub const Resource = struct {
             try common.appendQueryParam(writer, &first, "after", after);
         }
         const path = fbs.getWritten();
+        return common.sendNoBodyTyped(self.transport, allocator, .GET, path, gen.ListFilesResponse);
+    }
 
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.ListFilesResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
+    pub fn list_files_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListFilesParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ListFilesResponse) {
+        var buf: [256]u8 = undefined;
+        var fbs = std.io.fixedBufferStream(&buf);
+        var writer = fbs.writer();
+        writer.writeAll("/files") catch {
+            return errors.Error.SerializeError;
         };
-        return parsed;
+
+        var first = true;
+        if (params.purpose) |purpose| {
+            try common.appendQueryParam(writer, &first, "purpose", purpose);
+        }
+        if (params.limit) |limit| {
+            var value_buf: [32]u8 = undefined;
+            const value = std.fmt.bufPrint(&value_buf, "{d}", .{limit}) catch {
+                return errors.Error.SerializeError;
+            };
+            try common.appendQueryParam(writer, &first, "limit", value);
+        }
+        if (params.order) |order| {
+            try common.appendQueryParam(writer, &first, "order", order);
+        }
+        if (params.after) |after| {
+            try common.appendQueryParam(writer, &first, "after", after);
+        }
+        const path = fbs.getWritten();
+
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .GET,
+            path,
+            gen.ListFilesResponse,
+            request_opts,
+        );
     }
 
     /// GET /files
     pub fn list(self: *const Resource, allocator: std.mem.Allocator, params: ListFilesParams) errors.Error!std.json.Parsed(gen.ListFilesResponse) {
         return self.list_files(allocator, params);
+    }
+
+    pub fn list_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListFilesParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ListFilesResponse) {
+        return self.list_files_with_options(allocator, params, request_opts);
     }
 
     /// POST /files (multipart)
@@ -87,10 +128,25 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
     ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
-        const resp = try self.transport.request(.POST, "/files", &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = payload.content_type },
-        }, payload.body);
+        return self.create_file_with_options(allocator, payload, null);
+    }
+
+    pub fn create_file_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
+        const resp = try self.transport.requestWithOptions(
+            .POST,
+            "/files",
+            &.{
+                .{ .name = "Accept", .value = "application/json" },
+                .{ .name = "Content-Type", .value = payload.content_type },
+            },
+            payload.body,
+            request_opts,
+        );
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -109,6 +165,15 @@ pub const Resource = struct {
         return self.create_file(allocator, payload);
     }
 
+    pub fn create_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
+        return self.create_file_with_options(allocator, payload, request_opts);
+    }
+
     /// DELETE /files/{file_id}
     pub fn delete_file(
         self: *const Resource,
@@ -119,22 +184,41 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
             return errors.Error.SerializeError;
         };
+        return common.sendNoBodyTyped(self.transport, allocator, .DELETE, path, gen.DeleteFileResponse);
+    }
 
-        const resp = try self.transport.request(.DELETE, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.DeleteFileResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
+    pub fn delete_file_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        file_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.DeleteFileResponse) {
+        var path_buf: [256]u8 = undefined;
+        const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
+            return errors.Error.SerializeError;
         };
-        return parsed;
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .DELETE,
+            path,
+            gen.DeleteFileResponse,
+            request_opts,
+        );
     }
 
     /// DELETE /files/{file_id}
     pub fn delete(self: *const Resource, allocator: std.mem.Allocator, file_id: []const u8) errors.Error!std.json.Parsed(gen.DeleteFileResponse) {
         return self.delete_file(allocator, file_id);
+    }
+
+    pub fn delete_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        file_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.DeleteFileResponse) {
+        return self.delete_file_with_options(allocator, file_id, request_opts);
     }
 
     /// GET /files/{file_id}
@@ -147,17 +231,27 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
             return errors.Error.SerializeError;
         };
+        return common.sendNoBodyTyped(self.transport, allocator, .GET, path, gen.OpenAIFile);
+    }
 
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.OpenAIFile, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
+    pub fn retrieve_file_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        file_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
+        var path_buf: [256]u8 = undefined;
+        const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
+            return errors.Error.SerializeError;
         };
-        return parsed;
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .GET,
+            path,
+            gen.OpenAIFile,
+            request_opts,
+        );
     }
 
     /// GET /files/{file_id}
@@ -165,17 +259,34 @@ pub const Resource = struct {
         return self.retrieve_file(allocator, file_id);
     }
 
+    pub fn retrieve_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        file_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
+        return self.retrieve_file_with_options(allocator, file_id, request_opts);
+    }
+
     /// GET /files/{file_id}/content -> binary body.
     pub fn download_file(
         self: *const Resource,
         file_id: []const u8,
+    ) errors.Error!BinaryResponse {
+        return self.download_file_with_options(file_id, null);
+    }
+
+    pub fn download_file_with_options(
+        self: *const Resource,
+        file_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!BinaryResponse {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/files/{s}/content", .{file_id}) catch {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.GET, path, &.{}, null);
+        const resp = try self.transport.requestWithOptions(.GET, path, &.{}, null, request_opts);
         return BinaryResponse{
             .allocator = self.transport.allocator,
             .data = resp.body,
@@ -185,5 +296,13 @@ pub const Resource = struct {
     /// GET /files/{file_id}/content -> binary body.
     pub fn download(self: *const Resource, file_id: []const u8) errors.Error!BinaryResponse {
         return self.download_file(file_id);
+    }
+
+    pub fn download_with_options(
+        self: *const Resource,
+        file_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!BinaryResponse {
+        return self.download_file_with_options(file_id, request_opts);
     }
 };

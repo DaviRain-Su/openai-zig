@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const Resource = struct {
     transport: *transport_mod.Transport,
@@ -16,25 +17,31 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         req: gen.CreateModerationRequest,
     ) errors.Error!std.json.Parsed(gen.CreateModerationResponse) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(req) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
+        return common.sendJsonTyped(
+            self.transport,
+            allocator,
+            .POST,
+            "/moderations",
+            req,
+            gen.CreateModerationResponse,
+        );
+    }
 
-        const resp = try self.transport.request(.POST, "/moderations", &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.CreateModerationResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    pub fn create_moderation_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: gen.CreateModerationRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateModerationResponse) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            .POST,
+            "/moderations",
+            req,
+            gen.CreateModerationResponse,
+            request_opts,
+        );
     }
 
     pub fn create(
@@ -43,5 +50,14 @@ pub const Resource = struct {
         req: gen.CreateModerationRequest,
     ) errors.Error!std.json.Parsed(gen.CreateModerationResponse) {
         return self.create_moderation(allocator, req);
+    }
+
+    pub fn create_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: gen.CreateModerationRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateModerationResponse) {
+        return self.create_moderation_with_options(allocator, req, request_opts);
     }
 };

@@ -2,6 +2,7 @@ const std = @import("std");
 const errors = @import("../errors.zig");
 const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
+const common = @import("common.zig");
 
 pub const CreateResponseRequest = gen.CreateResponse;
 pub const CountInputTokensRequest = gen.TokenCountsBody;
@@ -25,25 +26,31 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         req: CreateResponseRequest,
     ) errors.Error!std.json.Parsed(gen.Response) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(req) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
+        return common.sendJsonTyped(
+            self.transport,
+            allocator,
+            .POST,
+            "/responses",
+            req,
+            gen.Response,
+        );
+    }
 
-        const resp = try self.transport.request(.POST, "/responses", &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.Response, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    pub fn create_response_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateResponseRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Response) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            .POST,
+            "/responses",
+            req,
+            gen.Response,
+            request_opts,
+        );
     }
 
     /// POST /responses
@@ -53,6 +60,15 @@ pub const Resource = struct {
         req: CreateResponseRequest,
     ) errors.Error!std.json.Parsed(gen.Response) {
         return self.create_response(allocator, req);
+    }
+
+    pub fn create_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateResponseRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Response) {
+        return self.create_response_with_options(allocator, req, request_opts);
     }
 
     /// GET /responses/{response_id}
@@ -65,17 +81,27 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/responses/{s}", .{response_id}) catch {
             return errors.Error.SerializeError;
         };
+        return common.sendNoBodyTyped(self.transport, allocator, .GET, path, gen.Response);
+    }
 
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.Response, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
+    pub fn get_response_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        response_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Response) {
+        var path_buf: [128]u8 = undefined;
+        const path = std.fmt.bufPrint(&path_buf, "/responses/{s}", .{response_id}) catch {
+            return errors.Error.SerializeError;
         };
-        return parsed;
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .GET,
+            path,
+            gen.Response,
+            request_opts,
+        );
     }
 
     /// GET /responses/{response_id}
@@ -85,6 +111,15 @@ pub const Resource = struct {
         response_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.Response) {
         return self.get_response(allocator, response_id);
+    }
+
+    pub fn retrieve_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        response_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Response) {
+        return self.get_response_with_options(allocator, response_id, request_opts);
     }
 
     /// DELETE /responses/{response_id}
@@ -97,17 +132,27 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/responses/{s}", .{response_id}) catch {
             return errors.Error.SerializeError;
         };
+        return common.sendNoBodyTyped(self.transport, allocator, .DELETE, path, DeleteResponseResponse);
+    }
 
-        const resp = try self.transport.request(.DELETE, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(DeleteResponseResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
+    pub fn delete_response_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        response_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(DeleteResponseResponse) {
+        var path_buf: [128]u8 = undefined;
+        const path = std.fmt.bufPrint(&path_buf, "/responses/{s}", .{response_id}) catch {
+            return errors.Error.SerializeError;
         };
-        return parsed;
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .DELETE,
+            path,
+            DeleteResponseResponse,
+            request_opts,
+        );
     }
 
     /// DELETE /responses/{response_id}
@@ -117,6 +162,15 @@ pub const Resource = struct {
         response_id: []const u8,
     ) errors.Error!std.json.Parsed(DeleteResponseResponse) {
         return self.delete_response(allocator, response_id);
+    }
+
+    pub fn delete_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        response_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(DeleteResponseResponse) {
+        return self.delete_response_with_options(allocator, response_id, request_opts);
     }
 
     /// POST /responses/{response_id}/cancel
@@ -129,17 +183,27 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/responses/{s}/cancel", .{response_id}) catch {
             return errors.Error.SerializeError;
         };
+        return common.sendNoBodyTyped(self.transport, allocator, .POST, path, gen.Response);
+    }
 
-        const resp = try self.transport.request(.POST, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.Response, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
+    pub fn cancel_response_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        response_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Response) {
+        var path_buf: [128]u8 = undefined;
+        const path = std.fmt.bufPrint(&path_buf, "/responses/{s}/cancel", .{response_id}) catch {
+            return errors.Error.SerializeError;
         };
-        return parsed;
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .POST,
+            path,
+            gen.Response,
+            request_opts,
+        );
     }
 
     /// POST /responses/{response_id}/cancel
@@ -149,6 +213,15 @@ pub const Resource = struct {
         response_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.Response) {
         return self.cancel_response(allocator, response_id);
+    }
+
+    pub fn cancel_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        response_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Response) {
+        return self.cancel_response_with_options(allocator, response_id, request_opts);
     }
 
     /// GET /responses/{response_id}/input_items
@@ -161,17 +234,27 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/responses/{s}/input_items", .{response_id}) catch {
             return errors.Error.SerializeError;
         };
+        return common.sendNoBodyTyped(self.transport, allocator, .GET, path, gen.ResponseItemList);
+    }
 
-        const resp = try self.transport.request(.GET, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.ResponseItemList, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
+    pub fn list_input_items_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        response_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ResponseItemList) {
+        var path_buf: [160]u8 = undefined;
+        const path = std.fmt.bufPrint(&path_buf, "/responses/{s}/input_items", .{response_id}) catch {
+            return errors.Error.SerializeError;
         };
-        return parsed;
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .GET,
+            path,
+            gen.ResponseItemList,
+            request_opts,
+        );
     }
 
     /// POST /responses/input_tokens
@@ -180,25 +263,31 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         req: CountInputTokensRequest,
     ) errors.Error!std.json.Parsed(gen.TokenCountsResource) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(req) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
+        return common.sendJsonTyped(
+            self.transport,
+            allocator,
+            .POST,
+            "/responses/input_tokens",
+            req,
+            gen.TokenCountsResource,
+        );
+    }
 
-        const resp = try self.transport.request(.POST, "/responses/input_tokens", &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.TokenCountsResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    pub fn count_input_tokens_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CountInputTokensRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.TokenCountsResource) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            .POST,
+            "/responses/input_tokens",
+            req,
+            gen.TokenCountsResource,
+            request_opts,
+        );
     }
 
     /// POST /responses/input_tokens
@@ -210,30 +299,45 @@ pub const Resource = struct {
         return self.count_input_tokens(allocator, req);
     }
 
+    pub fn count_tokens_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CountInputTokensRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.TokenCountsResource) {
+        return self.count_input_tokens_with_options(allocator, req, request_opts);
+    }
+
     /// POST /responses/compact
     pub fn compact(
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CompactResponseRequest,
     ) errors.Error!std.json.Parsed(gen.CompactResource) {
-        var body_writer: std.io.Writer.Allocating = .init(allocator);
-        defer body_writer.deinit();
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(req) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
+        return common.sendJsonTyped(
+            self.transport,
+            allocator,
+            .POST,
+            "/responses/compact",
+            req,
+            gen.CompactResource,
+        );
+    }
 
-        const resp = try self.transport.request(.POST, "/responses/compact", &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(gen.CompactResource, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    pub fn compact_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CompactResponseRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CompactResource) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            .POST,
+            "/responses/compact",
+            req,
+            gen.CompactResource,
+            request_opts,
+        );
     }
 };

@@ -46,6 +46,15 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         req: CreateSpeechRequest,
     ) errors.Error!BinaryResponse {
+        return self.create_speech_with_options(allocator, req, .{});
+    }
+
+    pub fn create_speech_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateSpeechRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!BinaryResponse {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
         var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
@@ -54,9 +63,9 @@ pub const Resource = struct {
         };
         const payload = body_writer.written();
 
-        const resp = try self.transport.request(.POST, "/audio/speech", &.{
+        const resp = try self.transport.requestWithOptions(.POST, "/audio/speech", &.{
             .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
+        }, payload, request_opts);
 
         // Transfer ownership of the response bytes to the caller for writing to disk.
         return BinaryResponse{
@@ -74,16 +83,34 @@ pub const Resource = struct {
         return self.create_speech(allocator, req);
     }
 
+    pub fn speech_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateSpeechRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!BinaryResponse {
+        return self.create_speech_with_options(allocator, req, request_opts);
+    }
+
     /// POST /audio/transcriptions (multipart form-data, caller builds payload).
     pub fn create_transcription(
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
     ) errors.Error!std.json.Parsed(gen.CreateTranscriptionResponseJson) {
-        const resp = try self.transport.request(.POST, "/audio/transcriptions", &.{
+        return self.create_transcription_with_options(allocator, payload, .{});
+    }
+
+    pub fn create_transcription_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateTranscriptionResponseJson) {
+        const resp = try self.transport.requestWithOptions(.POST, "/audio/transcriptions", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
-        }, payload.body);
+        }, payload.body, request_opts);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -102,16 +129,34 @@ pub const Resource = struct {
         return self.create_transcription(allocator, payload);
     }
 
+    pub fn transcriptions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateTranscriptionResponseJson) {
+        return self.create_transcription_with_options(allocator, payload, request_opts);
+    }
+
     /// POST /audio/translations (multipart form-data, caller builds payload).
     pub fn create_translation(
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
     ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
-        const resp = try self.transport.request(.POST, "/audio/translations", &.{
+        return self.create_translation_with_options(allocator, payload, .{});
+    }
+
+    pub fn create_translation_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
+        const resp = try self.transport.requestWithOptions(.POST, "/audio/translations", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
-        }, payload.body);
+        }, payload.body, request_opts);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -130,16 +175,34 @@ pub const Resource = struct {
         return self.create_translation(allocator, payload);
     }
 
+    pub fn translations_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
+        return self.create_translation_with_options(allocator, payload, request_opts);
+    }
+
     /// POST /audio/voice_consents (multipart form-data).
     pub fn create_voice_consent(
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
     ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
-        const resp = try self.transport.request(.POST, "/audio/voice_consents", &.{
+        return self.create_voice_consent_with_options(allocator, payload, .{});
+    }
+
+    pub fn create_voice_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
+        const resp = try self.transport.requestWithOptions(.POST, "/audio/voice_consents", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
-        }, payload.body);
+        }, payload.body, request_opts);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -158,11 +221,29 @@ pub const Resource = struct {
         return self.create_voice_consent(allocator, payload);
     }
 
+    pub fn create_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
+        return self.create_voice_consent_with_options(allocator, payload, request_opts);
+    }
+
     /// GET /audio/voice_consents
     pub fn list_voice_consents(
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListVoiceConsentsParams,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentListResource) {
+        return self.list_voice_consents_with_options(allocator, params, .{});
+    }
+
+    pub fn list_voice_consents_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListVoiceConsentsParams,
+        request_opts: transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.VoiceConsentListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -180,9 +261,9 @@ pub const Resource = struct {
         }
         const path = fbs.getWritten();
 
-        const resp = try self.transport.request(.GET, path, &.{
+        const resp = try self.transport.requestWithOptions(.GET, path, &.{
             .{ .name = "Accept", .value = "application/json" },
-        }, null);
+        }, null, request_opts);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -201,20 +282,38 @@ pub const Resource = struct {
         return self.list_voice_consents(allocator, params);
     }
 
+    pub fn list_consents_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListVoiceConsentsParams,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentListResource) {
+        return self.list_voice_consents_with_options(allocator, params, request_opts);
+    }
+
     /// GET /audio/voice_consents/{consent_id}
     pub fn get_voice_consent(
         self: *const Resource,
         allocator: std.mem.Allocator,
         consent_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
+        return self.get_voice_consent_with_options(allocator, consent_id, .{});
+    }
+
+    pub fn get_voice_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        consent_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/audio/voice_consents/{s}", .{consent_id}) catch {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.GET, path, &.{
+        const resp = try self.transport.requestWithOptions(.GET, path, &.{
             .{ .name = "Accept", .value = "application/json" },
-        }, null);
+        }, null, request_opts);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -233,6 +332,15 @@ pub const Resource = struct {
         return self.get_voice_consent(allocator, consent_id);
     }
 
+    pub fn get_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        consent_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
+        return self.get_voice_consent_with_options(allocator, consent_id, request_opts);
+    }
+
     /// GET /audio/voice_consents/{consent_id}
     pub fn retrieve_voice_consent(
         self: *const Resource,
@@ -242,12 +350,31 @@ pub const Resource = struct {
         return self.get_voice_consent(allocator, consent_id);
     }
 
+    pub fn retrieve_voice_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        consent_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
+        return self.get_voice_consent_with_options(allocator, consent_id, request_opts);
+    }
+
     /// POST /audio/voice_consents/{consent_id}
     pub fn update_voice_consent(
         self: *const Resource,
         allocator: std.mem.Allocator,
         consent_id: []const u8,
         req: UpdateVoiceConsentRequest,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
+        return self.update_voice_consent_with_options(allocator, consent_id, req, .{});
+    }
+
+    pub fn update_voice_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        consent_id: []const u8,
+        req: UpdateVoiceConsentRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
         var body_writer: std.io.Writer.Allocating = .init(allocator);
         defer body_writer.deinit();
@@ -262,10 +389,10 @@ pub const Resource = struct {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.POST, path, &.{
+        const resp = try self.transport.requestWithOptions(.POST, path, &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
+        }, payload, request_opts);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -285,6 +412,16 @@ pub const Resource = struct {
         return self.update_voice_consent(allocator, consent_id, req);
     }
 
+    pub fn modify_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        consent_id: []const u8,
+        req: UpdateVoiceConsentRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
+        return self.update_voice_consent_with_options(allocator, consent_id, req, request_opts);
+    }
+
     /// POST /audio/voice_consents/{consent_id}
     pub fn modify_voice_consent(
         self: *const Resource,
@@ -295,20 +432,39 @@ pub const Resource = struct {
         return self.update_voice_consent(allocator, consent_id, req);
     }
 
+    pub fn modify_voice_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        consent_id: []const u8,
+        req: UpdateVoiceConsentRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentResource) {
+        return self.update_voice_consent_with_options(allocator, consent_id, req, request_opts);
+    }
+
     /// DELETE /audio/voice_consents/{consent_id}
     pub fn delete_voice_consent(
         self: *const Resource,
         allocator: std.mem.Allocator,
         consent_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.VoiceConsentDeletedResource) {
+        return self.delete_voice_consent_with_options(allocator, consent_id, .{});
+    }
+
+    pub fn delete_voice_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        consent_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentDeletedResource) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/audio/voice_consents/{s}", .{consent_id}) catch {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.DELETE, path, &.{
+        const resp = try self.transport.requestWithOptions(.DELETE, path, &.{
             .{ .name = "Accept", .value = "application/json" },
-        }, null);
+        }, null, request_opts);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -327,16 +483,34 @@ pub const Resource = struct {
         return self.delete_voice_consent(allocator, consent_id);
     }
 
+    pub fn delete_consent_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        consent_id: []const u8,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceConsentDeletedResource) {
+        return self.delete_voice_consent_with_options(allocator, consent_id, request_opts);
+    }
+
     /// POST /audio/voices (multipart form-data).
     pub fn create_voice(
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
     ) errors.Error!std.json.Parsed(gen.VoiceResource) {
-        const resp = try self.transport.request(.POST, "/audio/voices", &.{
+        return self.create_voice_with_options(allocator, payload, .{});
+    }
+
+    pub fn create_voice_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceResource) {
+        const resp = try self.transport.requestWithOptions(.POST, "/audio/voices", &.{
             .{ .name = "Accept", .value = "application/json" },
             .{ .name = "Content-Type", .value = payload.content_type },
-        }, payload.body);
+        }, payload.body, request_opts);
         const body = resp.body;
         defer self.transport.allocator.free(body);
 
@@ -353,5 +527,14 @@ pub const Resource = struct {
         payload: MultipartRequest,
     ) errors.Error!std.json.Parsed(gen.VoiceResource) {
         return self.create_voice(allocator, payload);
+    }
+
+    pub fn create_voices_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: MultipartRequest,
+        request_opts: transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.VoiceResource) {
+        return self.create_voice_with_options(allocator, payload, request_opts);
     }
 };

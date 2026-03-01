@@ -8,6 +8,11 @@ pub const Transport = struct {
     api_key: ?[]const u8,
     organization: ?[]const u8,
     project: ?[]const u8,
+    proxy_url: ?[]const u8,
+    owns_base_url: bool,
+    owns_api_key: bool,
+    owns_organization: bool,
+    owns_project: bool,
     timeout_ms: ?u64 = null,
     max_retries: u8 = 2,
     retry_base_delay_ms: u64 = 500,
@@ -28,6 +33,28 @@ pub const Transport = struct {
         retry_base_delay_ms: u64 = 500,
     };
 
+    pub const RequestOptions = struct {
+        base_url: ?[]const u8 = null,
+        api_key: ?[]const u8 = null,
+        organization: ?[]const u8 = null,
+        project: ?[]const u8 = null,
+        timeout_ms: ?u64 = null,
+        max_retries: ?u8 = null,
+        retry_base_delay_ms: ?u64 = null,
+        extra_headers: ?[]const std.http.Header = null,
+    };
+
+    const ActiveRequestOptions = struct {
+        base_url: []const u8,
+        api_key: ?[]const u8,
+        organization: ?[]const u8,
+        project: ?[]const u8,
+        timeout_ms: ?u64,
+        max_retries: u8,
+        retry_base_delay_ms: u64,
+        extra_headers: ?[]const std.http.Header,
+    };
+
     pub fn init(allocator: std.mem.Allocator, opts: Options) !Transport {
         const http_client = std.http.Client{ .allocator = allocator };
         const ExtraConfig = struct { headers: []const std.http.Header, owns: bool };
@@ -38,13 +65,24 @@ pub const Transport = struct {
             break :blk ExtraConfig{ .headers = &.{}, .owns = false };
         };
 
+        const base_url = try allocator.dupe(u8, opts.base_url);
+        const api_key = if (opts.api_key) |key| try allocator.dupe(u8, key) else null;
+        const organization = if (opts.organization) |organization| try allocator.dupe(u8, organization) else null;
+        const project = if (opts.project) |project| try allocator.dupe(u8, project) else null;
+        const proxy_url = if (opts.proxy) |url| try allocator.dupe(u8, url) else null;
+
         var transport = Transport{
             .allocator = allocator,
             .client = http_client,
-            .base_url = opts.base_url,
-            .api_key = opts.api_key,
-            .organization = opts.organization,
-            .project = opts.project,
+            .base_url = base_url,
+            .api_key = api_key,
+            .organization = organization,
+            .project = project,
+            .owns_base_url = true,
+            .owns_api_key = api_key != null,
+            .owns_organization = organization != null,
+            .owns_project = project != null,
+            .proxy_url = proxy_url,
             .timeout_ms = opts.timeout_ms,
             .max_retries = opts.max_retries,
             .retry_base_delay_ms = opts.retry_base_delay_ms,
@@ -53,9 +91,10 @@ pub const Transport = struct {
             .proxy_http = null,
             .proxy_https = null,
         };
+        errdefer transport.deinit();
 
-        if (opts.proxy) |proxy_url| {
-            if (try parseProxy(allocator, proxy_url)) |proxy| {
+        if (proxy_url) |url| {
+            if (try parseProxy(allocator, url)) |proxy| {
                 switch (proxy.protocol) {
                     .plain => transport.proxy_http = proxy,
                     .tls => transport.proxy_https = proxy,
@@ -64,13 +103,33 @@ pub const Transport = struct {
                 transport.client.https_proxy = transport.proxy_https;
             }
         }
-
         return transport;
     }
 
     pub fn deinit(self: *Transport) void {
+        if (self.owns_base_url) {
+            self.allocator.free(self.base_url);
+        }
+        if (self.owns_api_key) {
+            if (self.api_key) |api_key| {
+                self.allocator.free(api_key);
+            }
+        }
+        if (self.owns_organization) {
+            if (self.organization) |organization| {
+                self.allocator.free(organization);
+            }
+        }
+        if (self.owns_project) {
+            if (self.project) |project| {
+                self.allocator.free(project);
+            }
+        }
         if (self.owns_extra_headers) {
             self.allocator.free(self.extra_headers);
+        }
+        if (self.proxy_url) |url| {
+            self.allocator.free(url);
         }
         if (self.proxy_http) |proxy| {
             self.allocator.free(proxy.host);
@@ -101,8 +160,50 @@ pub const Transport = struct {
         headers: []const std.http.Header,
         body: ?[]const u8,
     ) errors.Error!Response {
-        return self.requestInternal(method, path, headers, body) catch {
-            return errors.Error.HttpError;
+        return self.requestInternal(method, path, headers, body, null) catch |err| {
+            return mapTransportError(err);
+        };
+    }
+
+    pub fn requestWithOptions(
+        self: *Transport,
+        method: std.http.Method,
+        path: []const u8,
+        headers: []const std.http.Header,
+        body: ?[]const u8,
+        req_opts: ?RequestOptions,
+    ) errors.Error!Response {
+        return self.requestInternal(method, path, headers, body, req_opts) catch |err| {
+            return mapTransportError(err);
+        };
+    }
+
+    fn resolveRequestOptions(
+        self: *const Transport,
+        req_opts: ?RequestOptions,
+    ) ActiveRequestOptions {
+        if (req_opts) |opts| {
+            return ActiveRequestOptions{
+                .base_url = opts.base_url orelse self.base_url,
+                .api_key = opts.api_key orelse self.api_key,
+                .organization = opts.organization orelse self.organization,
+                .project = opts.project orelse self.project,
+                .timeout_ms = opts.timeout_ms orelse self.timeout_ms,
+                .max_retries = opts.max_retries orelse self.max_retries,
+                .retry_base_delay_ms = opts.retry_base_delay_ms orelse self.retry_base_delay_ms,
+                .extra_headers = opts.extra_headers,
+            };
+        }
+
+        return ActiveRequestOptions{
+            .base_url = self.base_url,
+            .api_key = self.api_key,
+            .organization = self.organization,
+            .project = self.project,
+            .timeout_ms = self.timeout_ms,
+            .max_retries = self.max_retries,
+            .retry_base_delay_ms = self.retry_base_delay_ms,
+            .extra_headers = null,
         };
     }
 
@@ -117,7 +218,20 @@ pub const Transport = struct {
         on_chunk: StreamChunk,
         chunk_ctx: ?*anyopaque,
     ) errors.Error!void {
-        return self.requestStreamInternal(method, path, headers, body, on_chunk, chunk_ctx);
+        return self.requestStreamInternal(method, path, headers, body, on_chunk, chunk_ctx, null);
+    }
+
+    pub fn requestStreamWithOptions(
+        self: *Transport,
+        method: std.http.Method,
+        path: []const u8,
+        headers: []const std.http.Header,
+        body: ?[]const u8,
+        on_chunk: StreamChunk,
+        chunk_ctx: ?*anyopaque,
+        req_opts: ?RequestOptions,
+    ) errors.Error!void {
+        return self.requestStreamInternal(method, path, headers, body, on_chunk, chunk_ctx, req_opts);
     }
 
     fn requestInternal(
@@ -126,26 +240,31 @@ pub const Transport = struct {
         path: []const u8,
         headers: []const std.http.Header,
         body: ?[]const u8,
+        req_opts: ?RequestOptions,
     ) !Response {
+        const active_opts = self.resolveRequestOptions(req_opts);
         var arena = std.heap.ArenaAllocator.init(self.allocator);
         defer arena.deinit();
         const alloc = arena.allocator();
 
-        const url = try buildUrl(alloc, self.base_url, path);
+        const url = try buildUrl(alloc, active_opts.base_url, path);
         const uri = try std.Uri.parse(url);
 
         var attempt: u8 = 0;
-        while (attempt <= self.max_retries) : (attempt += 1) {
+        while (attempt <= active_opts.max_retries) : (attempt += 1) {
             var header_list = try std.ArrayList(std.http.Header).initCapacity(alloc, 0);
             defer header_list.deinit(alloc);
             if (self.extra_headers.len > 0) {
                 try header_list.appendSlice(alloc, self.extra_headers);
             }
+            if (active_opts.extra_headers) |extra_headers| {
+                try header_list.appendSlice(alloc, extra_headers);
+            }
             if (headers.len > 0) {
                 try header_list.appendSlice(alloc, headers);
             }
 
-            if (self.api_key) |raw_key| {
+            if (active_opts.api_key) |raw_key| {
                 const key = std.mem.trim(u8, raw_key, " ");
                 const bearer_prefix = "Bearer ";
                 const header_value = if (std.mem.startsWith(u8, key, bearer_prefix))
@@ -159,13 +278,13 @@ pub const Transport = struct {
                 };
                 try header_list.append(alloc, .{ .name = "Authorization", .value = header_value });
             }
-            if (self.organization) |org| {
+            if (active_opts.organization) |org| {
                 const value = std.mem.trim(u8, org, " ");
                 if (value.len > 0) {
                     try header_list.append(alloc, .{ .name = "OpenAI-Organization", .value = value });
                 }
             }
-            if (self.project) |project| {
+            if (active_opts.project) |project| {
                 const value = std.mem.trim(u8, project, " ");
                 if (value.len > 0) {
                     try header_list.append(alloc, .{ .name = "OpenAI-Project", .value = value });
@@ -176,10 +295,10 @@ pub const Transport = struct {
                 .extra_headers = header_list.items,
                 .keep_alive = false,
             }) catch |err| {
-                if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                     return err;
                 }
-                sleepForRetry(self, attempt, null);
+                sleepForRetry(attempt, null, active_opts);
                 continue;
             };
             defer req.deinit();
@@ -187,72 +306,77 @@ pub const Transport = struct {
             if (body) |payload| {
                 req.transfer_encoding = .{ .content_length = payload.len };
                 var body_writer = req.sendBodyUnflushed(&.{}) catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return err;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
                 body_writer.writer.writeAll(payload) catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return err;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
                 body_writer.end() catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return err;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
                 req.connection.?.flush() catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return err;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
             } else {
                 req.sendBodiless() catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return err;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
             }
 
             var redirect_buffer: [8 * 1024]u8 = undefined;
             var response = req.receiveHead(&redirect_buffer) catch |err| {
-                if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                     return err;
                 }
-                sleepForRetry(self, attempt, null);
+                sleepForRetry(attempt, null, active_opts);
                 continue;
             };
 
             const status = @intFromEnum(response.head.status);
             const retry_after_ms = parseRetryAfterSeconds(&response.head);
+            const request_id = extractHeaderValue(&response.head, "x-request-id");
 
             const response_bytes = readResponseBody(self.allocator, alloc, &response) catch |err| {
-                if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                     return err;
                 }
-                sleepForRetry(self, attempt, retry_after_ms);
+                sleepForRetry(attempt, retry_after_ms, active_opts);
                 continue;
             };
             errdefer self.allocator.free(response_bytes);
 
             if (status < 200 or status >= 300) {
-                if (isRetryableStatus(status) and attempt < self.max_retries and isRetryableMethod(method)) {
+                if (isRetryableStatus(status) and attempt < active_opts.max_retries and isRetryableMethod(method)) {
                     self.allocator.free(response_bytes);
-                    sleepForRetry(self, attempt, retry_after_ms);
+                    sleepForRetry(attempt, retry_after_ms, active_opts);
                     continue;
                 }
                 defer self.allocator.free(response_bytes);
-                return errors.unexpectedStatus(.{ .status = status, .body = response_bytes });
+                return errors.unexpectedStatus(.{
+                    .status = status,
+                    .body = response_bytes,
+                    .request_id = request_id,
+                });
             }
 
             return Response{ .status = status, .body = response_bytes };
@@ -268,12 +392,14 @@ pub const Transport = struct {
         body: ?[]const u8,
         on_chunk: StreamChunk,
         chunk_ctx: ?*anyopaque,
+        req_opts: ?RequestOptions,
     ) errors.Error!void {
+        const active_opts = self.resolveRequestOptions(req_opts);
         var arena = std.heap.ArenaAllocator.init(self.allocator);
         defer arena.deinit();
         const alloc = arena.allocator();
 
-        const url = buildUrl(alloc, self.base_url, path) catch {
+        const url = buildUrl(alloc, active_opts.base_url, path) catch {
             return errors.Error.HttpError;
         };
         const uri = std.Uri.parse(url) catch {
@@ -281,7 +407,7 @@ pub const Transport = struct {
         };
 
         var attempt: u8 = 0;
-        while (attempt <= self.max_retries) : (attempt += 1) {
+        while (attempt <= active_opts.max_retries) : (attempt += 1) {
             var header_list = std.ArrayList(std.http.Header).initCapacity(alloc, 0) catch {
                 return errors.Error.HttpError;
             };
@@ -291,13 +417,18 @@ pub const Transport = struct {
                     return errors.Error.HttpError;
                 };
             }
+            if (active_opts.extra_headers) |extra_headers| {
+                header_list.appendSlice(alloc, extra_headers) catch {
+                    return errors.Error.HttpError;
+                };
+            }
             if (headers.len > 0) {
                 header_list.appendSlice(alloc, headers) catch {
                     return errors.Error.HttpError;
                 };
             }
 
-            if (self.api_key) |raw_key| {
+            if (active_opts.api_key) |raw_key| {
                 const key = std.mem.trim(u8, raw_key, " ");
                 const bearer_prefix = "Bearer ";
                 const header_value = if (std.mem.startsWith(u8, key, bearer_prefix))
@@ -321,7 +452,7 @@ pub const Transport = struct {
                     return errors.Error.HttpError;
                 };
             }
-            if (self.organization) |org| {
+            if (active_opts.organization) |org| {
                 const value = std.mem.trim(u8, org, " ");
                 if (value.len > 0) {
                     header_list.append(alloc, .{ .name = "OpenAI-Organization", .value = value }) catch {
@@ -329,7 +460,7 @@ pub const Transport = struct {
                     };
                 }
             }
-            if (self.project) |project| {
+            if (active_opts.project) |project| {
                 const value = std.mem.trim(u8, project, " ");
                 if (value.len > 0) {
                     header_list.append(alloc, .{ .name = "OpenAI-Project", .value = value }) catch {
@@ -342,10 +473,10 @@ pub const Transport = struct {
                 .extra_headers = header_list.items,
                 .keep_alive = false,
             }) catch |err| {
-                if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                     return errors.Error.HttpError;
                 }
-                sleepForRetry(self, attempt, null);
+                sleepForRetry(attempt, null, active_opts);
                 continue;
             };
             defer req.deinit();
@@ -353,54 +484,55 @@ pub const Transport = struct {
             if (body) |payload| {
                 req.transfer_encoding = .{ .content_length = payload.len };
                 var body_writer = req.sendBodyUnflushed(&.{}) catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return errors.Error.HttpError;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
                 body_writer.writer.writeAll(payload) catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return errors.Error.HttpError;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
                 body_writer.end() catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return errors.Error.HttpError;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
                 req.connection.?.flush() catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return errors.Error.HttpError;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
             } else {
                 req.sendBodiless() catch |err| {
-                    if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return errors.Error.HttpError;
                     }
-                    sleepForRetry(self, attempt, null);
+                    sleepForRetry(attempt, null, active_opts);
                     continue;
                 };
             }
 
             var redirect_buffer: [8 * 1024]u8 = undefined;
             var response = req.receiveHead(&redirect_buffer) catch |err| {
-                if (!isRetryableFetchError(err) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                     return errors.Error.HttpError;
                 }
-                sleepForRetry(self, attempt, null);
+                sleepForRetry(attempt, null, active_opts);
                 continue;
             };
 
             const status = @intFromEnum(response.head.status);
             const retry_after_ms = parseRetryAfterSeconds(&response.head);
+            const request_id = extractHeaderValue(&response.head, "x-request-id");
 
             var error_capture = std.ArrayList(u8).initCapacity(alloc, 0) catch {
                 return errors.Error.HttpError;
@@ -409,21 +541,22 @@ pub const Transport = struct {
 
             if (status < 200 or status >= 300) {
                 const response_body = readResponseBody(self.allocator, alloc, &response) catch {
-                    if (!isRetryableStatus(status) or attempt == self.max_retries or !isRetryableMethod(method)) {
+                    if (!isRetryableStatus(status) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return errors.Error.HttpError;
                     }
-                    sleepForRetry(self, attempt, retry_after_ms);
+                    sleepForRetry(attempt, retry_after_ms, active_opts);
                     continue;
                 };
                 defer self.allocator.free(response_body);
 
-                if (isRetryableStatus(status) and attempt < self.max_retries and isRetryableMethod(method)) {
-                    sleepForRetry(self, attempt, retry_after_ms);
+                if (isRetryableStatus(status) and attempt < active_opts.max_retries and isRetryableMethod(method)) {
+                    sleepForRetry(attempt, retry_after_ms, active_opts);
                     continue;
                 }
                 return errors.unexpectedStatus(.{
                     .status = status,
                     .body = response_body,
+                    .request_id = request_id,
                 });
             }
 
@@ -447,10 +580,10 @@ pub const Transport = struct {
                 if (stream_ctx.err) |callback_err| {
                     return callback_err;
                 }
-                if (attempt == self.max_retries or !isRetryableMethod(method)) {
+                if (attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                     return errors.Error.HttpError;
                 }
-                sleepForRetry(self, attempt, retry_after_ms);
+                sleepForRetry(attempt, retry_after_ms, active_opts);
                 continue;
             };
             if (stream_ctx.err) |callback_err| {
@@ -525,6 +658,26 @@ fn parseProxy(allocator: std.mem.Allocator, raw_proxy_url: []const u8) !?*std.ht
         return proxy;
 }
 
+fn mapTransportError(err: anyerror) errors.Error {
+    return switch (err) {
+        errors.Error.HttpError => errors.Error.HttpError,
+        errors.Error.BadRequestError => errors.Error.BadRequestError,
+        errors.Error.AuthenticationError => errors.Error.AuthenticationError,
+        errors.Error.PermissionDeniedError => errors.Error.PermissionDeniedError,
+        errors.Error.NotFoundError => errors.Error.NotFoundError,
+        errors.Error.ConflictError => errors.Error.ConflictError,
+        errors.Error.UnprocessableEntityError => errors.Error.UnprocessableEntityError,
+        errors.Error.RateLimitError => errors.Error.RateLimitError,
+        errors.Error.TimeoutError => errors.Error.TimeoutError,
+        errors.Error.InternalServerError => errors.Error.InternalServerError,
+        errors.Error.DeserializeError => errors.Error.DeserializeError,
+        errors.Error.SerializeError => errors.Error.SerializeError,
+        errors.Error.Timeout => errors.Error.Timeout,
+        errors.Error.Unimplemented => errors.Error.Unimplemented,
+        else => errors.Error.HttpError,
+    };
+}
+
 fn readResponseBodyToSink(
     response: *std.http.Client.Response,
     allocator: std.mem.Allocator,
@@ -588,6 +741,19 @@ fn parseRetryAfterSeconds(head: *const std.http.Client.Response.Head) ?u64 {
     return null;
 }
 
+fn extractHeaderValue(
+    head: *const std.http.Client.Response.Head,
+    name: []const u8,
+) ?[]const u8 {
+    var headers = head.iterateHeaders();
+    while (headers.next()) |header| {
+        if (std.ascii.eqlIgnoreCase(header.name, name)) {
+            return header.value;
+        }
+    }
+    return null;
+}
+
 fn isRetryableMethod(method: std.http.Method) bool {
     return switch (method) {
         .GET, .HEAD, .DELETE, .OPTIONS => true,
@@ -618,9 +784,13 @@ fn isRetryableFetchError(err: anytype) bool {
     };
 }
 
-fn sleepForRetry(self: *Transport, attempt: u8, retry_after_ms: ?u64) void {
+fn sleepForRetry(
+    attempt: u8,
+    retry_after_ms: ?u64,
+    request_opts: Transport.ActiveRequestOptions,
+) void {
     const attempt_u64: u64 = attempt;
-    var delay_ms = self.retry_base_delay_ms;
+    var delay_ms = request_opts.retry_base_delay_ms;
     var i: u64 = 0;
     while (i < @min(attempt_u64, 10)) : (i += 1) {
         const max_half = std.math.maxInt(u64) >> 1;
@@ -630,7 +800,7 @@ fn sleepForRetry(self: *Transport, attempt: u8, retry_after_ms: ?u64) void {
     if (retry_after_ms) |retry_ms| {
         if (retry_ms > delay_ms) delay_ms = retry_ms;
     }
-    const capped_delay_ms = if (self.timeout_ms) |timeout_ms|
+    const capped_delay_ms = if (request_opts.timeout_ms) |timeout_ms|
         @min(delay_ms, timeout_ms)
     else
         delay_ms;
