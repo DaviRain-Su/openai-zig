@@ -37,8 +37,20 @@ pub const Client = struct {
         return resources.AudioResource.init(&self.transport);
     }
 
+    pub fn audios(self: *Client) resources.AudioResource {
+        return self.audio();
+    }
+
     pub fn chat(self: *Client) resources.ChatResource {
         return resources.ChatResource.init(&self.transport);
+    }
+
+    pub fn chat_completion(self: *Client) resources.ChatResource {
+        return self.chat();
+    }
+
+    pub fn chat_completions(self: *Client) resources.ChatResource {
+        return self.chat();
     }
 
     pub fn models(self: *Client) resources.ModelsResource {
