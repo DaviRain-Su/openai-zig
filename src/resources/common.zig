@@ -62,26 +62,55 @@ pub fn appendQueryParam(
     key: []const u8,
     value: []const u8,
 ) errors.Error!void {
-    var mutable_writer = writer;
     if (first.*) {
-        mutable_writer.writeAll("?") catch {
+        writer.writeAll("?") catch {
             return errors.Error.SerializeError;
         };
         first.* = false;
     } else {
-        mutable_writer.writeAll("&") catch {
+        writer.writeAll("&") catch {
             return errors.Error.SerializeError;
         };
     }
-    mutable_writer.writeAll(key) catch {
+    try writeQueryComponent(writer, key);
+    writer.writeAll("=") catch {
         return errors.Error.SerializeError;
     };
-    mutable_writer.writeAll("=") catch {
-        return errors.Error.SerializeError;
-    };
-    mutable_writer.writeAll(value) catch {
-        return errors.Error.SerializeError;
-    };
+    try writeQueryComponent(writer, value);
+}
+
+fn writeQueryComponent(
+    writer: anytype,
+    component: []const u8,
+) errors.Error!void {
+    const hexdigits = "0123456789ABCDEF";
+    for (component) |byte| {
+        if (isQueryUnreserved(byte)) {
+            writer.writeByte(byte) catch {
+                return errors.Error.SerializeError;
+            };
+            continue;
+        }
+
+        const encoded = [_]u8{
+            '%',
+            hexdigits[(byte >> 4) & 0x0f],
+            hexdigits[byte & 0x0f],
+        };
+        writer.writeAll(&encoded) catch {
+            return errors.Error.SerializeError;
+        };
+    }
+}
+
+fn isQueryUnreserved(byte: u8) bool {
+    return (byte >= 'a' and byte <= 'z') or
+        (byte >= 'A' and byte <= 'Z') or
+        (byte >= '0' and byte <= '9') or
+        byte == '-' or
+        byte == '.' or
+        byte == '_' or
+        byte == '~';
 }
 
 pub fn appendOptionalQueryParam(
