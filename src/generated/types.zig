@@ -154,7 +154,137 @@ pub const AssistantObject = struct {
     top_p: ?f64,
     response_format: ?AssistantsApiResponseFormatOption,
 };
-pub const AssistantStreamEvent = std.json.Value;
+pub const AssistantStreamEvent = union(enum) {
+    thread: ThreadStreamEvent,
+    run: RunStreamEvent,
+    run_step: RunStepStreamEvent,
+    message: MessageStreamEvent,
+    err: ErrorEvent,
+    raw: std.json.Value,
+
+    pub fn forThread(value: ThreadStreamEvent) AssistantStreamEvent {
+        return .{ .thread = value };
+    }
+
+    pub fn forRun(value: RunStreamEvent) AssistantStreamEvent {
+        return .{ .run = value };
+    }
+
+    pub fn forRunStep(value: RunStepStreamEvent) AssistantStreamEvent {
+        return .{ .run_step = value };
+    }
+
+    pub fn forMessage(value: MessageStreamEvent) AssistantStreamEvent {
+        return .{ .message = value };
+    }
+
+    pub fn forError(value: ErrorEvent) AssistantStreamEvent {
+        return .{ .err = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) AssistantStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: AssistantStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .thread => |value| {
+                try writer.write(value);
+            },
+            .run => |value| {
+                try writer.write(value);
+            },
+            .run_step => |value| {
+                try writer.write(value);
+            },
+            .message => |value| {
+                try writer.write(value);
+            },
+            .err => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !AssistantStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !AssistantStreamEvent {
+        switch (source) {
+            .object => |root| {
+                const event = root.get("event") orelse return .{ .raw = source };
+                if (event != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, event.string, "thread.created")) {
+                    const parsed = std.json.parseFromValue(
+                        ThreadStreamEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .thread = parsed.value };
+                }
+
+                if (std.mem.startsWith(u8, event.string, "thread.run.step.")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStepStreamEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .run_step = parsed.value };
+                }
+
+                if (std.mem.startsWith(u8, event.string, "thread.run.")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .run = parsed.value };
+                }
+
+                if (std.mem.startsWith(u8, event.string, "thread.message.")) {
+                    const parsed = std.json.parseFromValue(
+                        MessageStreamEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .message = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "error")) {
+                    const parsed = std.json.parseFromValue(
+                        ErrorEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .err = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const AssistantSupportedModels = []const u8;
 pub const AssistantTool = struct {
     type: []const u8,
@@ -2840,7 +2970,7 @@ pub const CreateMessageRequest = struct {
     },
     metadata: ?Metadata,
 };
-pub const CreateModelResponseProperties = std.json.Value;
+pub const CreateModelResponseProperties = ModelResponseProperties;
 pub const CreateModerationRequest = struct {
     input: CreateModerationRequestInput,
     model: ?[]const u8,
@@ -2975,7 +3105,77 @@ pub const CreateSpeechRequest = struct {
     speed: ?f64,
     stream_format: ?[]const u8,
 };
-pub const CreateSpeechResponseStreamEvent = std.json.Value;
+pub const CreateSpeechResponseStreamEvent = union(enum) {
+    delta: SpeechAudioDeltaEvent,
+    done: SpeechAudioDoneEvent,
+    raw: std.json.Value,
+
+    pub fn forDelta(value: SpeechAudioDeltaEvent) CreateSpeechResponseStreamEvent {
+        return .{ .delta = value };
+    }
+
+    pub fn forDone(value: SpeechAudioDoneEvent) CreateSpeechResponseStreamEvent {
+        return .{ .done = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) CreateSpeechResponseStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateSpeechResponseStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .delta => |value| {
+                try writer.write(value);
+            },
+            .done => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateSpeechResponseStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !CreateSpeechResponseStreamEvent {
+        switch (source) {
+            .object => |root| {
+                if (root.get("usage") != null) {
+                    const parsed = std.json.parseFromValue(
+                        SpeechAudioDoneEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .done = parsed.value };
+                }
+
+                if (root.get("audio") != null) {
+                    const parsed = std.json.parseFromValue(
+                        SpeechAudioDeltaEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .delta = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const CreateThreadAndRunRequest = struct {
     assistant_id: []const u8,
     thread: ?CreateThreadRequest,
@@ -3046,7 +3246,96 @@ pub const CreateTranscriptionResponseJson = struct {
     },
     usage: ?TranscriptTextUsage,
 };
-pub const CreateTranscriptionResponseStreamEvent = std.json.Value;
+pub const CreateTranscriptionResponseStreamEvent = union(enum) {
+    delta: TranscriptTextDeltaEvent,
+    done: TranscriptTextDoneEvent,
+    segment: TranscriptTextSegmentEvent,
+    raw: std.json.Value,
+
+    pub fn forDelta(value: TranscriptTextDeltaEvent) CreateTranscriptionResponseStreamEvent {
+        return .{ .delta = value };
+    }
+
+    pub fn forDone(value: TranscriptTextDoneEvent) CreateTranscriptionResponseStreamEvent {
+        return .{ .done = value };
+    }
+
+    pub fn forSegment(value: TranscriptTextSegmentEvent) CreateTranscriptionResponseStreamEvent {
+        return .{ .segment = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) CreateTranscriptionResponseStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateTranscriptionResponseStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .delta => |value| {
+                try writer.write(value);
+            },
+            .done => |value| {
+                try writer.write(value);
+            },
+            .segment => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateTranscriptionResponseStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !CreateTranscriptionResponseStreamEvent {
+        switch (source) {
+            .object => |root| {
+                if (root.get("usage") != null) {
+                    const parsed = std.json.parseFromValue(
+                        TranscriptTextDoneEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .done = parsed.value };
+                }
+
+                if (root.get("delta") != null or root.get("segment_id") != null) {
+                    const parsed = std.json.parseFromValue(
+                        TranscriptTextDeltaEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .delta = parsed.value };
+                }
+
+                if (root.get("start") != null and root.get("end") != null and root.get("text") != null) {
+                    const parsed = std.json.parseFromValue(
+                        TranscriptTextSegmentEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .segment = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const CreateTranscriptionResponseVerboseJson = struct {
     language: []const u8,
     duration: f64,
@@ -4021,7 +4310,77 @@ pub const ImageEditPartialImageEvent = struct {
     output_format: []const u8,
     partial_image_index: i64,
 };
-pub const ImageEditStreamEvent = std.json.Value;
+pub const ImageEditStreamEvent = union(enum) {
+    completed: ImageEditCompletedEvent,
+    partial_image: ImageEditPartialImageEvent,
+    raw: std.json.Value,
+
+    pub fn forCompleted(value: ImageEditCompletedEvent) ImageEditStreamEvent {
+        return .{ .completed = value };
+    }
+
+    pub fn forPartialImage(value: ImageEditPartialImageEvent) ImageEditStreamEvent {
+        return .{ .partial_image = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) ImageEditStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ImageEditStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .completed => |value| {
+                try writer.write(value);
+            },
+            .partial_image => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ImageEditStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ImageEditStreamEvent {
+        switch (source) {
+            .object => |root| {
+                if (root.get("usage") != null) {
+                    const parsed = std.json.parseFromValue(
+                        ImageEditCompletedEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .completed = parsed.value };
+                }
+
+                if (root.get("partial_image_index") != null) {
+                    const parsed = std.json.parseFromValue(
+                        ImageEditPartialImageEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .partial_image = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const ImageGenCompletedEvent = struct {
     type: []const u8,
     b64_json: []const u8,
@@ -4050,7 +4409,77 @@ pub const ImageGenPartialImageEvent = struct {
     output_format: []const u8,
     partial_image_index: i64,
 };
-pub const ImageGenStreamEvent = std.json.Value;
+pub const ImageGenStreamEvent = union(enum) {
+    completed: ImageGenCompletedEvent,
+    partial_image: ImageGenPartialImageEvent,
+    raw: std.json.Value,
+
+    pub fn forCompleted(value: ImageGenCompletedEvent) ImageGenStreamEvent {
+        return .{ .completed = value };
+    }
+
+    pub fn forPartialImage(value: ImageGenPartialImageEvent) ImageGenStreamEvent {
+        return .{ .partial_image = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) ImageGenStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ImageGenStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .completed => |value| {
+                try writer.write(value);
+            },
+            .partial_image => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ImageGenStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ImageGenStreamEvent {
+        switch (source) {
+            .object => |root| {
+                if (root.get("usage") != null) {
+                    const parsed = std.json.parseFromValue(
+                        ImageGenCompletedEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .completed = parsed.value };
+                }
+
+                if (root.get("partial_image_index") != null) {
+                    const parsed = std.json.parseFromValue(
+                        ImageGenPartialImageEvent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .partial_image = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const ImageGenTool = struct {
     type: []const u8,
     model: ?[]const u8,
@@ -5033,7 +5462,157 @@ pub const MessageRequestContentTextObject = struct {
 };
 pub const MessageRole = []const u8;
 pub const MessageStatus = []const u8;
-pub const MessageStreamEvent = std.json.Value;
+pub const MessageStreamEventCreated = struct {
+    event: []const u8,
+    data: MessageObject,
+};
+pub const MessageStreamEventInProgress = struct {
+    event: []const u8,
+    data: MessageObject,
+};
+pub const MessageStreamEventDelta = struct {
+    event: []const u8,
+    data: MessageDeltaObject,
+};
+pub const MessageStreamEventCompleted = struct {
+    event: []const u8,
+    data: MessageObject,
+};
+pub const MessageStreamEventIncomplete = struct {
+    event: []const u8,
+    data: MessageObject,
+};
+pub const MessageStreamEvent = union(enum) {
+    created: MessageStreamEventCreated,
+    in_progress: MessageStreamEventInProgress,
+    delta: MessageStreamEventDelta,
+    completed: MessageStreamEventCompleted,
+    incomplete: MessageStreamEventIncomplete,
+    raw: std.json.Value,
+
+    pub fn forCreated(value: MessageStreamEventCreated) MessageStreamEvent {
+        return .{ .created = value };
+    }
+
+    pub fn forInProgress(value: MessageStreamEventInProgress) MessageStreamEvent {
+        return .{ .in_progress = value };
+    }
+
+    pub fn forDelta(value: MessageStreamEventDelta) MessageStreamEvent {
+        return .{ .delta = value };
+    }
+
+    pub fn forCompleted(value: MessageStreamEventCompleted) MessageStreamEvent {
+        return .{ .completed = value };
+    }
+
+    pub fn forIncomplete(value: MessageStreamEventIncomplete) MessageStreamEvent {
+        return .{ .incomplete = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) MessageStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: MessageStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .created => |value| {
+                try writer.write(value);
+            },
+            .in_progress => |value| {
+                try writer.write(value);
+            },
+            .delta => |value| {
+                try writer.write(value);
+            },
+            .completed => |value| {
+                try writer.write(value);
+            },
+            .incomplete => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !MessageStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !MessageStreamEvent {
+        switch (source) {
+            .object => |root| {
+                const event = root.get("event") orelse return .{ .raw = source };
+                if (event != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, event.string, "thread.message.created")) {
+                    const parsed = std.json.parseFromValue(
+                        MessageStreamEventCreated,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .created = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.message.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        MessageStreamEventInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.message.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        MessageStreamEventDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.message.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        MessageStreamEventCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.message.incomplete")) {
+                    const parsed = std.json.parseFromValue(
+                        MessageStreamEventIncomplete,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .incomplete = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const Metadata = std.json.Value;
 pub const Model = struct {
     id: []const u8 = "",
@@ -5224,7 +5803,7 @@ pub const OutputTextContent = struct {
     logprobs: ?[]const LogProb,
 };
 pub const ParallelToolCalls = bool;
-pub const PartialImages = std.json.Value;
+pub const PartialImages = i64;
 pub const PredictionContent = struct {
     type: []const u8,
     content: std.json.Value,
@@ -7258,7 +7837,1294 @@ pub const ResponseRefusalDoneEvent = struct {
     refusal: []const u8,
     sequence_number: i64,
 };
-pub const ResponseStreamEvent = std.json.Value;
+pub const ResponseStreamEventAudioDelta = struct {
+    type: []const u8,
+    sequence_number: i64,
+    delta: []const u8,
+};
+pub const ResponseStreamEventAudioDone = struct {
+    type: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventAudioTranscriptDelta = struct {
+    type: []const u8,
+    delta: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventAudioTranscriptDone = struct {
+    type: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventCodeInterpreterCallCodeDelta = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    delta: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventCodeInterpreterCallCodeDone = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    code: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventCodeInterpreterCallCompleted = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventCodeInterpreterCallInProgress = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventCodeInterpreterCallInterpreting = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventCompleted = struct {
+    type: []const u8,
+    response: Response,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventContentPartAdded = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    part: OutputContent,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventContentPartDone = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    sequence_number: i64,
+    part: OutputContent,
+};
+pub const ResponseStreamEventCreated = struct {
+    type: []const u8,
+    response: Response,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventCustomToolCallInputDelta = struct {
+    type: []const u8,
+    sequence_number: i64,
+    output_index: i64,
+    item_id: []const u8,
+    delta: []const u8,
+};
+pub const ResponseStreamEventCustomToolCallInputDone = struct {
+    type: []const u8,
+    sequence_number: i64,
+    output_index: i64,
+    item_id: []const u8,
+    input: []const u8,
+};
+pub const ResponseStreamEventError = struct {
+    type: []const u8,
+    code: ?[]const u8,
+    message: []const u8,
+    param: ?[]const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventFailed = struct {
+    type: []const u8,
+    sequence_number: i64,
+    response: Response,
+};
+pub const ResponseStreamEventFileSearchCallCompleted = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventFileSearchCallInProgress = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventFileSearchCallSearching = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventFunctionCallArgumentsDelta = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+    delta: []const u8,
+};
+pub const ResponseStreamEventFunctionCallArgumentsDone = struct {
+    type: []const u8,
+    item_id: []const u8,
+    name: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+    arguments: []const u8,
+};
+pub const ResponseStreamEventImageGenCallCompleted = struct {
+    type: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+    item_id: []const u8,
+};
+pub const ResponseStreamEventImageGenCallGenerating = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventImageGenCallInProgress = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventImageGenCallPartialImage = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+    partial_image_index: i64,
+    partial_image_b64: []const u8,
+};
+pub const ResponseStreamEventInProgress = struct {
+    type: []const u8,
+    response: Response,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventIncomplete = struct {
+    type: []const u8,
+    response: Response,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventMCPCallArgumentsDelta = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    delta: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventMCPCallArgumentsDone = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    arguments: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventMCPCallCompleted = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventMCPCallFailed = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventMCPCallInProgress = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventMCPListToolsCompleted = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventMCPListToolsFailed = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventMCPListToolsInProgress = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventOutputItemAdded = struct {
+    type: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+    item: OutputItem,
+};
+pub const ResponseStreamEventOutputItemDone = struct {
+    type: []const u8,
+    output_index: i64,
+    sequence_number: i64,
+    item: OutputItem,
+};
+pub const ResponseStreamEventOutputTextAnnotationAdded = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    annotation_index: i64,
+    sequence_number: i64,
+    annotation: Annotation,
+};
+pub const ResponseStreamEventQueued = struct {
+    type: []const u8,
+    response: Response,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventReasoningSummaryPartAdded = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    summary_index: i64,
+    sequence_number: i64,
+    part: struct {
+        type: []const u8,
+        text: []const u8,
+    },
+};
+pub const ResponseStreamEventReasoningSummaryPartDone = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    summary_index: i64,
+    sequence_number: i64,
+    part: struct {
+        type: []const u8,
+        text: []const u8,
+    },
+};
+pub const ResponseStreamEventReasoningSummaryTextDelta = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    summary_index: i64,
+    delta: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventReasoningSummaryTextDone = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    summary_index: i64,
+    text: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventReasoningTextDelta = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    delta: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventReasoningTextDone = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    text: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventRefusalDelta = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    delta: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventRefusalDone = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    refusal: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventTextDelta = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    delta: []const u8,
+    sequence_number: i64,
+    logprobs: []const ResponseLogProb,
+};
+pub const ResponseStreamEventTextDone = struct {
+    type: []const u8,
+    item_id: []const u8,
+    output_index: i64,
+    content_index: i64,
+    text: []const u8,
+    sequence_number: i64,
+    logprobs: []const ResponseLogProb,
+};
+pub const ResponseStreamEventWebSearchCallCompleted = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventWebSearchCallInProgress = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEventWebSearchCallSearching = struct {
+    type: []const u8,
+    output_index: i64,
+    item_id: []const u8,
+    sequence_number: i64,
+};
+pub const ResponseStreamEvent = union(enum) {
+    audio_delta: ResponseStreamEventAudioDelta,
+    audio_done: ResponseStreamEventAudioDone,
+    audio_transcript_delta: ResponseStreamEventAudioTranscriptDelta,
+    audio_transcript_done: ResponseStreamEventAudioTranscriptDone,
+    code_interpreter_call_code_delta: ResponseStreamEventCodeInterpreterCallCodeDelta,
+    code_interpreter_call_code_done: ResponseStreamEventCodeInterpreterCallCodeDone,
+    code_interpreter_call_completed: ResponseStreamEventCodeInterpreterCallCompleted,
+    code_interpreter_call_in_progress: ResponseStreamEventCodeInterpreterCallInProgress,
+    code_interpreter_call_interpreting: ResponseStreamEventCodeInterpreterCallInterpreting,
+    completed: ResponseStreamEventCompleted,
+    content_part_added: ResponseStreamEventContentPartAdded,
+    content_part_done: ResponseStreamEventContentPartDone,
+    created: ResponseStreamEventCreated,
+    custom_tool_call_input_delta: ResponseStreamEventCustomToolCallInputDelta,
+    custom_tool_call_input_done: ResponseStreamEventCustomToolCallInputDone,
+    err: ResponseStreamEventError,
+    failed: ResponseStreamEventFailed,
+    file_search_call_completed: ResponseStreamEventFileSearchCallCompleted,
+    file_search_call_in_progress: ResponseStreamEventFileSearchCallInProgress,
+    file_search_call_searching: ResponseStreamEventFileSearchCallSearching,
+    function_call_arguments_delta: ResponseStreamEventFunctionCallArgumentsDelta,
+    function_call_arguments_done: ResponseStreamEventFunctionCallArgumentsDone,
+    image_gen_call_completed: ResponseStreamEventImageGenCallCompleted,
+    image_gen_call_generating: ResponseStreamEventImageGenCallGenerating,
+    image_gen_call_in_progress: ResponseStreamEventImageGenCallInProgress,
+    image_gen_call_partial_image: ResponseStreamEventImageGenCallPartialImage,
+    in_progress: ResponseStreamEventInProgress,
+    incomplete: ResponseStreamEventIncomplete,
+    mcp_call_arguments_delta: ResponseStreamEventMCPCallArgumentsDelta,
+    mcp_call_arguments_done: ResponseStreamEventMCPCallArgumentsDone,
+    mcp_call_completed: ResponseStreamEventMCPCallCompleted,
+    mcp_call_failed: ResponseStreamEventMCPCallFailed,
+    mcp_call_in_progress: ResponseStreamEventMCPCallInProgress,
+    mcp_list_tools_completed: ResponseStreamEventMCPListToolsCompleted,
+    mcp_list_tools_failed: ResponseStreamEventMCPListToolsFailed,
+    mcp_list_tools_in_progress: ResponseStreamEventMCPListToolsInProgress,
+    output_item_added: ResponseStreamEventOutputItemAdded,
+    output_item_done: ResponseStreamEventOutputItemDone,
+    output_text_annotation_added: ResponseStreamEventOutputTextAnnotationAdded,
+    queued: ResponseStreamEventQueued,
+    reasoning_summary_part_added: ResponseStreamEventReasoningSummaryPartAdded,
+    reasoning_summary_part_done: ResponseStreamEventReasoningSummaryPartDone,
+    reasoning_summary_text_delta: ResponseStreamEventReasoningSummaryTextDelta,
+    reasoning_summary_text_done: ResponseStreamEventReasoningSummaryTextDone,
+    reasoning_text_delta: ResponseStreamEventReasoningTextDelta,
+    reasoning_text_done: ResponseStreamEventReasoningTextDone,
+    refusal_delta: ResponseStreamEventRefusalDelta,
+    refusal_done: ResponseStreamEventRefusalDone,
+    text_delta: ResponseStreamEventTextDelta,
+    text_done: ResponseStreamEventTextDone,
+    web_search_call_completed: ResponseStreamEventWebSearchCallCompleted,
+    web_search_call_in_progress: ResponseStreamEventWebSearchCallInProgress,
+    web_search_call_searching: ResponseStreamEventWebSearchCallSearching,
+    raw: std.json.Value,
+
+    pub fn forAudioDelta(value: ResponseStreamEventAudioDelta) ResponseStreamEvent {
+        return .{ .audio_delta = value };
+    }
+
+    pub fn forAudioDone(value: ResponseStreamEventAudioDone) ResponseStreamEvent {
+        return .{ .audio_done = value };
+    }
+
+    pub fn forAudioTranscriptDelta(value: ResponseStreamEventAudioTranscriptDelta) ResponseStreamEvent {
+        return .{ .audio_transcript_delta = value };
+    }
+
+    pub fn forAudioTranscriptDone(value: ResponseStreamEventAudioTranscriptDone) ResponseStreamEvent {
+        return .{ .audio_transcript_done = value };
+    }
+
+    pub fn forCodeInterpreterCallCodeDelta(value: ResponseStreamEventCodeInterpreterCallCodeDelta) ResponseStreamEvent {
+        return .{ .code_interpreter_call_code_delta = value };
+    }
+
+    pub fn forCodeInterpreterCallCodeDone(value: ResponseStreamEventCodeInterpreterCallCodeDone) ResponseStreamEvent {
+        return .{ .code_interpreter_call_code_done = value };
+    }
+
+    pub fn forCodeInterpreterCallCompleted(value: ResponseStreamEventCodeInterpreterCallCompleted) ResponseStreamEvent {
+        return .{ .code_interpreter_call_completed = value };
+    }
+
+    pub fn forCodeInterpreterCallInProgress(value: ResponseStreamEventCodeInterpreterCallInProgress) ResponseStreamEvent {
+        return .{ .code_interpreter_call_in_progress = value };
+    }
+
+    pub fn forCodeInterpreterCallInterpreting(value: ResponseStreamEventCodeInterpreterCallInterpreting) ResponseStreamEvent {
+        return .{ .code_interpreter_call_interpreting = value };
+    }
+
+    pub fn forCompleted(value: ResponseStreamEventCompleted) ResponseStreamEvent {
+        return .{ .completed = value };
+    }
+
+    pub fn forContentPartAdded(value: ResponseStreamEventContentPartAdded) ResponseStreamEvent {
+        return .{ .content_part_added = value };
+    }
+
+    pub fn forContentPartDone(value: ResponseStreamEventContentPartDone) ResponseStreamEvent {
+        return .{ .content_part_done = value };
+    }
+
+    pub fn forCreated(value: ResponseStreamEventCreated) ResponseStreamEvent {
+        return .{ .created = value };
+    }
+
+    pub fn forCustomToolCallInputDelta(value: ResponseStreamEventCustomToolCallInputDelta) ResponseStreamEvent {
+        return .{ .custom_tool_call_input_delta = value };
+    }
+
+    pub fn forCustomToolCallInputDone(value: ResponseStreamEventCustomToolCallInputDone) ResponseStreamEvent {
+        return .{ .custom_tool_call_input_done = value };
+    }
+
+    pub fn forError(value: ResponseStreamEventError) ResponseStreamEvent {
+        return .{ .err = value };
+    }
+
+    pub fn forFailed(value: ResponseStreamEventFailed) ResponseStreamEvent {
+        return .{ .failed = value };
+    }
+
+    pub fn forFileSearchCallCompleted(value: ResponseStreamEventFileSearchCallCompleted) ResponseStreamEvent {
+        return .{ .file_search_call_completed = value };
+    }
+
+    pub fn forFileSearchCallInProgress(value: ResponseStreamEventFileSearchCallInProgress) ResponseStreamEvent {
+        return .{ .file_search_call_in_progress = value };
+    }
+
+    pub fn forFileSearchCallSearching(value: ResponseStreamEventFileSearchCallSearching) ResponseStreamEvent {
+        return .{ .file_search_call_searching = value };
+    }
+
+    pub fn forFunctionCallArgumentsDelta(value: ResponseStreamEventFunctionCallArgumentsDelta) ResponseStreamEvent {
+        return .{ .function_call_arguments_delta = value };
+    }
+
+    pub fn forFunctionCallArgumentsDone(value: ResponseStreamEventFunctionCallArgumentsDone) ResponseStreamEvent {
+        return .{ .function_call_arguments_done = value };
+    }
+
+    pub fn forImageGenCallCompleted(value: ResponseStreamEventImageGenCallCompleted) ResponseStreamEvent {
+        return .{ .image_gen_call_completed = value };
+    }
+
+    pub fn forImageGenCallGenerating(value: ResponseStreamEventImageGenCallGenerating) ResponseStreamEvent {
+        return .{ .image_gen_call_generating = value };
+    }
+
+    pub fn forImageGenCallInProgress(value: ResponseStreamEventImageGenCallInProgress) ResponseStreamEvent {
+        return .{ .image_gen_call_in_progress = value };
+    }
+
+    pub fn forImageGenCallPartialImage(value: ResponseStreamEventImageGenCallPartialImage) ResponseStreamEvent {
+        return .{ .image_gen_call_partial_image = value };
+    }
+
+    pub fn forInProgress(value: ResponseStreamEventInProgress) ResponseStreamEvent {
+        return .{ .in_progress = value };
+    }
+
+    pub fn forIncomplete(value: ResponseStreamEventIncomplete) ResponseStreamEvent {
+        return .{ .incomplete = value };
+    }
+
+    pub fn forMCPCallArgumentsDelta(value: ResponseStreamEventMCPCallArgumentsDelta) ResponseStreamEvent {
+        return .{ .mcp_call_arguments_delta = value };
+    }
+
+    pub fn forMCPCallArgumentsDone(value: ResponseStreamEventMCPCallArgumentsDone) ResponseStreamEvent {
+        return .{ .mcp_call_arguments_done = value };
+    }
+
+    pub fn forMCPCallCompleted(value: ResponseStreamEventMCPCallCompleted) ResponseStreamEvent {
+        return .{ .mcp_call_completed = value };
+    }
+
+    pub fn forMCPCallFailed(value: ResponseStreamEventMCPCallFailed) ResponseStreamEvent {
+        return .{ .mcp_call_failed = value };
+    }
+
+    pub fn forMCPCallInProgress(value: ResponseStreamEventMCPCallInProgress) ResponseStreamEvent {
+        return .{ .mcp_call_in_progress = value };
+    }
+
+    pub fn forMCPListToolsCompleted(value: ResponseStreamEventMCPListToolsCompleted) ResponseStreamEvent {
+        return .{ .mcp_list_tools_completed = value };
+    }
+
+    pub fn forMCPListToolsFailed(value: ResponseStreamEventMCPListToolsFailed) ResponseStreamEvent {
+        return .{ .mcp_list_tools_failed = value };
+    }
+
+    pub fn forMCPListToolsInProgress(value: ResponseStreamEventMCPListToolsInProgress) ResponseStreamEvent {
+        return .{ .mcp_list_tools_in_progress = value };
+    }
+
+    pub fn forOutputItemAdded(value: ResponseStreamEventOutputItemAdded) ResponseStreamEvent {
+        return .{ .output_item_added = value };
+    }
+
+    pub fn forOutputItemDone(value: ResponseStreamEventOutputItemDone) ResponseStreamEvent {
+        return .{ .output_item_done = value };
+    }
+
+    pub fn forOutputTextAnnotationAdded(value: ResponseStreamEventOutputTextAnnotationAdded) ResponseStreamEvent {
+        return .{ .output_text_annotation_added = value };
+    }
+
+    pub fn forQueued(value: ResponseStreamEventQueued) ResponseStreamEvent {
+        return .{ .queued = value };
+    }
+
+    pub fn forReasoningSummaryPartAdded(value: ResponseStreamEventReasoningSummaryPartAdded) ResponseStreamEvent {
+        return .{ .reasoning_summary_part_added = value };
+    }
+
+    pub fn forReasoningSummaryPartDone(value: ResponseStreamEventReasoningSummaryPartDone) ResponseStreamEvent {
+        return .{ .reasoning_summary_part_done = value };
+    }
+
+    pub fn forReasoningSummaryTextDelta(value: ResponseStreamEventReasoningSummaryTextDelta) ResponseStreamEvent {
+        return .{ .reasoning_summary_text_delta = value };
+    }
+
+    pub fn forReasoningSummaryTextDone(value: ResponseStreamEventReasoningSummaryTextDone) ResponseStreamEvent {
+        return .{ .reasoning_summary_text_done = value };
+    }
+
+    pub fn forReasoningTextDelta(value: ResponseStreamEventReasoningTextDelta) ResponseStreamEvent {
+        return .{ .reasoning_text_delta = value };
+    }
+
+    pub fn forReasoningTextDone(value: ResponseStreamEventReasoningTextDone) ResponseStreamEvent {
+        return .{ .reasoning_text_done = value };
+    }
+
+    pub fn forRefusalDelta(value: ResponseStreamEventRefusalDelta) ResponseStreamEvent {
+        return .{ .refusal_delta = value };
+    }
+
+    pub fn forRefusalDone(value: ResponseStreamEventRefusalDone) ResponseStreamEvent {
+        return .{ .refusal_done = value };
+    }
+
+    pub fn forTextDelta(value: ResponseStreamEventTextDelta) ResponseStreamEvent {
+        return .{ .text_delta = value };
+    }
+
+    pub fn forTextDone(value: ResponseStreamEventTextDone) ResponseStreamEvent {
+        return .{ .text_done = value };
+    }
+
+    pub fn forWebSearchCallCompleted(value: ResponseStreamEventWebSearchCallCompleted) ResponseStreamEvent {
+        return .{ .web_search_call_completed = value };
+    }
+
+    pub fn forWebSearchCallInProgress(value: ResponseStreamEventWebSearchCallInProgress) ResponseStreamEvent {
+        return .{ .web_search_call_in_progress = value };
+    }
+
+    pub fn forWebSearchCallSearching(value: ResponseStreamEventWebSearchCallSearching) ResponseStreamEvent {
+        return .{ .web_search_call_searching = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) ResponseStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ResponseStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .audio_delta => |value| try writer.write(value),
+            .audio_done => |value| try writer.write(value),
+            .audio_transcript_delta => |value| try writer.write(value),
+            .audio_transcript_done => |value| try writer.write(value),
+            .code_interpreter_call_code_delta => |value| try writer.write(value),
+            .code_interpreter_call_code_done => |value| try writer.write(value),
+            .code_interpreter_call_completed => |value| try writer.write(value),
+            .code_interpreter_call_in_progress => |value| try writer.write(value),
+            .code_interpreter_call_interpreting => |value| try writer.write(value),
+            .completed => |value| try writer.write(value),
+            .content_part_added => |value| try writer.write(value),
+            .content_part_done => |value| try writer.write(value),
+            .created => |value| try writer.write(value),
+            .custom_tool_call_input_delta => |value| try writer.write(value),
+            .custom_tool_call_input_done => |value| try writer.write(value),
+            .err => |value| try writer.write(value),
+            .failed => |value| try writer.write(value),
+            .file_search_call_completed => |value| try writer.write(value),
+            .file_search_call_in_progress => |value| try writer.write(value),
+            .file_search_call_searching => |value| try writer.write(value),
+            .function_call_arguments_delta => |value| try writer.write(value),
+            .function_call_arguments_done => |value| try writer.write(value),
+            .image_gen_call_completed => |value| try writer.write(value),
+            .image_gen_call_generating => |value| try writer.write(value),
+            .image_gen_call_in_progress => |value| try writer.write(value),
+            .image_gen_call_partial_image => |value| try writer.write(value),
+            .in_progress => |value| try writer.write(value),
+            .incomplete => |value| try writer.write(value),
+            .mcp_call_arguments_delta => |value| try writer.write(value),
+            .mcp_call_arguments_done => |value| try writer.write(value),
+            .mcp_call_completed => |value| try writer.write(value),
+            .mcp_call_failed => |value| try writer.write(value),
+            .mcp_call_in_progress => |value| try writer.write(value),
+            .mcp_list_tools_completed => |value| try writer.write(value),
+            .mcp_list_tools_failed => |value| try writer.write(value),
+            .mcp_list_tools_in_progress => |value| try writer.write(value),
+            .output_item_added => |value| try writer.write(value),
+            .output_item_done => |value| try writer.write(value),
+            .output_text_annotation_added => |value| try writer.write(value),
+            .queued => |value| try writer.write(value),
+            .reasoning_summary_part_added => |value| try writer.write(value),
+            .reasoning_summary_part_done => |value| try writer.write(value),
+            .reasoning_summary_text_delta => |value| try writer.write(value),
+            .reasoning_summary_text_done => |value| try writer.write(value),
+            .reasoning_text_delta => |value| try writer.write(value),
+            .reasoning_text_done => |value| try writer.write(value),
+            .refusal_delta => |value| try writer.write(value),
+            .refusal_done => |value| try writer.write(value),
+            .text_delta => |value| try writer.write(value),
+            .text_done => |value| try writer.write(value),
+            .web_search_call_completed => |value| try writer.write(value),
+            .web_search_call_in_progress => |value| try writer.write(value),
+            .web_search_call_searching => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ResponseStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ResponseStreamEvent {
+        switch (source) {
+            .object => |root| {
+                const event = root.get("type") orelse return .{ .raw = source };
+                if (event != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, event.string, "response.audio.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventAudioDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .audio_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.audio.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventAudioDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .audio_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.audio.transcript.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventAudioTranscriptDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .audio_transcript_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.audio.transcript.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventAudioTranscriptDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .audio_transcript_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.code_interpreter_call_code.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCodeInterpreterCallCodeDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .code_interpreter_call_code_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.code_interpreter_call_code.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCodeInterpreterCallCodeDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .code_interpreter_call_code_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.code_interpreter_call.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCodeInterpreterCallCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .code_interpreter_call_completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.code_interpreter_call.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCodeInterpreterCallInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .code_interpreter_call_in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.code_interpreter_call.interpreting")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCodeInterpreterCallInterpreting,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .code_interpreter_call_interpreting = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.content_part.added")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventContentPartAdded,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .content_part_added = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.content_part.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventContentPartDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .content_part_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.created")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCreated,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .created = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.custom_tool_call_input.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCustomToolCallInputDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .custom_tool_call_input_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.custom_tool_call_input.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventCustomToolCallInputDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .custom_tool_call_input_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "error")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventError,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .err = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.failed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventFailed,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .failed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.file_search_call.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventFileSearchCallCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .file_search_call_completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.file_search_call.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventFileSearchCallInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .file_search_call_in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.file_search_call.searching")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventFileSearchCallSearching,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .file_search_call_searching = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.function_call_arguments.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventFunctionCallArgumentsDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .function_call_arguments_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.function_call_arguments.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventFunctionCallArgumentsDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .function_call_arguments_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.image_generation_call.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventImageGenCallCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .image_gen_call_completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.image_generation_call.generating")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventImageGenCallGenerating,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .image_gen_call_generating = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.image_generation_call.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventImageGenCallInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .image_gen_call_in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.image_generation_call.partial_image")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventImageGenCallPartialImage,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .image_gen_call_partial_image = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.incomplete")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventIncomplete,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .incomplete = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.mcp_call_arguments.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventMCPCallArgumentsDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .mcp_call_arguments_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.mcp_call_arguments.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventMCPCallArgumentsDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .mcp_call_arguments_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.mcp_call.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventMCPCallCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .mcp_call_completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.mcp_call.failed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventMCPCallFailed,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .mcp_call_failed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.mcp_call.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventMCPCallInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .mcp_call_in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.mcp_list_tools.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventMCPListToolsCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .mcp_list_tools_completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.mcp_list_tools.failed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventMCPListToolsFailed,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .mcp_list_tools_failed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.mcp_list_tools.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventMCPListToolsInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .mcp_list_tools_in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.output_item.added")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventOutputItemAdded,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .output_item_added = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.output_item.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventOutputItemDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .output_item_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.output_text.annotation.added")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventOutputTextAnnotationAdded,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .output_text_annotation_added = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.queued")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventQueued,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .queued = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.reasoning_summary_part.added")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventReasoningSummaryPartAdded,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .reasoning_summary_part_added = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.reasoning_summary_part.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventReasoningSummaryPartDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .reasoning_summary_part_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.reasoning_summary_text.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventReasoningSummaryTextDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .reasoning_summary_text_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.reasoning_summary_text.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventReasoningSummaryTextDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .reasoning_summary_text_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.reasoning_text.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventReasoningTextDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .reasoning_text_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.reasoning_text.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventReasoningTextDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .reasoning_text_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.refusal.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventRefusalDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .refusal_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.refusal.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventRefusalDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .refusal_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.output_text.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventTextDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .text_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.output_text.done")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventTextDone,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .text_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.web_search_call.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventWebSearchCallCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .web_search_call_completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.web_search_call.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventWebSearchCallInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .web_search_call_in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "response.web_search_call.searching")) {
+                    const parsed = std.json.parseFromValue(
+                        ResponseStreamEventWebSearchCallSearching,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .web_search_call_searching = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const ResponseStreamOptions = struct {
     include_obfuscation: ?bool = null,
 };
@@ -7701,8 +9567,469 @@ pub const RunStepLastError = struct {
     code: ?[]const u8,
     message: ?[]const u8,
 };
-pub const RunStepStreamEvent = std.json.Value;
-pub const RunStreamEvent = std.json.Value;
+pub const RunStepStreamEventCreated = struct {
+    event: []const u8,
+    data: RunStepObject,
+};
+pub const RunStepStreamEventInProgress = struct {
+    event: []const u8,
+    data: RunStepObject,
+};
+pub const RunStepStreamEventDelta = struct {
+    event: []const u8,
+    data: RunStepDeltaObject,
+};
+pub const RunStepStreamEventCompleted = struct {
+    event: []const u8,
+    data: RunStepObject,
+};
+pub const RunStepStreamEventFailed = struct {
+    event: []const u8,
+    data: RunStepObject,
+};
+pub const RunStepStreamEventCancelled = struct {
+    event: []const u8,
+    data: RunStepObject,
+};
+pub const RunStepStreamEventExpired = struct {
+    event: []const u8,
+    data: RunStepObject,
+};
+pub const RunStepStreamEvent = union(enum) {
+    created: RunStepStreamEventCreated,
+    in_progress: RunStepStreamEventInProgress,
+    delta: RunStepStreamEventDelta,
+    completed: RunStepStreamEventCompleted,
+    failed: RunStepStreamEventFailed,
+    cancelled: RunStepStreamEventCancelled,
+    expired: RunStepStreamEventExpired,
+    raw: std.json.Value,
+
+    pub fn forCreated(value: RunStepStreamEventCreated) RunStepStreamEvent {
+        return .{ .created = value };
+    }
+
+    pub fn forInProgress(value: RunStepStreamEventInProgress) RunStepStreamEvent {
+        return .{ .in_progress = value };
+    }
+
+    pub fn forDelta(value: RunStepStreamEventDelta) RunStepStreamEvent {
+        return .{ .delta = value };
+    }
+
+    pub fn forCompleted(value: RunStepStreamEventCompleted) RunStepStreamEvent {
+        return .{ .completed = value };
+    }
+
+    pub fn forFailed(value: RunStepStreamEventFailed) RunStepStreamEvent {
+        return .{ .failed = value };
+    }
+
+    pub fn forCancelled(value: RunStepStreamEventCancelled) RunStepStreamEvent {
+        return .{ .cancelled = value };
+    }
+
+    pub fn forExpired(value: RunStepStreamEventExpired) RunStepStreamEvent {
+        return .{ .expired = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) RunStepStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: RunStepStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .created => |value| {
+                try writer.write(value);
+            },
+            .in_progress => |value| {
+                try writer.write(value);
+            },
+            .delta => |value| {
+                try writer.write(value);
+            },
+            .completed => |value| {
+                try writer.write(value);
+            },
+            .failed => |value| {
+                try writer.write(value);
+            },
+            .cancelled => |value| {
+                try writer.write(value);
+            },
+            .expired => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RunStepStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !RunStepStreamEvent {
+        switch (source) {
+            .object => |root| {
+                const event = root.get("event") orelse return .{ .raw = source };
+                if (event != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, event.string, "thread.run.step.created")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStepStreamEventCreated,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .created = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.step.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStepStreamEventInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.step.delta")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStepStreamEventDelta,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.step.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStepStreamEventCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.step.failed")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStepStreamEventFailed,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .failed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.step.cancelled")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStepStreamEventCancelled,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .cancelled = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.step.expired")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStepStreamEventExpired,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .expired = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
+pub const RunStreamEventCreated = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventQueued = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventInProgress = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventRequiresAction = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventCompleted = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventIncomplete = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventFailed = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventCancelling = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventCancelled = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEventExpired = struct {
+    event: []const u8,
+    data: RunObject,
+};
+pub const RunStreamEvent = union(enum) {
+    created: RunStreamEventCreated,
+    queued: RunStreamEventQueued,
+    in_progress: RunStreamEventInProgress,
+    requires_action: RunStreamEventRequiresAction,
+    completed: RunStreamEventCompleted,
+    incomplete: RunStreamEventIncomplete,
+    failed: RunStreamEventFailed,
+    cancelling: RunStreamEventCancelling,
+    cancelled: RunStreamEventCancelled,
+    expired: RunStreamEventExpired,
+    raw: std.json.Value,
+
+    pub fn forCreated(value: RunStreamEventCreated) RunStreamEvent {
+        return .{ .created = value };
+    }
+
+    pub fn forQueued(value: RunStreamEventQueued) RunStreamEvent {
+        return .{ .queued = value };
+    }
+
+    pub fn forInProgress(value: RunStreamEventInProgress) RunStreamEvent {
+        return .{ .in_progress = value };
+    }
+
+    pub fn forRequiresAction(value: RunStreamEventRequiresAction) RunStreamEvent {
+        return .{ .requires_action = value };
+    }
+
+    pub fn forCompleted(value: RunStreamEventCompleted) RunStreamEvent {
+        return .{ .completed = value };
+    }
+
+    pub fn forIncomplete(value: RunStreamEventIncomplete) RunStreamEvent {
+        return .{ .incomplete = value };
+    }
+
+    pub fn forFailed(value: RunStreamEventFailed) RunStreamEvent {
+        return .{ .failed = value };
+    }
+
+    pub fn forCancelling(value: RunStreamEventCancelling) RunStreamEvent {
+        return .{ .cancelling = value };
+    }
+
+    pub fn forCancelled(value: RunStreamEventCancelled) RunStreamEvent {
+        return .{ .cancelled = value };
+    }
+
+    pub fn forExpired(value: RunStreamEventExpired) RunStreamEvent {
+        return .{ .expired = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) RunStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: RunStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .created => |value| {
+                try writer.write(value);
+            },
+            .queued => |value| {
+                try writer.write(value);
+            },
+            .in_progress => |value| {
+                try writer.write(value);
+            },
+            .requires_action => |value| {
+                try writer.write(value);
+            },
+            .completed => |value| {
+                try writer.write(value);
+            },
+            .incomplete => |value| {
+                try writer.write(value);
+            },
+            .failed => |value| {
+                try writer.write(value);
+            },
+            .cancelling => |value| {
+                try writer.write(value);
+            },
+            .cancelled => |value| {
+                try writer.write(value);
+            },
+            .expired => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RunStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !RunStreamEvent {
+        switch (source) {
+            .object => |root| {
+                const event = root.get("event") orelse return .{ .raw = source };
+                if (event != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, event.string, "thread.run.created")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventCreated,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .created = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.queued")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventQueued,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .queued = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.in_progress")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventInProgress,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .in_progress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.requires_action")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventRequiresAction,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .requires_action = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.completed")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventCompleted,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .completed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.incomplete")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventIncomplete,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .incomplete = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.failed")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventFailed,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .failed = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.cancelling")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventCancelling,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .cancelling = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.cancelled")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventCancelled,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .cancelled = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event.string, "thread.run.expired")) {
+                    const parsed = std.json.parseFromValue(
+                        RunStreamEventExpired,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .expired = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const RunToolCallObject = struct {
     id: []const u8,
     type: []const u8,
@@ -8114,7 +10441,66 @@ pub const ThreadResource = struct {
     status: ?[]const u8,
     user: []const u8,
 };
-pub const ThreadStreamEvent = std.json.Value;
+pub const ThreadStreamEventCreated = struct {
+    enabled: ?bool,
+    event: []const u8,
+    data: ThreadObject,
+};
+pub const ThreadStreamEvent = union(enum) {
+    created: ThreadStreamEventCreated,
+    raw: std.json.Value,
+
+    pub fn forCreated(value: ThreadStreamEventCreated) ThreadStreamEvent {
+        return .{ .created = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) ThreadStreamEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ThreadStreamEvent, writer: anytype) !void {
+        switch (self) {
+            .created => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ThreadStreamEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ThreadStreamEvent {
+        switch (source) {
+            .object => |root| {
+                const event = root.get("event") orelse return .{ .raw = source };
+                if (event != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, event.string, "thread.created")) {
+                    const parsed = std.json.parseFromValue(
+                        ThreadStreamEventCreated,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .created = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const ToggleCertificatesRequest = struct {
     certificate_ids: []const []const u8,
 };
