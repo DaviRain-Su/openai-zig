@@ -52,12 +52,15 @@
 
 ### 2.2 流式能力统一
 - [x] 抽象 SSE/parsing 工具，统一 `text/event-stream` 处理。
-- [x] 统一 `[DONE]` 终止行为，保留回调错误透传。
+- [x] 统一 `[DONE]` 终止行为，新增 `common` 级别 done 回调并在例子里可观测流式终止状态，保留回调错误透传。
 - [x] 逐步补齐支持流式的 endpoint。
   - [x] 已为 `responses` 增加 `create_response_stream` / `create_response_stream_with_options` + `create_with_options_stream`，统一使用 `common.sendStreamTypedWithOptions`。
-  - [x] 已为 `completions` 增加 `create_completion_stream` / `create_completion_stream_with_options` / `create_stream` / `create_with_options_stream`，统一使用 `common.sendStreamTypedWithOptions`。
+  - [x] 已为 `completions` 增加 `create_completion_stream` / `create_completion_stream_with_options` / `create_completion_stream_with_options_and_done` / `create_stream` / `create_with_options_stream`，统一使用 `common.sendStreamTypedWithDoneWithOptions` 进行 `[DONE]` 通知。
+  - [x] 已修复 `completions` 与 `chat` 的 `*_stream_raw` 别名链路中 `request_opts` 未透传到最终发送层的问题。
   - [x] 已新增 `examples/completions_stream.zig` 示例并接入 `run-examples`。
   - [x] 已为 `responses` 增加 `create_response_stream` / `create_response_stream_with_options` + `create_with_options_stream`，统一使用 `common.sendStreamTypedWithOptions`。
+  - [x] 已修复 `chat` raw 流式接口参数回归问题，`run-chat_completion_stream` 与 `run-examples` 能成功编译通过。
+  - [x] 已增强 SSE 解析器：在 `StreamEventParser.flush` 时对有事件却未收到 `[DONE]` 的流自动触发 done 回调，减少部分供应商误判为未完成导致 fallback 的情况。
 
 ### 2.3 文件与多部分请求
 - [x] 统一 multipart 构建流程（边界、字段、content-type）。
@@ -94,10 +97,18 @@
   - [x] 缺失字段补齐，保持 `ignore_unknown_fields = true` 兜底。
   - [x] 新增 `OpenAIFile` 与 `ListBatchesResponse` 缺省字段解析回归测试。
   - [x] 新增 `CreateCompletionResponse`、`CreateEmbeddingResponse`、`ImagesResponse` 的回归测试，覆盖高频返回模型在 extra 字段与可选字段场景下的兼容。
+  - [x] 补充 `CompletionUsage` 的 DeepSeek 兼容字段（如 `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens`）并增加对应回归测试。
   - [x] 新增 `ListRunsResponse` 与 `RunObject` 回归测试，覆盖助理运行列表与运行体的未知字段与空值兼容。
   - [x] 新增 `ListPaginatedFineTuningJobsResponse`、`ListFineTuningJobEventsResponse` 回归测试，覆盖微调任务列表与事件在未知字段场景下的兼容。
   - [x] 新增 `ListRunStepsResponse`、`RunStepObject`、`FineTuningJob`、`FineTuningJobCheckpoint` 的容错回归测试，覆盖高频响应对象未知字段场景。
   - [x] 新增 `VectorStoreSearchResultsPage`、`VectorStoreFileContentResponse`、`ListFineTuningJobCheckpointsResponse` 的回归测试，覆盖向量与微调分页列表兼容场景。
+- [x] 扩展 `chat.create_chat_completion` 请求参数与 `StreamResponseDelta` 覆盖度：新增 `top_p`、`frequency_penalty`、`presence_penalty`、`stop`、`tools`、`tool_choice`、`stream_options`、`logprobs`、`n`、`reasoning_content` 等字段在本地结构体层面的可用性。
+- [x] 增加 `chat.create_chat_completion_raw`/`create_chat_completion_raw_with_options` 及对应 stream raw 方法，提供 `std.json.Value` 的透传入口用于 docs/测试用例中完整请求体字段覆盖。
+- [x] 增加 `completions.create_completion_raw` 与 `completions.create_completion_stream_raw` 透传入口（含 with_options 与流式 raw 别名），用于 `/completions` 在 DeepSeek 等兼容提供商下保留非标准字段。
+- [x] 增加 `chat` 请求兼容扩展字段（`functions`、`function_call`、`logit_bias`、`modalities`、`audio`、`store`、`prediction`）与序列化回归测试，便于兼容 DeepSeek/OpenAI chat completion 的老接口参数。
+- [x] 增加 Chat 消息级 `prefix` 字段（DeepSeek 前缀续写）与序列化回归测试。
+- [x] 新增 `examples/chat_completion_raw.zig`，展示原始 JSON 请求体（含额外字段）到 `chat/create` 的透传示例，并纳入 `run-examples` 示例列表。
+  - [x] 增强 `ChatMessage` 的序列化能力：支持 `content` 普通字符串与 `content_json` 复杂内容（如多模态 content 数组）并通过自定义 `jsonStringify` 序列化为同名 `content`，补充 `content_json` 回归测试。
 
 ### 3.3 配置层和开发体验
 - [x] 统一环境变量优先级文档（`OPENAI_*` / `DEEPSEEK_*`）。
@@ -114,15 +125,32 @@
   - [x] 新增 `examples/completions_basic.zig`，补充 legacy `/completions` 非流式调用；该示例依赖 transport 的自动 `/completions -> /beta` 兼容，避免重复手工 base 覆盖。
 - [x] 深度兼容 DeepSeek 的 `beta` 约定：为 `Path=/completions` 的调用自动切换到 `.../beta`，无需调用方手工拼接 base_url；仍支持通过 `create_completion_with_options(..., .{ .base_url = "https://api.deepseek.com/beta" })` 显式覆盖。
   - [x] 在 `README` 与 `completions_stream` 示例中补充了显式 `/beta` 覆盖示例，避免出现 `/completions` 在 DeepSeek 下的兼容性误判。
+  - [x] 扩展为 `chat/completions` 的 `messages[].prefix=true` 场景自动转发到 `.../beta`。
   - [x] 新增 `examples/responses_basic.zig`：补充 `responses` 资源的基本调用与 provider 降级示例。
   - [x] 新增 `embeddings_and_moderations` 示例：覆盖 `embeddings` 与 `moderations` 核心调用形态。
   - [x] 新增 `assistants_list.zig`：补充 `assistants` 列表示例与 provider 降级处理。
   - [x] 新增 `batch_basic.zig`：补充 `batch` 列表与详情调用示例（404 降级处理）。
   - [x] 新增 `images_generation.zig`：补充 `images` 资源基础调用示例（provider 降级处理）。
   - [x] 新增 `vector_stores_list.zig`：补充 `vector_stores` 列表示例（provider 降级处理）。
-  - [x] `examples/chat_completion.zig` 已统一到 `client.chat().create_chat_completion` 标准高层调用路径。
-  - [x] `examples/chat_multiturn.zig` 避免了对返回对象直接 stringify，改为安全字段级输出，修复运行时 UTF-8 崩溃。
-  - [x] `examples/models_list.zig` 改为字段级安全输出，避免 `Model` 为 `std.json.Value` 时 stringify 出现异常二进制片段。
+- [x] `examples/chat_completion.zig` 已统一到 `client.chat().create_chat_completion` 标准高层调用路径。
+- [x] `examples/chat_multiturn.zig` 避免了对返回对象直接 stringify，改为安全字段级输出，修复运行时 UTF-8 崩溃。
+- [x] `examples/models_list.zig` 改为字段级安全输出，避免 `Model` 为 `std.json.Value` 时 stringify 出现异常二进制片段。
+- [x] `examples/chat_completion_stream.zig` 与 `examples/completions_stream.zig` 增加递归文本提取与非完整流回退（在无有效流片段时补齐非流请求）。
+- [x] `examples/chat_completion_stream.zig` 与 `examples/completions_stream.zig` 新增流式分片增量输出去重：当供应商返回“累积文本”而非增量 token 时，仅打印新增片段，避免重复内容。
+- [x] 完善 `examples/completions_stream.zig`：加入 `done` 信号检测，与 `fallback` 联动，降低流式未完整输出导致截断的场景。
+- [x] `examples/completions_stream.zig` 修复流式事件抽取：不再因 `text` 字段存在而跳过 `delta` 解析，避免某些供应商返回双字段导致内容丢失。
+- [x] `examples/completions_stream.zig` 与 `examples/chat_completion_stream.zig` 放宽回退触发：无 `done` 信号但有事件返回时，会走非流式补齐，减少“流式返回片段截断”。
+- [x] `examples/completions_stream.zig` 与 `examples/chat_completion_stream.zig` 增加 `saw_finish_reason` 回退维度：若事件链未带 `finish_reason` 则自动触发非流式补齐，增强 DeepSeek 兼容场景下的完整性保障。
+- [x] `examples/completions_stream.zig` 与 `examples/chat_completion_stream.zig` 改为缓存流式文本并在最终输出，避免 DeepSeek 兼容场景下“部分流式输出 + 非流式补齐”重复内容。
+- [x] 进一步优化流式分片去重与回退判定：新增尾部重叠检测，避免供应商返回累积文本导致重复片段；保留无 `done` 信号时走降级补齐。
+- [x] `examples/completions_stream.zig` 增加 DeepSeek 专用兜底：当流式结果明显截断（长文本却非结尾符）时继续触发非流式补齐，避免偶发尾部截断。
+- [x] 修复流式示例 `done` 回调上下文传递错误：`completions_stream` 与 `chat_completion_stream` 现传入 `&stream_state`，确保 `stream_done` 可由 `onDone` 正确置位。
+- [x] 补齐 `transport/http.zig` 中 DeepSeek `/beta` 自动切换边界测试（含 `/completions` 查询串、`/chat/completions` 查询串、`prefix` 在带 query 的 chat 路径场景）。
+- [x] 进一步修复 DeepSeek `/beta` 自动切换路径归一化：补齐 `completions`、`chat/completions` 的“无前导 `/` + query 字符串”边界（例如 `completions?stream=true`）。
+- [x] 强化 DeepSeek `/beta` 路由判断对路径形态的兼容（支持无前导 `/`、`?`、带空白的 base_url 场景），避免边界路径误判。
+- [x] 修复 `deepSeekBetaBase` 对 `https://api.deepseek.com/beta/` 等幂等场景的兼容：在已有 `/beta/` 时不再追加重复 `/beta`，同时增加空白字符裁剪为通用空白字符。
+- [x] `examples/completions_basic.zig` 与 `examples/completions_stream.zig` 显式设置 `echo = false`，避免 DeepSeek 在流式/非流式下返回输入提示词；`completions_stream` 的默认 `max_tokens` 提升到 768，提升长文本输出稳定性。
+- [x] 为 `chat`、`completions`、`responses` 的流式 raw/alias 场景补齐可选 `done` 回调签名，统一流式终止观测。
 
 ### 4.2 回归测试
 - [x] 补 transport 测试（重试、超时行为）。
@@ -132,6 +160,8 @@
 - [x] 增加配置加载/覆盖测试。
 - [x] 补齐分页 helper 语义边界测试（has_more=false 及方向/游标边界行为）。
 - [x] 扩展资源方法签名回归测试覆盖 `audio`/`embeddings`/`batch`/`moderations`。
+- [x] `examples/chat_completion_stream.zig` 与 `examples/completions_stream.zig` 再次收紧回退边界：在无流式事件、无流式文本输出、或未收到结束信号时走非流式补齐，降低“返回不全”场景。
+- [x] 调整 DeepSeek 流式回退判定：在 `stream_done` 缺失但文本末尾看似完整时，不再触发无条件补齐；仅在输出为空或文本尾部明显不完整时才发起非流式兜底。
 
 ## 5. 后续执行建议
 - 第一步先做 P0：transport、errors、资源通用层（`common`）。
