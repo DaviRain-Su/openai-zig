@@ -8682,8 +8682,58 @@ pub const RealtimeTranscriptionSessionCreateResponseGA = struct {
         },
     },
 };
-pub const RealtimeTruncation = std.json.Value;
-pub const RealtimeTurnDetection = std.json.Value;
+pub const RealtimeTruncation = union(enum) {
+    mode: []const u8,
+    config: TruncationObject,
+    raw: JsonObject,
+
+    pub fn forMode(value: []const u8) RealtimeTruncation {
+        return .{ .mode = value };
+    }
+
+    pub fn forConfig(value: TruncationObject) RealtimeTruncation {
+        return .{ .config = value };
+    }
+
+    pub fn forRaw(value: JsonObject) RealtimeTruncation {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: RealtimeTruncation, writer: anytype) !void {
+        switch (self) {
+            .mode => |value| try writer.write(value),
+            .config => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeTruncation {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !RealtimeTruncation {
+        switch (source) {
+            .string => return .{ .mode = source.string },
+            .object => {
+                const parsed = std.json.parseFromValue(TruncationObject, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .config = parsed.value };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
+pub const RealtimeTurnDetection = struct {
+    type: ?[]const u8,
+    threshold: ?f64,
+    prefix_padding_ms: ?i64,
+    silence_duration_ms: ?i64,
+};
 pub const Reasoning = struct {
     effort: ?ReasoningEffort,
     summary: ?[]const u8,

@@ -2430,3 +2430,69 @@ test "eval grader config keeps raw fallback for unknown shape" {
         else => try std.testing.expect(false),
     }
 }
+
+test "realtime truncation parses mode/object and keeps raw fallback" {
+    const mode = try std.json.parseFromSlice(
+        gen.RealtimeTruncation,
+        std.testing.allocator,
+        "\"auto\"",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer mode.deinit();
+    switch (mode.value) {
+        .mode => |value| try std.testing.expectEqualStrings("auto", value),
+        else => try std.testing.expect(false),
+    }
+
+    const config_payload =
+        \\{"type":"retention","last_messages":8}
+    ;
+    const config = try std.json.parseFromSlice(
+        gen.RealtimeTruncation,
+        std.testing.allocator,
+        config_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer config.deinit();
+    switch (config.value) {
+        .config => |value| {
+            try std.testing.expectEqualStrings("retention", value.type);
+            try std.testing.expectEqual(@as(?i64, 8), value.last_messages);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw = try std.json.parseFromSlice(
+        gen.RealtimeTruncation,
+        std.testing.allocator,
+        "1",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqual(@as(std.json.Value, .{ .integer = 1 }), value),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime session parses typed turn detection" {
+    const payload =
+        \\{"turn_detection":{"type":"server_vad","threshold":0.4,"prefix_padding_ms":120,"silence_duration_ms":250}}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.RealtimeSession,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const turn_detection = parsed.value.turn_detection orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expectEqualStrings("server_vad", turn_detection.type.?);
+    try std.testing.expectEqual(@as(?f64, 0.4), turn_detection.threshold);
+    try std.testing.expectEqual(@as(?i64, 120), turn_detection.prefix_padding_ms);
+    try std.testing.expectEqual(@as(?i64, 250), turn_detection.silence_duration_ms);
+}
