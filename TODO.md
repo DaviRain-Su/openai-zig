@@ -97,6 +97,7 @@
   - [x] 缺失字段补齐，保持 `ignore_unknown_fields = true` 兜底。
   - [x] 新增 `OpenAIFile` 与 `ListBatchesResponse` 缺省字段解析回归测试。
   - [x] 新增 `CreateCompletionResponse`、`CreateEmbeddingResponse`、`ImagesResponse` 的回归测试，覆盖高频返回模型在 extra 字段与可选字段场景下的兼容。
+  - [x] 细化 `CreateCompletionResponse.logprobs` 为结构化模型，并将 `CreateCompletionRequest.model` / `prompt` 由 `std.json.Value` 转为具体类型（`[]const u8`），新增对应兼容测试。
   - [x] 补充 `CompletionUsage` 的 DeepSeek 兼容字段（如 `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens`）并增加对应回归测试。
   - [x] 新增 `ListRunsResponse` 与 `RunObject` 回归测试，覆盖助理运行列表与运行体的未知字段与空值兼容。
   - [x] 新增 `ListPaginatedFineTuningJobsResponse`、`ListFineTuningJobEventsResponse` 回归测试，覆盖微调任务列表与事件在未知字段场景下的兼容。
@@ -146,7 +147,11 @@
 - [x] `examples/completions_stream.zig` 增加 `reasoning` / `reasoning_content` 流式字段抽取，并独立打印，配合 DeepSeek 兼容回退策略降低返回截断率。
 - [x] 进一步优化流式分片去重与回退判定：新增尾部重叠检测，避免供应商返回累积文本导致重复片段；保留无 `done` 信号时走降级补齐。
 - [x] `examples/completions_stream.zig` 增加 DeepSeek 专用兜底：当流式结果明显截断（长文本却非结尾符）时继续触发非流式补齐，避免偶发尾部截断。
+- [x] 优化 `completions/chat` 流式结束判定：在判断末尾完整性前先去除常见尾部修饰字符（如 `✨`、`😊` 等），降低 DeepSeek 场景下“完整回答误判为截断”导致的无谓 fallback。
+- [x] 优化 `completions` 示例的 prompt 回显清洗：扩展 `stripInstructionPrefix`，过滤更多提示词起始措辞（如 `The poem must...` 等），减少模型返回中指令残留文本。
 - [x] 修复流式示例 `done` 回调上下文传递错误：`completions_stream` 与 `chat_completion_stream` 现传入 `&stream_state`，确保 `stream_done` 可由 `onDone` 正确置位。
+- [x] 简化 `examples/chat_completion_stream.zig` 的 fallback 请求构建：采用 `var fallback_request = request; fallback_request.stream = null`，避免逐字段手工组装遗漏兼容字段。
+- [x] 抽象通用 `examples/provider_compat.withoutStream`，在流式失败 fallback 中统一关闭 `stream`，并同步替换 `chat_completion_stream` / `completions_stream` / `fim_completion_stream` 的回退请求构造。
 - [x] 加固示例主请求路径容错：`chat_completion`、`chat_completion_stream`、`completions_basic`、`completions_stream`、`chat_prefix_completion`、`fim_completion`、`fim_completion_stream`、`models_list` 的关键调用全部改为错误兜底，避免单例失败导致 `run-examples` 链路中断。
 - [x] 补齐 `transport/http.zig` 中 DeepSeek `/beta` 自动切换边界测试（含 `/completions` 查询串、`/chat/completions` 查询串、`prefix` 在带 query 的 chat 路径场景）。
 - [x] 进一步修复 DeepSeek `/beta` 自动切换路径归一化：补齐 `completions`、`chat/completions` 的“无前导 `/` + query 字符串”边界（例如 `completions?stream=true`）。
@@ -163,8 +168,13 @@
 - [x] 增加配置加载/覆盖测试。
 - [x] 补齐分页 helper 语义边界测试（has_more=false 及方向/游标边界行为）。
 - [x] 扩展资源方法签名回归测试覆盖 `audio`/`embeddings`/`batch`/`moderations`。
+- [x] 扩展资源方法签名回归测试覆盖 `assistants`/`vector_stores`/`fine_tuning`/`user_balance` 的 `with_options` 最后一参数签名一致性。
 - [x] `examples/chat_completion_stream.zig` 与 `examples/completions_stream.zig` 再次收紧回退边界：在无流式事件、无流式文本输出、或未收到结束信号时走非流式补齐，降低“返回不全”场景。
 - [x] 调整 DeepSeek 流式回退判定：在 `stream_done` 缺失但文本末尾看似完整时，不再触发无条件补齐；仅在输出为空或文本尾部明显不完整时才发起非流式兜底。
+- [x] 再次收敛三类流式示例（chat/completions/fim）：仅在“无结束信号 + 文本明显不完整”时触发 fallback，并保留“有文本输出且无完整结尾但长度偏短”的保守兜底策略。
+- [x] 补充 DeepSeek 流式示例兼容策略：`chat_completion_stream` 与 `completions_stream` 在 DeepSeek 环境下直接切到非流式执行，避免重复 fallback 与误判截断。
+- [x] 增加 `user/balance` 结构化返回回归测试，覆盖 `is_available` 与 `balance_infos` 基础字段。
+- [x] 增加客户端 `balance`/`user_balance` 资源别名回归测试，保证两者都绑定同一 transport。
 
 ### 4.3 Thinking Mode / Reasoning content
 - [x] 完善 `chat` 侧的 Raw Value 能力：
@@ -173,6 +183,7 @@
 - [x] 验证 `extra_body` 与 `thinking` 兼容：`CreateChatCompletionRequest` 支持 `extra_body` 并平铺到顶层 JSON。
 - [x] 新增 `extra_body` 平铺回归测试（包含 `thinking` 与自定义键值）。
 - [x] 新增 `examples/chat_thinking_mode.zig`，支持输出 `content` 与 `reasoning_content`，并演示多轮对话仅携带 `content` 回流。
+- [x] 修正 `examples/chat_thinking_mode.zig`：follow-up 请求显式不透传 `extra_body`（`thinking`），保证“仅 content 回流”场景。
 - [x] 优化 `examples/chat_completion_stream.zig` 的流式输出：默认仅按 `content` 输出，`reasoning_content` 另行缓存并显示，避免思考内容与正文混排。
 
 ### 4.4 DeepSeek 多轮与 Prefix 能力对齐
@@ -185,11 +196,17 @@
 - [x] 增加 `completions` 本地序列化回归测试，确保 `suffix` 能正确参与 JSON 请求体构造。
 - [x] 新增 `examples/fim_completion_stream.zig`，验证 FIM 流式续写与 fallback 兜底。
 - [x] 增加 `examples/fim_completion_raw.zig`，通过 `std.json.Value` 直接发起 `/completions` FIM 请求，演示 raw 透传。
+- [x] `examples/fim_completion_stream.zig` 为 DeepSeek 路由加速：检测到 DeepSeek 时直接走非流式 FIM 请求，避免流式仅返回空文本再 fallback 的噪音输出。
 
 ### 4.6 音频转写与示例补齐
 - [x] 增加 `audio` 本地文件路径转写/翻译 helper（`create_transcription_from_path` / `create_translation_from_path`）并补齐 `transcriptions_from_path`、`translations_from_path` 别名链路。
 - [x] 修复 Zig 0.15 下 multipart 构建与文件长度读取编译兼容（`ArrayList.writer`、`file.stat` 错误集合适配）。
 - [x] 新增 `examples/audio_transcription.zig` 示例并接入 `run-examples`，支持缺失文件与 DeepSeek 兼容层跳过提示。
+- [x] 完善音频转写/翻译请求模型：将 `CreateTranscriptionRequest.model`、`CreateTranslationRequest.model` 与本地路径请求体 `model` 收窄为 `[]const u8`，同步示例与 multipart 构建逻辑。
+
+- [x] 继续收窄 `generated/types.zig` 高频字段：`CreateAssistantRequest` / `ModifyAssistantRequest` 的文本与数值参数、`InferenceOptions.model`、usage 统计返回中的 `project_id/user_id/api_key_id/model/batch/service_tier` 等字段改为具体类型。
+- [x] 继续收窄 `generated/types.zig`：`AssistantObject`、`Eval*Source`、`ImageGenTool.model`、`FunctionTool`、`TokenCountsBody.model`/`instructions`、`ThreadResource.title/status` 等字段转为具体类型。
+- [x] 继续收窄 `generated/types.zig`：补齐 `CreateTranscriptionRequest.stream`、`EvalResponsesSource.temperature/top_p`、`GraderScoreModel`、`ModelResponseProperties`、`SubmitToolOutputsRunRequest.stream`、工具调用状态/描述等剩余高频 `std.json.Value` 标量字段。
 
 ### 4.7 JSON Mode / JSON 输出能力
 - [x] 在 `chat` 资源补充 `ResponseFormat` 结构化构造能力，支持 `json_object` 与 `json_schema`。
@@ -200,7 +217,28 @@
 - [x] 补齐 `chat.create_chat_completion` 的 `tools` 与 `tool_choice` 结构化请求能力（含 `forFunction/forAuto/forNone/forRequired` 与 `raw` 兼容）。
 - [x] 新增 `examples/chat_tool_calls.zig`，展示 `tools` + `tool_choice` 的请求构造与返回 `tool_calls` 解析。
 
+### 4.9 供应商原生能力（DeepSeek）
+- [x] 新增 `GET /user/balance` 的 `balance` 资源能力（`resources.UserBalanceResource`）与客户端入口 `client.balance()/client.user_balance()`。
+- [x] 新增 `examples/user_balance.zig` 示例（DeepSeek 前置判断 + 404 降级处理），并加入 `run-examples` 构建清单。
+- [x] 将 `/user/balance` 支持写入 `examples/README.md` 与 `README.md` 及 todo 清单，便于逐项验收。
+- [x] 将 `/user/balance` 从 `std.json.Value` 升级为结构化返回模型（`UserBalanceResponse` + `UserBalanceInfo`），并更新示例字段级输出。
+
 ## 5. 后续执行建议
 - 第一步先做 P0：transport、errors、资源通用层（`common`）。
 - 第二步做 P1：流式统一、文件 multipart、核心资源 `with_options` 接口扩展。
 - 第三步做 P2：分页、模型/文档、测试收口。
+
+- [x] 本轮继续收窄 generated/types：`CreateEmbeddingRequest.model/input`、`CreateSpeechRequest.model`、`CreateModerationResponse.illicit*`、`CreateRunRequest.model`、`CreateThreadAndRunRequest.model`、`CreateFineTuningJobRequest.model` 与部分图片模型字段已改为具体类型。
+- [x] 继续收窄 generated/types 标量类型：`AdminApiKey.last_used_at`、`ApproximateLocation.country/region/city/timezone`、`AssignedRoleDetails.description/created_at/updated_at/created_by`、`Attachment.preview_url`、`BatchError.param/line` 已改为具体类型。
+- [x] 继续收窄 generated/types 标量类型：`ClosedStatus.reason`、`LockedStatus.reason`、`Error.code/param`、`DeleteCertificateResponse.object`、`MCPApprovalResponse(id/reason)`、`MCPApprovalResponseResource.reason`、`MCPListTools._error`、`LocalShellExecAction(timeout_ms/working_directory/user)`、`CodeInterpreterToolCall.code/outputs`、`RealtimeBetaServerEventError`、`RealtimeMCPApprovalResponse.reason`、`ResponseErrorEvent.code/param`、`ResponseFormatJsonSchema.strict`、`TextResponseFormatJsonSchema.strict`、`TaskGroupTask`、`TaskItem` 的 heading/summary 已改为具体类型。
+- [x] 本轮继续收窄 generated/types 高频字段：`ChatCompletionStreamOptions`、`ChatSession*`、`ClientToolCallItem.output`、`CodeInterpreterContainerAuto.memory_limit`、`EvalResponsesSource`、`EvalGrader*`、`GraderScoreModel`、`ImageGenTool.input_fidelity`、`CreateImageEditRequest.input_fidelity`、`InferenceOptions.tool_choice`、`ModelResponseProperties.top_logprobs/prompt_cache_retention`、`ReasoningEffort`、`TruncationObject.last_messages`、`SubmitToolOutputsRunRequest`、`CreateRun*/CreateThreadAndRun*` 及 `EvalStoredCompletionsSource` 的标量/对象字段已改为更具体类型。
+- [x] 本轮继续收窄 generated/types 高频字段：`ChatCompletionModalities`、`ModelIds*`、`ResponseModalities`、`ResponseStreamOptions`、`RunCompletionUsage`、`RunStepCompletionUsage`、`ServiceTier`、`Verbosity`、`VoiceIdsShared`、`WebSearchApproximateLocation` 已改为具体类型；复杂 oneOf 的 `CreateResponse` 保持 `std.json.Value` 兼容。
+- [x] 本轮继续收窄 generated/types：`FunctionShellAction`、`FunctionShellActionParam`、`FunctionShellCallOutput`、`FunctionShellCallOutputItemParam` 的长度/超时字段改为具体整数类型（`i64`），降低动态类型依赖。
+- [x] 本轮继续收窄 generated/types：`CompactResponseMethodPublicBody.previous_response_id`、`CompactionSummaryItemParam.id`、`ApplyPatchToolCall*Param.id`、`ComputerCallOutputItemParam.id`、`FunctionCallOutputItemParam.id`、`FunctionShellCall*Param.id` 改为可选字符串。
+- [x] 本轮继续收窄 generated/types：`CostsResult.project_id`、`ListFineTuningCheckpointPermissionResponse.first_id/last_id`、`ListFineTuningJobCheckpointsResponse.first_id/last_id`、`ListThreads`/`ListThreadItems`/`VideoListResource` 的 `first_id/last_id` 改为具体字符串类型；补齐实时事件 `previous_item_id`、响应 `previous_response_id`（`TokenCountsBody/ResponseProperties`）、`UsageVectorStoresResult.project_id`、`VoiceConsentListResource.first_id/last_id` 为具体可选字符串类型。
+- [x] 本轮继续收窄 generated/types：`BatchRequestOutput.response/_error`、`FineTuningJob._error/fine_tuned_model/finished_at/trained_tokens/validation_file/integrations/estimated_finish`、`GroupListResource.next`、`ProjectGroupListResource.next`、`PublicRoleListResource.next`、`RoleListResource.next`、`UserListResource.next`、`InputFileContent/file_id`、`InputFileContentParam.file_id`、`MCPToolCall._error/approval_request_id`、`MessageObject.assistant_id/run_id/attachments/incomplete_details/completed_at/incomplete_at`、`RunStepObject.last_error/expired_at/cancelled_at/failed_at/completed_at`、`VectorStoreFileContentResponse.next_page`、`VectorStoreSearchResultsPage.next_page`、`VectorStoreFileObject.last_error`、`VectorStoreObject.expires_at/last_active_at`、`VideoListResource.object`、`VideoResource.completed_at/expires_at/prompt/remixed_from_video_id/_error` 已改为具体类型。
+- [x] 继续收窄 generated/types：`Project.archived_at` 改为 `?i64`；将 `Realtime*` 相关的 `modality/modalities/output_modalities` 列表字段改为 `?[]const []const u8`；将多处 `max_output_tokens` 与 `max_response_output_tokens` 明确为 `?i64`（`Realtime*` 请求/响应模型）。
+- [x] 继续收窄 generated/types：`RealtimeServerEvent*` 事件结构体中的 `type` 字段改为 `[]const u8`，并将 `RealtimeServerEventError.code/param/event_id` 收窄为可选字符串。
+- [x] 继续收窄 generated/types：`RealtimeBeta*` 事件体中的 `type` 字段改为 `[]const u8`，`CreateFineTuningJobRequest.integrations[*].type` 改为字符串，`RunGraderResponse.errors.python_grader_server_error_type` 设为可选字符串。
+- [x] 继续收窄 generated/types：`ComputerCallSafetyCheckParam.code/message` 改为可选字符串（`?[]const u8`），降低安全检查字段动态解析风险。
+- [x] 继续收窄 generated/types：`ContainerFile/List/ConversationItem` 列表 `object`、`FineTuning*` 超参数、`RealtimeBeta/Realtime Response` 常量 `object`、`ResponseItemList`、`ThreadItem/ThreadList` 列表 `object`、`VectorStoreSearchRequest.query`、`UpdateVectorStoreRequest.expires_after`、`ItemReferenceParam.type`、`WebSearchPreviewTool.user_location` 继续改为具体类型。
