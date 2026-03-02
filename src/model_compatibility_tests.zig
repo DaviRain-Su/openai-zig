@@ -2367,3 +2367,66 @@ test "realtime response create params parses typed tools and conversation" {
     }
     try std.testing.expectEqual(@as(?i64, 256), parsed.value.max_output_tokens);
 }
+
+test "eval grader config parses typed variants" {
+    const score_payload =
+        \\{"type":"score_model","name":"score","model":"gpt-4o-mini","input":[{"role":"assistant","content":"ok"}],"range":[0,1]}
+    ;
+    const score = try std.json.parseFromSlice(
+        gen.EvalGraderConfig,
+        std.testing.allocator,
+        score_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer score.deinit();
+    switch (score.value) {
+        .score_model => |value| {
+            try std.testing.expectEqualStrings("score", value.name);
+            try std.testing.expectEqualStrings("gpt-4o-mini", value.model);
+            try std.testing.expectEqual(@as(usize, 1), value.input.len);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const multi_payload =
+        \\{"type":"multi","name":"combo","graders":[{"type":"python","name":"py","source":"return 1"}],"calculate_output":"mean"}
+    ;
+    const multi = try std.json.parseFromSlice(
+        gen.EvalGraderConfig,
+        std.testing.allocator,
+        multi_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer multi.deinit();
+    switch (multi.value) {
+        .multi => |value| {
+            try std.testing.expectEqualStrings("combo", value.name);
+            try std.testing.expectEqual(@as(usize, 1), value.graders.len);
+            switch (value.graders[0]) {
+                .python => |py| try std.testing.expectEqualStrings("py", py.name),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval grader config keeps raw fallback for unknown shape" {
+    const raw_payload =
+        \\{"type":"future_grader","foo":1}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.EvalGraderConfig,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| {
+            try std.testing.expectEqualStrings("future_grader", value.object.get("type").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}

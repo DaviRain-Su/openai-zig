@@ -7,7 +7,119 @@ pub const EvalTestingCriterion = JsonObject;
 pub const EvalSchema = JsonObject;
 pub const EvalSample = JsonObject;
 pub const EvalDatasourceItem = JsonObject;
-pub const EvalGraderConfig = JsonObject;
+pub const EvalGraderConfig = union(enum) {
+    label_model: GraderLabelModel,
+    multi: GraderMulti,
+    python: GraderPython,
+    score_model: GraderScoreModel,
+    string_check: GraderStringCheck,
+    text_similarity: GraderTextSimilarity,
+    raw: JsonObject,
+
+    pub fn forRaw(value: JsonObject) EvalGraderConfig {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: EvalGraderConfig, writer: anytype) !void {
+        switch (self) {
+            .label_model => |value| try writer.write(value),
+            .multi => |value| try writer.write(value),
+            .python => |value| try writer.write(value),
+            .score_model => |value| try writer.write(value),
+            .string_check => |value| try writer.write(value),
+            .text_similarity => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !EvalGraderConfig {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !EvalGraderConfig {
+        switch (source) {
+            .object => |root| {
+                if (root.get("type")) |kind| {
+                    if (kind == .string) {
+                        if (std.mem.eql(u8, kind.string, "label_model")) {
+                            const parsed = std.json.parseFromValue(GraderLabelModel, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .label_model = parsed.value };
+                        }
+
+                        if (std.mem.eql(u8, kind.string, "multi")) {
+                            const parsed = std.json.parseFromValue(GraderMulti, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .multi = parsed.value };
+                        }
+
+                        if (std.mem.eql(u8, kind.string, "python")) {
+                            const parsed = std.json.parseFromValue(GraderPython, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .python = parsed.value };
+                        }
+
+                        if (std.mem.eql(u8, kind.string, "score_model")) {
+                            const parsed = std.json.parseFromValue(GraderScoreModel, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .score_model = parsed.value };
+                        }
+
+                        if (std.mem.eql(u8, kind.string, "string_check")) {
+                            const parsed = std.json.parseFromValue(GraderStringCheck, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .string_check = parsed.value };
+                        }
+
+                        if (std.mem.eql(u8, kind.string, "text_similarity")) {
+                            const parsed = std.json.parseFromValue(GraderTextSimilarity, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .text_similarity = parsed.value };
+                        }
+                    }
+                }
+
+                if (std.json.parseFromValue(GraderMulti, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .multi = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(GraderLabelModel, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .label_model = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(GraderScoreModel, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .score_model = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(GraderPython, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .python = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(GraderStringCheck, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .string_check = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(GraderTextSimilarity, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .text_similarity = parsed.value };
+                } else |_| {}
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const ToolOutputPayload = JsonObject;
 pub const GenericContent = JsonObject;
 pub const RealtimeObfuscation = JsonObject;
@@ -4266,7 +4378,7 @@ pub const GraderLabelModel = struct {
 pub const GraderMulti = struct {
     type: []const u8,
     name: []const u8,
-    graders: EvalGraderConfig,
+    graders: []const EvalGraderConfig,
     calculate_output: []const u8,
 };
 pub const GraderPython = struct {
@@ -4869,7 +4981,7 @@ pub const InviteRequest = struct {
         id: []const u8,
         role: []const u8,
     },
-}; 
+};
 pub const Item = union(enum) {
     input_message: InputMessage,
     output_message: OutputMessage,
