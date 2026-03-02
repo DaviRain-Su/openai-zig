@@ -47,8 +47,20 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
 
 ### DeepSeek `/beta` compatibility notes
 
-- Some DeepSeek endpoints (for example legacy `/completions` in some accounts) require the `/beta` base path.
-- The transport automatically switches DeepSeek requests for `/completions` to `.../beta` when `base_url` contains `api.deepseek.com`.
+- The transport applies provider-aware rewrites for DeepSeek-compatible base URLs (base URL containing `deepseek`):
+  - `POST /completions` and `GET /completions` are rewritten to `<base>/beta`.
+  - `POST /chat/completions` is rewritten to `<base>/beta` only when the last message is
+    `{"role":"assistant", "prefix": true}`.
+  - `/beta` is normalized idempotently (no duplicated `/beta` suffix is added).
+- This behavior applies in all normal request paths and request-with-options calls.
+
+Examples:
+
+- `https://api.deepseek.com/v1 + /completions` -> `https://api.deepseek.com/beta`
+- `https://api.deepseek.com/v1 + /completions?stream=true` -> `https://api.deepseek.com/beta`
+- `https://api.deepseek.com/v1 + /chat/completions` (without assistant prefix) -> `https://api.deepseek.com/v1`
+- `https://api.deepseek.com/v1 + /chat/completions` (assistant `prefix=true` last message) -> `https://api.deepseek.com/beta`
+
 - You can also force it explicitly per request with `RequestOptions.base_url`:
 
 ```zig
@@ -86,15 +98,21 @@ bash scripts/check-op-coverage.sh     # verify operation coverage against genera
 ## Examples
 - `examples/models_list.zig` — list available models
 - `examples/chat_completion.zig` — single chat completion call
+- `examples/chat_completion_raw.zig` — raw JSON chat completion request demo
+- `examples/chat_thinking_mode.zig` — chat completion with DeepSeek thinking/reasoning fields
 - `examples/chat_completion_stream.zig` — chat completion stream
 - `examples/chat_list.zig` — list chat completion objects
 - `examples/chat_multiturn.zig` — multi-turn chat continuation
+- `examples/chat_prefix_completion.zig` — chat prefix completion (`prefix=true`) sample
 - `examples/chat_json_extract.zig` — function-like structured chat output demo
 - `examples/files_list.zig` — list files
 - `examples/assistants_list.zig` — assistants list with fallback handling
 - `examples/embeddings_and_moderations.zig` — embeddings + moderations call path
 - `examples/completions_stream.zig` — completions stream wrapper
 - `examples/completions_basic.zig` — completions call (legacy completion endpoint) with DeepSeek `/beta` compatibility
+- `examples/fim_completion.zig` — FIM-style completion (`prompt` + `suffix`) via `/completions`
+- `examples/fim_completion_stream.zig` — FIM-style streaming completion with fallback completion fallback
+- `examples/fim_completion_raw.zig` — raw JSON FIM completion request via `/completions`
 - `examples/responses_basic.zig` — responses API baseline sample
 - `examples/batch_basic.zig` — batch list/detail sample
 - `examples/files_list_paged.zig` — manual pagination helper

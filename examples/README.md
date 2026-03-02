@@ -18,14 +18,21 @@ Environment overrides are also supported (priority: env vars override TOML):
 
 - `models_list.zig` — list models.
 - `chat_completion.zig` — create a chat completion.
+- `chat_completion_raw.zig` — raw JSON chat completion request.
 - `chat_completion_stream.zig` — stream chat completion delta chunks.
 - `chat_list.zig` — list chat completions.
-- `chat_multiturn.zig` — create multi-turn chat messages.
+- `chat_multiturn.zig` — create multi-turn chat messages, including `prefix` continuation examples.
+- `chat_prefix_completion.zig` — direct DeepSeek/Chat prefix completion (`prefix=true`) sample.
 - `chat_json_extract.zig` — extract JSON via chat responses.
+- `chat_thinking_mode.zig` — chat completion with reasoning/`thinking` mode and follow-up control.
 - `assistants_list.zig` — list assistants with capability fallback.
 - `files_list.zig` — list files.
 - `embeddings_and_moderations.zig` — embeddings + moderations examples.
 - `completions_stream.zig` — stream completions output.
+- `completions_basic.zig` — basic `/completions` request with DeepSeek compatibility behavior.
+- `fim_completion.zig` — FIM-style completion (`prompt` + `suffix`) via `/completions`.
+- `fim_completion_stream.zig` — FIM-style streaming completion.
+- `fim_completion_raw.zig` — raw JSON FIM completion request.
 - `files_list_paged.zig` — manually paginate `files` list with cursor helpers.
 - `files_list_auto_paged.zig` — automatically paginate `files` list with `auto_paginate_after`.
 - `images_generation.zig` — generate images with basic request/response handling.
