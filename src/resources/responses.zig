@@ -11,6 +11,7 @@ pub const StreamResponseEventHandler = *const fn (
     user_ctx: ?*anyopaque,
     event: std.json.Parsed(gen.ResponseStreamEvent),
 ) errors.Error!void;
+pub const StreamResponseDoneHandler = *const fn (user_ctx: ?*anyopaque) errors.Error!void;
 pub const DeleteResponseResponse = struct {
     id: []const u8 = "",
     object: []const u8 = "",
@@ -83,7 +84,27 @@ pub const Resource = struct {
         on_event: StreamResponseEventHandler,
         user_ctx: ?*anyopaque,
     ) errors.Error!void {
-        return self.create_response_stream_with_options(allocator, req, on_event, user_ctx, null);
+        return self.create_response_stream_with_done(allocator, req, on_event, user_ctx, null, null);
+    }
+
+    pub fn create_response_stream_with_done(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateResponseRequest,
+        on_event: StreamResponseEventHandler,
+        user_ctx: ?*anyopaque,
+        on_done: ?StreamResponseDoneHandler,
+        done_ctx: ?*anyopaque,
+    ) errors.Error!void {
+        return self.create_response_stream_with_options_and_done(
+            allocator,
+            req,
+            on_event,
+            user_ctx,
+            null,
+            on_done,
+            done_ctx,
+        );
     }
 
     pub fn create_response_stream_with_options(
@@ -93,6 +114,27 @@ pub const Resource = struct {
         on_event: StreamResponseEventHandler,
         user_ctx: ?*anyopaque,
         request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!void {
+        return self.create_response_stream_with_options_and_done(
+            allocator,
+            req,
+            on_event,
+            user_ctx,
+            request_opts,
+            null,
+            null,
+        );
+    }
+
+    pub fn create_response_stream_with_options_and_done(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateResponseRequest,
+        on_event: StreamResponseEventHandler,
+        user_ctx: ?*anyopaque,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+        on_done: ?StreamResponseDoneHandler,
+        done_ctx: ?*anyopaque,
     ) errors.Error!void {
         var body_writer = std.io.Writer.Allocating.init(allocator);
         defer body_writer.deinit();
@@ -106,7 +148,7 @@ pub const Resource = struct {
         };
         const payload = body_writer.written();
 
-        try common.sendStreamTypedWithOptions(
+        try common.sendStreamTypedWithDoneWithOptions(
             self.transport,
             allocator,
             .POST,
@@ -119,6 +161,8 @@ pub const Resource = struct {
             gen.ResponseStreamEvent,
             on_event,
             user_ctx,
+            on_done,
+            done_ctx,
             request_opts,
         );
     }

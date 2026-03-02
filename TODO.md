@@ -134,6 +134,7 @@
   - [x] 新增 `vector_stores_list.zig`：补充 `vector_stores` 列表示例（provider 降级处理）。
 - [x] `examples/chat_completion.zig` 已统一到 `client.chat().create_chat_completion` 标准高层调用路径。
 - [x] `examples/chat_multiturn.zig` 避免了对返回对象直接 stringify，改为安全字段级输出，修复运行时 UTF-8 崩溃。
+- [x] `examples/chat_multiturn.zig` 新增 `messages[].prefix` 多轮续写示例（兼容 DeepSeek `prefix` 续写能力）。
 - [x] `examples/models_list.zig` 改为字段级安全输出，避免 `Model` 为 `std.json.Value` 时 stringify 出现异常二进制片段。
 - [x] `examples/chat_completion_stream.zig` 与 `examples/completions_stream.zig` 增加递归文本提取与非完整流回退（在无有效流片段时补齐非流请求）。
 - [x] `examples/chat_completion_stream.zig` 与 `examples/completions_stream.zig` 新增流式分片增量输出去重：当供应商返回“累积文本”而非增量 token 时，仅打印新增片段，避免重复内容。
@@ -142,6 +143,7 @@
 - [x] `examples/completions_stream.zig` 与 `examples/chat_completion_stream.zig` 放宽回退触发：无 `done` 信号但有事件返回时，会走非流式补齐，减少“流式返回片段截断”。
 - [x] `examples/completions_stream.zig` 与 `examples/chat_completion_stream.zig` 增加 `saw_finish_reason` 回退维度：若事件链未带 `finish_reason` 则自动触发非流式补齐，增强 DeepSeek 兼容场景下的完整性保障。
 - [x] `examples/completions_stream.zig` 与 `examples/chat_completion_stream.zig` 改为缓存流式文本并在最终输出，避免 DeepSeek 兼容场景下“部分流式输出 + 非流式补齐”重复内容。
+- [x] `examples/completions_stream.zig` 增加 `reasoning` / `reasoning_content` 流式字段抽取，并独立打印，配合 DeepSeek 兼容回退策略降低返回截断率。
 - [x] 进一步优化流式分片去重与回退判定：新增尾部重叠检测，避免供应商返回累积文本导致重复片段；保留无 `done` 信号时走降级补齐。
 - [x] `examples/completions_stream.zig` 增加 DeepSeek 专用兜底：当流式结果明显截断（长文本却非结尾符）时继续触发非流式补齐，避免偶发尾部截断。
 - [x] 修复流式示例 `done` 回调上下文传递错误：`completions_stream` 与 `chat_completion_stream` 现传入 `&stream_state`，确保 `stream_done` 可由 `onDone` 正确置位。
@@ -162,6 +164,26 @@
 - [x] 扩展资源方法签名回归测试覆盖 `audio`/`embeddings`/`batch`/`moderations`。
 - [x] `examples/chat_completion_stream.zig` 与 `examples/completions_stream.zig` 再次收紧回退边界：在无流式事件、无流式文本输出、或未收到结束信号时走非流式补齐，降低“返回不全”场景。
 - [x] 调整 DeepSeek 流式回退判定：在 `stream_done` 缺失但文本末尾看似完整时，不再触发无条件补齐；仅在输出为空或文本尾部明显不完整时才发起非流式兜底。
+
+### 4.3 Thinking Mode / Reasoning content
+- [x] 完善 `chat` 侧的 Raw Value 能力：
+  - [x] 新增 `create_chat_completion_value`/`create_chat_completion_value_with_options`。
+  - [x] 新增 `create_chat_completion_raw_value`/`create_chat_completion_raw_value_with_options`。
+- [x] 验证 `extra_body` 与 `thinking` 兼容：`CreateChatCompletionRequest` 支持 `extra_body` 并平铺到顶层 JSON。
+- [x] 新增 `extra_body` 平铺回归测试（包含 `thinking` 与自定义键值）。
+- [x] 新增 `examples/chat_thinking_mode.zig`，支持输出 `content` 与 `reasoning_content`，并演示多轮对话仅携带 `content` 回流。
+- [x] 优化 `examples/chat_completion_stream.zig` 的流式输出：默认仅按 `content` 输出，`reasoning_content` 另行缓存并显示，避免思考内容与正文混排。
+
+### 4.4 DeepSeek 多轮与 Prefix 能力对齐
+- [x] 新增 `examples/chat_prefix_completion.zig`，演示 `messages[].prefix = true` 续写调用，并接入 `build.zig` 与示例文档清单。
+- [x] 收敛 `DeepSeek prefix` 路由条件：仅在 `messages` 最后一条 `assistant` 且 `prefix=true` 时自动切换到 `/beta`，并补充路由边界测试。
+
+### 4.5 FIM / Suffix 补全能力对齐
+- [x] 确认 `CreateCompletionRequest` 已包含 `suffix` 字段，可用于 DeepSeek FIM 风格续写。
+- [x] 增加 `examples/fim_completion.zig`，演示 `prompt` + `suffix` 示例并接入 `build.zig`。
+- [x] 增加 `completions` 本地序列化回归测试，确保 `suffix` 能正确参与 JSON 请求体构造。
+- [x] 新增 `examples/fim_completion_stream.zig`，验证 FIM 流式续写与 fallback 兜底。
+- [x] 增加 `examples/fim_completion_raw.zig`，通过 `std.json.Value` 直接发起 `/completions` FIM 请求，演示 raw 透传。
 
 ## 5. 后续执行建议
 - 第一步先做 P0：transport、errors、资源通用层（`common`）。

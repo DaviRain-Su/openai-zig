@@ -247,7 +247,7 @@ pub const Transport = struct {
         defer arena.deinit();
         const alloc = arena.allocator();
 
-        const request_base_url = resolveRequestBaseUrl(alloc, active_opts.base_url, path) catch {
+        const request_base_url = resolveRequestBaseUrl(alloc, active_opts.base_url, path, body) catch {
             return errors.Error.HttpError;
         };
         const url = try buildUrl(alloc, request_base_url, path);
@@ -366,7 +366,6 @@ pub const Transport = struct {
                 sleepForRetry(attempt, retry_after_ms, active_opts);
                 continue;
             };
-            errdefer self.allocator.free(response_bytes);
 
             if (status < 200 or status >= 300) {
                 if (isRetryableStatus(status) and attempt < active_opts.max_retries and isRetryableMethod(method)) {
@@ -374,12 +373,13 @@ pub const Transport = struct {
                     sleepForRetry(attempt, retry_after_ms, active_opts);
                     continue;
                 }
-                defer self.allocator.free(response_bytes);
-                return errors.unexpectedStatus(.{
+                const err = errors.unexpectedStatus(.{
                     .status = status,
                     .body = response_bytes,
                     .request_id = request_id,
                 });
+                self.allocator.free(response_bytes);
+                return err;
             }
 
             return Response{ .status = status, .body = response_bytes };
@@ -402,7 +402,7 @@ pub const Transport = struct {
         defer arena.deinit();
         const alloc = arena.allocator();
 
-        const request_base_url = resolveRequestBaseUrl(alloc, active_opts.base_url, path) catch {
+        const request_base_url = resolveRequestBaseUrl(alloc, active_opts.base_url, path, body) catch {
             return errors.Error.HttpError;
         };
         const url = buildUrl(alloc, request_base_url, path) catch {
@@ -633,22 +633,69 @@ fn buildUrl(allocator: std.mem.Allocator, base_url: []const u8, path: []const u8
 }
 
 fn isDeepSeekProvider(base_url: []const u8) bool {
-    return std.mem.indexOf(u8, base_url, "api.deepseek.com") != null;
+    const trimmed_url = std.mem.trim(u8, base_url, " \t\n\r");
+    return std.mem.indexOf(u8, trimmed_url, "api.deepseek.com") != null;
+}
+
+fn normalizedRequestPath(path: []const u8) []const u8 {
+    const query_index = std.mem.indexOf(u8, path, "?") orelse path.len;
+    const path_without_query = path[0..query_index];
+    const path_without_leading_slash = if (path_without_query.len > 0 and path_without_query[0] == '/')
+        path_without_query[1..]
+    else
+        path_without_query;
+    return std.mem.trimRight(u8, path_without_leading_slash, "/");
 }
 
 fn isBetaRequiredPath(path: []const u8) bool {
-    const normalized = if (path.len > 0 and path[0] == '/') path[1..] else path;
-    return std.mem.eql(u8, path, "/completions") or
-        std.mem.startsWith(u8, path, "/completions/") or
-        std.mem.startsWith(u8, path, "/completions?") or
-        std.mem.eql(u8, normalized, "completions");
+    const normalized = normalizedRequestPath(path);
+    return std.mem.eql(u8, normalized, "completions") or
+        std.mem.startsWith(u8, normalized, "completions/");
+}
+
+fn isChatCompletionPrefixPath(path: []const u8) bool {
+    const normalized = normalizedRequestPath(path);
+    return std.mem.eql(u8, normalized, "chat/completions") or
+        std.mem.startsWith(u8, normalized, "chat/completions/");
+}
+
+fn hasChatPrefixFlag(payload: []const u8, alloc: std.mem.Allocator) bool {
+    const parsed = std.json.parseFromSlice(std.json.Value, alloc, payload, .{}) catch {
+        return false;
+    };
+    defer parsed.deinit();
+
+    if (parsed.value != .object) return false;
+    const root = parsed.value.object;
+    const messages = root.get("messages") orelse return false;
+
+    if (messages != .array or messages.array.items.len == 0) return false;
+    const last_msg = messages.array.items[messages.array.items.len - 1];
+    if (last_msg != .object) return false;
+    const prefix = last_msg.object.get("prefix") orelse return false;
+    if (prefix != .bool or !prefix.bool) return false;
+
+    if (last_msg.object.get("role")) |role| {
+        if (role != .string) return false;
+        if (!std.mem.eql(u8, role.string, "assistant")) return false;
+    }
+
+    return true;
 }
 
 fn deepSeekBetaBase(allocator: std.mem.Allocator, base_url: []const u8) ![]u8 {
-    const trimmed_base = std.mem.trimRight(u8, base_url, "/");
+    const trimmed_base = std.mem.trim(u8, base_url, " \t\n\r");
+
+    if (trimmed_base.len == 0) {
+        return allocator.dupe(u8, "https://api.deepseek.com/beta");
+    }
 
     if (std.mem.endsWith(u8, trimmed_base, "/beta")) {
         return allocator.dupe(u8, trimmed_base);
+    }
+
+    if (std.mem.endsWith(u8, trimmed_base, "/")) {
+        return std.fmt.allocPrint(allocator, "{s}/beta", .{std.mem.trimRight(u8, trimmed_base, "/")});
     }
 
     if (std.mem.endsWith(u8, trimmed_base, "/v1")) {
@@ -656,21 +703,30 @@ fn deepSeekBetaBase(allocator: std.mem.Allocator, base_url: []const u8) ![]u8 {
             return allocator.dupe(u8, "https://api.deepseek.com/beta");
         }
         const host_base = trimmed_base[0 .. trimmed_base.len - 3];
-        return std.fmt.allocPrint(allocator, "{s}/beta", .{host_base});
+        const normalized_host_base = std.mem.trimRight(u8, host_base, "/");
+        return std.fmt.allocPrint(allocator, "{s}/beta", .{normalized_host_base});
     }
 
-    return std.fmt.allocPrint(allocator, "{s}/beta", .{trimmed_base});
+    const normalized_base = std.mem.trimRight(u8, trimmed_base, "/");
+    return std.fmt.allocPrint(allocator, "{s}/beta", .{normalized_base});
 }
 
 fn resolveRequestBaseUrl(
     allocator: std.mem.Allocator,
     base_url: []const u8,
     path: []const u8,
+    body: ?[]const u8,
 ) ![]u8 {
-    if (!isBetaRequiredPath(path) or !isDeepSeekProvider(base_url)) {
+    if (!isDeepSeekProvider(base_url)) {
         return allocator.dupe(u8, base_url);
     }
-    return deepSeekBetaBase(allocator, base_url);
+    if (isBetaRequiredPath(path)) {
+        return deepSeekBetaBase(allocator, base_url);
+    }
+    if (isChatCompletionPrefixPath(path) and body != null and hasChatPrefixFlag(body.?, allocator)) {
+        return deepSeekBetaBase(allocator, base_url);
+    }
+    return allocator.dupe(u8, base_url);
 }
 
 fn parseProxy(allocator: std.mem.Allocator, raw_proxy_url: []const u8) !?*std.http.Client.Proxy {
@@ -961,17 +1017,101 @@ test "resolveRequestOptions uses transport defaults and per-request override" {
 }
 
 test "deepseek completions requests are routed to /beta" {
-    const completion_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/completions");
+    const completion_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/completions", null);
     defer std.testing.allocator.free(completion_url);
     try std.testing.expectEqualStrings("https://api.deepseek.com/beta", completion_url);
 
-    const chat_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/chat/completions");
+    const completion_query_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "completions?stream=true", null);
+    defer std.testing.allocator.free(completion_query_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/beta", completion_query_url);
+
+    const chat_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/chat/completions", null);
     defer std.testing.allocator.free(chat_url);
     try std.testing.expectEqualStrings("https://api.deepseek.com/v1", chat_url);
+
+    const chat_url_no_slash = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "chat/completions", null);
+    defer std.testing.allocator.free(chat_url_no_slash);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", chat_url_no_slash);
+
+    const chat_query_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/chat/completions?stream=true", null);
+    defer std.testing.allocator.free(chat_query_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", chat_query_url);
+
+    const chat_prefix_url = try resolveRequestBaseUrl(
+        std.testing.allocator,
+        "https://api.deepseek.com/v1",
+        "/chat/completions",
+        "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"assistant\",\"prefix\":true}]}",
+    );
+    defer std.testing.allocator.free(chat_prefix_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/beta", chat_prefix_url);
+
+    const chat_prefix_query_url = try resolveRequestBaseUrl(
+        std.testing.allocator,
+        "https://api.deepseek.com/v1/",
+        "/chat/completions?stream=true",
+        "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"assistant\",\"prefix\":true}]}",
+    );
+    defer std.testing.allocator.free(chat_prefix_query_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/beta", chat_prefix_query_url);
+
+    const chat_no_prefix_url = try resolveRequestBaseUrl(
+        std.testing.allocator,
+        "https://api.deepseek.com",
+        "/chat/completions?stream=true",
+        "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"assistant\",\"content\":\"hi\"}]}",
+    );
+    defer std.testing.allocator.free(chat_no_prefix_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com", chat_no_prefix_url);
+
+    const completion_base_with_spaces = try resolveRequestBaseUrl(
+        std.testing.allocator,
+        " https://api.deepseek.com/v1 ",
+        "completions",
+        null,
+    );
+    defer std.testing.allocator.free(completion_base_with_spaces);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/beta", completion_base_with_spaces);
+
+    const completion_base_with_beta = try resolveRequestBaseUrl(
+        std.testing.allocator,
+        "https://api.deepseek.com/beta/",
+        "completions",
+        null,
+    );
+    defer std.testing.allocator.free(completion_base_with_beta);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/beta", completion_base_with_beta);
+
+    const chat_prefix_last_is_only = try resolveRequestBaseUrl(
+        std.testing.allocator,
+        "https://api.deepseek.com/v1",
+        "/chat/completions",
+        "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"user\",\"content\":\"hello\"},{\"role\":\"assistant\",\"content\":\"Hi\",\"prefix\":true}]}",
+    );
+    defer std.testing.allocator.free(chat_prefix_last_is_only);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/beta", chat_prefix_last_is_only);
+
+    const chat_prefix_not_last = try resolveRequestBaseUrl(
+        std.testing.allocator,
+        "https://api.deepseek.com/v1",
+        "/chat/completions",
+        "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"assistant\",\"content\":\"Hi\",\"prefix\":true},{\"role\":\"user\",\"content\":\"What next?\"}]}",
+    );
+    defer std.testing.allocator.free(chat_prefix_not_last);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", chat_prefix_not_last);
+
+    const chat_prefix_user_last = try resolveRequestBaseUrl(
+        std.testing.allocator,
+        "https://api.deepseek.com/v1",
+        "/chat/completions",
+        "{\"model\":\"deepseek-chat\",\"messages\":[{\"role\":\"assistant\",\"content\":\"Hi\"},{\"role\":\"user\",\"content\":\"continue\",\"prefix\":true}]}",
+    );
+    defer std.testing.allocator.free(chat_prefix_user_last);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", chat_prefix_user_last);
 }
 
 test "non-deepseek base URLs keep original host" {
-    const base_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.openai.com/v1", "/completions");
+    const base_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.openai.com/v1", "/completions", null);
     defer std.testing.allocator.free(base_url);
     try std.testing.expectEqualStrings("https://api.openai.com/v1", base_url);
 }

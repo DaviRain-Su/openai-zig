@@ -2,6 +2,7 @@ const std = @import("std");
 const sdk = @import("openai_zig");
 const errors = sdk.errors;
 const config = @import("config");
+const compat = @import("provider_compat");
 const gen = sdk.generated;
 
 fn onChunk(
@@ -15,13 +16,13 @@ fn onChunk(
         const choice_index: usize = if (choice.index > 0) @intCast(choice.index) else 0;
 
         if (choice.delta.content) |content| {
-            try dumpTextValue(content, state, choice_index);
+            try dumpTextValue(content, state, choice_index, false);
         }
         if (choice.delta.reasoning_content) |reasoning| {
-            try dumpTextValue(reasoning, state, choice_index);
+            try dumpTextValue(reasoning, state, choice_index, true);
         }
         if (choice.delta.refusal) |refusal| {
-            try dumpTextValue(refusal, state, choice_index);
+            try dumpTextValue(refusal, state, choice_index, false);
         }
         if (choice.finish_reason) |finish| {
             state.saw_finish_reason = true;
@@ -87,31 +88,86 @@ fn emitIncrementalText(
     self.choice_last_texts.items[choice_index] = dup;
 }
 
+fn emitIncrementalReasoning(
+    self: *StreamState,
+    choice_index: usize,
+    chunk: []const u8,
+) errors.Error!void {
+    if (chunk.len == 0) return;
+
+    while (self.reasoning_choice_last_texts.items.len <= choice_index) {
+        self.reasoning_choice_last_texts.append(self.allocator, null) catch {
+            return errors.Error.HttpError;
+        };
+    }
+
+    const tail = if (self.reasoning_choice_last_texts.items[choice_index]) |last| blk: {
+        if (last.len == chunk.len and std.mem.eql(u8, last, chunk)) return;
+
+        if (chunk.len >= last.len and std.mem.startsWith(u8, chunk, last)) {
+            const suffix = chunk[last.len..];
+            if (suffix.len == 0) return;
+            break :blk suffix;
+        }
+
+        if (chunk.len <= last.len and std.mem.startsWith(u8, last, chunk)) return;
+
+        const max_len = @min(last.len, chunk.len);
+        var overlap: usize = max_len;
+        while (overlap > 0) : (overlap -= 1) {
+            if (std.mem.eql(u8, last[last.len - overlap..], chunk[0..overlap])) {
+                break :blk chunk[overlap..];
+            }
+        }
+
+        break :blk chunk;
+    } else chunk;
+
+    if (tail.len == 0) return;
+
+    self.reasoning_output.appendSlice(self.allocator, tail) catch {
+        return errors.Error.HttpError;
+    };
+
+    if (self.reasoning_choice_last_texts.items[choice_index]) |last| {
+        self.allocator.free(last);
+    }
+    const dup = self.allocator.dupe(u8, chunk) catch {
+        return errors.Error.HttpError;
+    };
+    self.reasoning_choice_last_texts.items[choice_index] = dup;
+}
+
 fn dumpTextValue(
     value: std.json.Value,
     state: *StreamState,
     choice_index: usize,
+    is_reasoning: bool,
 ) errors.Error!void {
     if (value == .null) return;
 
     switch (value) {
         .string => |text| {
-            try emitIncrementalText(state, choice_index, text);
+            if (is_reasoning) {
+                try emitIncrementalReasoning(state, choice_index, text);
+            } else {
+                try emitIncrementalText(state, choice_index, text);
+            }
         },
         .object => |object| {
             if (object.get("text")) |text| {
-                try dumpTextValue(text, state, choice_index);
+                try dumpTextValue(text, state, choice_index, is_reasoning);
             } else if (object.get("input_text")) |input| {
-                try dumpTextValue(input, state, choice_index);
+                try dumpTextValue(input, state, choice_index, is_reasoning);
             } else if (object.get("content")) |content| {
-                try dumpTextValue(content, state, choice_index);
+                try dumpTextValue(content, state, choice_index, is_reasoning);
             } else if (object.get("delta")) |delta| {
-                try dumpTextValue(delta, state, choice_index);
+                try dumpTextValue(delta, state, choice_index, is_reasoning);
             }
         },
         .array => |items| {
             for (items.items) |item| {
-                try dumpTextValue(item, state, choice_index);
+                try dumpTextValue(item, state, choice_index, is_reasoning);
             }
         },
         else => {},
@@ -129,10 +185,23 @@ fn firstChoiceText(response: gen.CreateChatCompletionResponse) ?[]const u8 {
     };
 }
 
+fn firstChoiceReasoning(response: gen.CreateChatCompletionResponse) ?[]const u8 {
+    if (response.choices.len == 0) return null;
+    const message = response.choices[0].message orelse return null;
+    const reasoning = message.reasoning_content orelse return null;
+
+    return switch (reasoning) {
+        .string => |text| text,
+        else => null,
+    };
+}
+
 const StreamState = struct {
     allocator: std.mem.Allocator,
     choice_last_texts: std.ArrayListUnmanaged(?[]const u8),
+    reasoning_choice_last_texts: std.ArrayListUnmanaged(?[]const u8),
     output: std.ArrayListUnmanaged(u8),
+    reasoning_output: std.ArrayListUnmanaged(u8),
     event_count: usize = 0,
     saw_finish_reason: bool = false,
     printed_any: bool = false,
@@ -145,8 +214,15 @@ const StreamState = struct {
                 self.allocator.free(text);
             }
         }
+        for (self.reasoning_choice_last_texts.items) |entry| {
+            if (entry) |text| {
+                self.allocator.free(text);
+            }
+        }
         self.choice_last_texts.deinit(self.allocator);
+        self.reasoning_choice_last_texts.deinit(self.allocator);
         self.output.deinit(self.allocator);
+        self.reasoning_output.deinit(self.allocator);
     }
 
     fn looksIncomplete(self: *StreamState) bool {
@@ -235,6 +311,8 @@ pub fn main() !void {
         .allocator = gpa,
         .choice_last_texts = .{},
         .output = .{},
+        .reasoning_choice_last_texts = .{},
+        .reasoning_output = .{},
     };
     defer stream_state.deinit();
 
@@ -248,7 +326,7 @@ pub fn main() !void {
         &stream_state,
     );
 
-    const is_deepseek = std.mem.indexOf(u8, conf.base_url, "api.deepseek.com") != null;
+    const is_deepseek = compat.isDeepSeek(conf.base_url);
     const fallback_needed = stream_state.output.items.len == 0 or
         (if (is_deepseek)
             stream_state.looksIncomplete()
@@ -300,6 +378,9 @@ pub fn main() !void {
         } else {
             std.debug.print("Fallback chat completion returned non-text content.\n", .{});
         }
+        if (firstChoiceReasoning(response.value)) |reasoning| {
+            std.debug.print("Reasoning:\n{s}\n", .{reasoning});
+        }
         std.debug.print("\n", .{});
         return;
     }
@@ -308,6 +389,9 @@ pub fn main() !void {
         std.debug.print("{s}\n", .{stream_state.output.items});
     } else {
         std.debug.print("Stream response returned no textual output.\n", .{});
+    }
+    if (stream_state.reasoning_output.items.len > 0) {
+        std.debug.print("Reasoning:\n{s}\n", .{stream_state.reasoning_output.items});
     }
 
     std.debug.print("\n", .{});

@@ -51,8 +51,20 @@ test "chat completion signature keeps request options and optional payload field
     assertParamCount(chat.Resource.create_with_options, 4);
     assertLastParamIsOptionalRequestOptions(chat.Resource.create_with_options);
 
+    assertParamCount(chat.Resource.create_chat_completion_stream_with_done, 7);
+
     assertParamCount(chat.Resource.create_chat_completion_stream_with_options, 6);
     assertLastParamIsOptionalRequestOptions(chat.Resource.create_chat_completion_stream_with_options);
+
+    assertParamCount(chat.Resource.create_chat_completion_stream_with_options_and_done, 8);
+    assertLastParamIsOptionalRequestOptions(chat.Resource.create_chat_completion_stream_with_options_and_done);
+
+    assertParamCount(chat.Resource.create_chat_completion_stream_raw_with_done, 7);
+
+    assertParamCount(chat.Resource.create_chat_completion_stream_raw_with_done_and_options, 8);
+
+    assertParamCount(chat.Resource.create_chat_completion_stream_raw_with_options, 6);
+    assertLastParamIsOptionalRequestOptions(chat.Resource.create_chat_completion_stream_raw_with_options);
 
     assertLastParamIsOptionalRequestOptions(chat.Resource.create_with_options_stream);
 
@@ -69,8 +81,24 @@ test "completions resource signature keeps request options" {
     assertParamCount(completions.Resource.create_completion_stream_with_options, 6);
     assertLastParamIsOptionalRequestOptions(completions.Resource.create_completion_stream_with_options);
 
+    assertParamCount(completions.Resource.create_completion_stream_raw_with_done, 7);
+
+    assertParamCount(completions.Resource.create_completion_stream_raw_with_done_and_options, 8);
+
+    assertParamCount(completions.Resource.create_completion_stream_raw_with_options, 6);
+    assertLastParamIsOptionalRequestOptions(completions.Resource.create_completion_stream_raw_with_options);
+
+    assertParamCount(completions.Resource.create_raw_with_options_stream, 6);
+    assertLastParamIsOptionalRequestOptions(completions.Resource.create_raw_with_options_stream);
+
     assertParamCount(completions.Resource.create_with_options_stream, 6);
     assertLastParamIsOptionalRequestOptions(completions.Resource.create_with_options_stream);
+
+    assertParamCount(completions.Resource.create_completion_raw_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(completions.Resource.create_completion_raw_with_options);
+
+    assertParamCount(completions.Resource.create_raw_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(completions.Resource.create_raw_with_options);
 }
 
 test "files resource signature keeps request options" {
@@ -108,6 +136,10 @@ test "responses resource signature keeps request options" {
 
     assertParamCount(responses.Resource.create_response_stream_with_options, 6);
     assertLastParamIsOptionalRequestOptions(responses.Resource.create_response_stream_with_options);
+
+    assertParamCount(responses.Resource.create_response_stream_with_done, 7);
+
+    assertParamCount(responses.Resource.create_response_stream_with_options_and_done, 8);
 
     assertParamCount(responses.Resource.create_with_options_stream, 6);
     assertLastParamIsOptionalRequestOptions(responses.Resource.create_with_options_stream);

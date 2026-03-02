@@ -43,6 +43,7 @@ pub fn main() !void {
     var chat = try client.chat().create_chat_completion(gpa, .{
         .model = conf.model,
         .messages = &messages,
+        .max_tokens = 512,
     });
     defer chat.deinit();
 

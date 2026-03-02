@@ -72,4 +72,39 @@ pub fn main() !void {
             else => std.debug.print("Refusal: <non-text payload>\n", .{}),
         }
     }
+
+    const prefix_messages = [_]sdk.resources.chat.ChatMessage{
+        .{ .role = "user", .content = "Write a short continuation." },
+        .{ .role = "assistant", .content = "The river glides", .prefix = true },
+    };
+
+    std.debug.print("\nMulti-round continuation (prefix):\n", .{});
+    var prefixed_resp = client.chat().create_chat_completion(gpa, .{
+        .model = conf.model,
+        .messages = &prefix_messages,
+        .max_tokens = 64,
+    }) catch |err| {
+        std.debug.print("Prefix continuation request failed: {s}\n", .{@errorName(err)});
+        return;
+    };
+    defer prefixed_resp.deinit();
+
+    if (prefixed_resp.value.choices.len == 0) {
+        std.debug.print("Prefix continuation response had no choices\n", .{});
+        return;
+    }
+    const prefixed_choice = prefixed_resp.value.choices[0];
+    const prefixed_message = prefixed_choice.message orelse {
+        std.debug.print("Prefix continuation response first choice has no message\n", .{});
+        return;
+    };
+
+    if (prefixed_message.content) |content| {
+        switch (content) {
+            .string => |text| std.debug.print("Content:\n{s}\n", .{text}),
+            else => std.debug.print("Content: <non-text payload>\n", .{}),
+        }
+    } else {
+        std.debug.print("Content: <null>\n", .{});
+    }
 }

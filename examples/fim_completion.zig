@@ -31,27 +31,30 @@ pub fn main() !void {
     var model = try std.json.parseFromSlice(std.json.Value, gpa, model_json, .{});
     defer model.deinit();
 
-    var prompt = try std.json.parseFromSlice(std.json.Value, gpa, "\"Write a complete 4-line poem about a river. Output only the poem, no explanation. Do not add labels.\"", .{});
-    defer prompt.deinit();
+    const prompt = "def fib(a):";
+    const suffix = "    return fib(a - 1) + fib(a - 2)";
+
+    const prompt_json = try std.json.parseFromSlice(std.json.Value, gpa, "\"def fib(a):\"", .{});
+    defer prompt_json.deinit();
 
     const response = try client.completions().create_completion_with_options(
         gpa,
         .{
             .model = model.value,
-            .prompt = prompt.value,
+            .prompt = prompt_json.value,
+            .suffix = suffix,
             .best_of = null,
             .echo = false,
             .frequency_penalty = null,
             .logit_bias = null,
             .logprobs = null,
-            .max_tokens = 512,
+            .max_tokens = 128,
             .n = null,
             .presence_penalty = null,
             .seed = null,
             .stop = null,
             .stream = null,
             .stream_options = null,
-            .suffix = null,
             .temperature = null,
             .top_p = null,
             .user = null,
@@ -61,9 +64,12 @@ pub fn main() !void {
     defer response.deinit();
 
     if (response.value.choices.len == 0) {
-        std.debug.print("Completion response has no choices.\n", .{});
+        std.debug.print("FIM completion response has no choices.\n", .{});
         return;
     }
-    const text = response.value.choices[0].text;
-    std.debug.print("Completion:\n{s}\n", .{text});
+
+    const completion = response.value.choices[0].text;
+    std.debug.print("Prompt:\n{s}\n", .{prompt});
+    std.debug.print("Suffix:\n{s}\n", .{suffix});
+    std.debug.print("Completion:\n{s}\n", .{completion});
 }

@@ -2,6 +2,8 @@ const std = @import("std");
 const transport_mod = @import("../transport/http.zig");
 const errors = @import("../errors.zig");
 
+pub const StreamDoneHandler = *const fn (?*anyopaque) errors.Error!void;
+
 /// Send a JSON request and parse into the provided type.
 pub inline fn sendJsonTyped(
     transport: *transport_mod.Transport,
@@ -232,7 +234,7 @@ pub fn sendStreamTyped(
     on_event: *const fn (?*anyopaque, std.json.Parsed(T)) errors.Error!void,
     user_ctx: ?*anyopaque,
 ) errors.Error!void {
-    return sendStreamTypedWithOptions(
+    return sendStreamTypedWithDone(
         transport,
         allocator,
         method,
@@ -242,6 +244,8 @@ pub fn sendStreamTyped(
         T,
         on_event,
         user_ctx,
+        null,
+        null,
         null,
     );
 }
@@ -258,7 +262,72 @@ pub fn sendStreamTypedWithOptions(
     user_ctx: ?*anyopaque,
     req_opts: ?transport_mod.Transport.RequestOptions,
 ) errors.Error!void {
-    var parser = try StreamEventParser(T).init(allocator, on_event, user_ctx);
+    return sendStreamTypedWithDoneWithOptions(
+        transport,
+        allocator,
+        method,
+        path,
+        headers,
+        payload,
+        T,
+        on_event,
+        user_ctx,
+        null,
+        null,
+        req_opts,
+    );
+}
+
+pub fn sendStreamTypedWithDone(
+    transport: *transport_mod.Transport,
+    allocator: std.mem.Allocator,
+    method: std.http.Method,
+    path: []const u8,
+    headers: []const std.http.Header,
+    payload: ?[]const u8,
+    comptime T: type,
+    on_event: *const fn (?*anyopaque, std.json.Parsed(T)) errors.Error!void,
+    user_ctx: ?*anyopaque,
+    on_done: ?StreamDoneHandler,
+    done_ctx: ?*anyopaque,
+) errors.Error!void {
+    return sendStreamTypedWithDoneWithOptions(
+        transport,
+        allocator,
+        method,
+        path,
+        headers,
+        payload,
+        T,
+        on_event,
+        user_ctx,
+        on_done,
+        done_ctx,
+        null,
+    );
+}
+
+pub fn sendStreamTypedWithDoneWithOptions(
+    transport: *transport_mod.Transport,
+    allocator: std.mem.Allocator,
+    method: std.http.Method,
+    path: []const u8,
+    headers: []const std.http.Header,
+    payload: ?[]const u8,
+    comptime T: type,
+    on_event: *const fn (?*anyopaque, std.json.Parsed(T)) errors.Error!void,
+    user_ctx: ?*anyopaque,
+    on_done: ?StreamDoneHandler,
+    done_ctx: ?*anyopaque,
+    req_opts: ?transport_mod.Transport.RequestOptions,
+) errors.Error!void {
+    var parser = try StreamEventParser(T).initWithDone(
+        allocator,
+        on_event,
+        user_ctx,
+        on_done,
+        done_ctx,
+    );
     defer parser.deinit();
 
     try transport.requestStreamWithOptions(
@@ -278,6 +347,10 @@ fn StreamEventParser(comptime T: type) type {
         allocator: std.mem.Allocator,
         handler: *const fn (?*anyopaque, std.json.Parsed(T)) errors.Error!void,
         user_ctx: ?*anyopaque,
+        on_done: ?StreamDoneHandler,
+        done_ctx: ?*anyopaque,
+        done: bool = false,
+        has_dispatched_events: bool = false,
         line_buf: std.ArrayList(u8),
         data_buf: std.ArrayList(u8),
         ready_to_dispatch: bool = false,
@@ -287,10 +360,22 @@ fn StreamEventParser(comptime T: type) type {
             handler: *const fn (?*anyopaque, std.json.Parsed(T)) errors.Error!void,
             callback_ctx: ?*anyopaque,
         ) errors.Error!@This() {
+            return @This().initWithDone(ctx_allocator, handler, callback_ctx, null, null);
+        }
+
+        fn initWithDone(
+            ctx_allocator: std.mem.Allocator,
+            handler: *const fn (?*anyopaque, std.json.Parsed(T)) errors.Error!void,
+            callback_ctx: ?*anyopaque,
+            on_done: ?StreamDoneHandler,
+            done_ctx: ?*anyopaque,
+        ) errors.Error!@This() {
             return @This(){
                 .allocator = ctx_allocator,
                 .handler = handler,
                 .user_ctx = callback_ctx,
+                .on_done = on_done,
+                .done_ctx = done_ctx,
                 .line_buf = std.ArrayList(u8).initCapacity(ctx_allocator, 0) catch {
                     return errors.Error.HttpError;
                 },
@@ -336,6 +421,13 @@ fn StreamEventParser(comptime T: type) type {
                 try self.dispatch();
                 self.data_buf.clearRetainingCapacity();
                 self.ready_to_dispatch = false;
+            }
+
+            if (!self.done and self.has_dispatched_events) {
+                self.done = true;
+                if (self.on_done) |handler| {
+                    try handler(self.done_ctx);
+                }
             }
         }
 
@@ -386,7 +478,25 @@ fn StreamEventParser(comptime T: type) type {
             if (self.data_buf.items.len == 0) return;
 
             const event_payload = std.mem.trim(u8, self.data_buf.items, " \t");
-            if (event_payload.len == 0 or std.mem.eql(u8, event_payload, "[DONE]")) return;
+            if (event_payload.len == 0) {
+                self.data_buf.clearRetainingCapacity();
+                self.ready_to_dispatch = false;
+                return;
+            }
+
+            self.has_dispatched_events = true;
+
+            if (std.mem.eql(u8, event_payload, "[DONE]")) {
+                if (!self.done) {
+                    self.done = true;
+                    if (self.on_done) |handler| {
+                        try handler(self.done_ctx);
+                    }
+                }
+                self.data_buf.clearRetainingCapacity();
+                self.ready_to_dispatch = false;
+                return;
+            }
 
             const parsed = std.json.parseFromSlice(T, self.allocator, event_payload, .{
                 .ignore_unknown_fields = true,
@@ -693,6 +803,93 @@ test "sse parser ignores [DONE], dispatches on blank line, and supports split ch
     try std.testing.expectEqual(@as(usize, 1), state.count);
     try std.testing.expectEqual(@as(i64, 1), state.a);
     try std.testing.expectEqual(@as(i64, 2), state.b);
+}
+
+test "sse parser reports stream completion via done callback" {
+    const EventPayload = struct {
+        value: i64,
+    };
+
+    const State = struct {
+        done_called: usize = 0,
+        value: i64 = 0,
+    };
+
+    var state = State{};
+
+    const Handler = struct {
+        fn onEvent(ctx: ?*anyopaque, parsed: std.json.Parsed(EventPayload)) errors.Error!void {
+            const s: *State = @ptrCast(@alignCast(ctx.?));
+            s.value = parsed.value.value;
+        }
+    };
+
+    const DoneHandler = struct {
+        fn onDone(ctx: ?*anyopaque) errors.Error!void {
+            const s: *State = @ptrCast(@alignCast(ctx.?));
+            s.done_called += 1;
+        }
+    };
+
+    var parser = try StreamEventParser(EventPayload).initWithDone(
+        std.testing.allocator,
+        Handler.onEvent,
+        &state,
+        DoneHandler.onDone,
+        &state,
+    );
+    defer parser.deinit();
+
+    try parser.onChunk("data: {\"value\": 100}\r\n");
+    try parser.onChunk("\r\n");
+    try parser.onChunk("data: [DONE]\r\n");
+    try parser.onChunk("\r\n");
+    try std.testing.expectEqual(@as(i64, 100), state.value);
+    try std.testing.expectEqual(@as(usize, 1), state.done_called);
+    try std.testing.expect(parser.done);
+}
+
+test "sse parser marks stream complete on flush when no [DONE] token" {
+    const EventPayload = struct {
+        value: i64,
+    };
+
+    const State = struct {
+        done_called: usize = 0,
+        value: i64 = 0,
+    };
+
+    var state = State{};
+
+    const Handler = struct {
+        fn onEvent(ctx: ?*anyopaque, parsed: std.json.Parsed(EventPayload)) errors.Error!void {
+            const s: *State = @ptrCast(@alignCast(ctx.?));
+            s.value = parsed.value.value;
+        }
+    };
+
+    const DoneHandler = struct {
+        fn onDone(ctx: ?*anyopaque) errors.Error!void {
+            const s: *State = @ptrCast(@alignCast(ctx.?));
+            s.done_called += 1;
+        }
+    };
+
+    var parser = try StreamEventParser(EventPayload).initWithDone(
+        std.testing.allocator,
+        Handler.onEvent,
+        &state,
+        DoneHandler.onDone,
+        &state,
+    );
+    defer parser.deinit();
+
+    try parser.onChunk("data: {\"value\": 100}\r\n");
+    try parser.onChunk("\r\n");
+    try parser.flush();
+    try std.testing.expectEqual(@as(i64, 100), state.value);
+    try std.testing.expectEqual(@as(usize, 1), state.done_called);
+    try std.testing.expect(parser.done);
 }
 
 test "sse parser propagates callback errors" {

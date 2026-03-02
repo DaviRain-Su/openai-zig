@@ -211,6 +211,23 @@ test "create completion response ignores unknown fields and tolerates optional u
     try std.testing.expectEqual(@as(i64, 1), response.value.usage.?.prompt_tokens);
 }
 
+test "create completion response parses DeepSeek cache usage fields" {
+    const payload =
+        \\{"id":"cmpl-deepseek","object":"text_completion","created":1700000000,"model":"deepseek-chat","choices":[{"text":"hello","index":0,"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":20,"total_tokens":30,"prompt_cache_hit_tokens":25,"prompt_cache_miss_tokens":5}}
+    ;
+    const response = try std.json.parseFromSlice(
+        gen.CreateCompletionResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer response.deinit();
+
+    try std.testing.expect(response.value.usage != null);
+    try std.testing.expectEqual(@as(i64, 25), response.value.usage.?.prompt_cache_hit_tokens.?);
+    try std.testing.expectEqual(@as(i64, 5), response.value.usage.?.prompt_cache_miss_tokens.?);
+}
+
 test "create embedding response parses nested embedding objects" {
     const payload =
         \\{"object":"list","data":[{"object":"embedding","index":0,"embedding":[0.1,0.2,0.3]}],"model":"text-embedding-3-small","usage":{"prompt_tokens":3,"total_tokens":3},"extra_response_field":"ignored"}
@@ -250,7 +267,7 @@ test "images response parses optional fields with unknown extras" {
 
 test "create chat completion response ignores unknown fields" {
     const payload =
-        \\{"id":"chatcmpl-test","object":"chat.completion","created":1700000000,"model":"deepseek-chat","service_tier":{"foo":"bar"},"system_fingerprint":"fp_x","choices":[{"index":0,"message":{"role":"assistant","content":"ok","refusal":null,"annotations":[],"tool_calls":null},"finish_reason":"stop","logprobs":null}],"usage":{"prompt_tokens":10,"completion_tokens":20,"total_tokens":30},"extra_root":"ignored"}
+        \\{"id":"chatcmpl-test","object":"chat.completion","created":1700000000,"model":"deepseek-chat","service_tier":{"foo":"bar"},"system_fingerprint":"fp_x","choices":[{"index":0,"message":{"role":"assistant","content":"ok","reasoning_content":"think through details","refusal":null,"annotations":[],"tool_calls":null},"finish_reason":"stop","logprobs":null}],"usage":{"prompt_tokens":10,"completion_tokens":20,"total_tokens":30},"extra_root":"ignored"}
     ;
     const response = try std.json.parseFromSlice(
         gen.CreateChatCompletionResponse,
@@ -267,6 +284,10 @@ test "create chat completion response ignores unknown fields" {
     try std.testing.expectEqualStrings("stop", choices[0].finish_reason.?);
     try std.testing.expectEqual(@as(i64, 0), choices[0].index);
     try std.testing.expectEqual(@as(?[]const gen.ChatCompletionTokenLogprob, null), choices[0].logprobs);
+    const message = choices[0].message orelse return error.TestUnexpectedResult;
+    const reasoning = message.reasoning_content orelse return error.TestUnexpectedResult;
+    try std.testing.expect(reasoning == .string);
+    try std.testing.expectEqualStrings("think through details", reasoning.string);
 }
 
 test "model object with missing optional fields still parses" {

@@ -690,6 +690,7 @@ pub const ChatCompletionRequestUserMessageContentPart = std.json.Value;
 pub const ChatCompletionResponseMessage = struct {
     content: ?std.json.Value = null,
     refusal: ?std.json.Value = null,
+    reasoning_content: ?std.json.Value = null,
     tool_calls: ?ChatCompletionMessageToolCalls = null,
     annotations: ?[]const struct {
     type: []const u8,
@@ -882,6 +883,8 @@ pub const CompletionUsage = struct {
     completion_tokens: i64,
     prompt_tokens: i64,
     total_tokens: i64,
+    prompt_cache_hit_tokens: ?i64 = null,
+    prompt_cache_miss_tokens: ?i64 = null,
     completion_tokens_details: ?struct {
     accepted_prediction_tokens: ?i64 = null,
     audio_tokens: ?i64 = null,
