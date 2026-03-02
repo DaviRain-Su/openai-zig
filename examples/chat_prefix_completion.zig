@@ -46,7 +46,7 @@ pub fn main() !void {
         .{ .role = "assistant", .content = "The silver moonlight", .prefix = true },
     };
 
-    const response = try client.chat().create_chat_completion(
+    const response = client.chat().create_chat_completion(
         gpa,
         .{
             .model = conf.model,
@@ -54,7 +54,10 @@ pub fn main() !void {
             .max_tokens = 64,
             .stream = null,
         },
-    );
+    ) catch |err| {
+        std.debug.print("Prefix completion request failed: {s}\n", .{@errorName(err)});
+        return;
+    };
     defer response.deinit();
 
     if (response.value.choices.len == 0) {

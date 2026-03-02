@@ -196,7 +196,11 @@ pub fn main() !void {
             std.debug.print("Stream text:\n{s}\n", .{state.output.items});
         } else {
             std.debug.print("Stream returned no text payload, fallback to non-stream.\n", .{});
-            const fallback = try client.completions().create_completion_with_options(gpa, request, null);
+            const fallback = client.completions().create_completion_with_options(gpa, request, null) catch |err| {
+                std.debug.print("FIM stream fallback request failed: {s}\n", .{@errorName(err)});
+                std.debug.print("\n", .{});
+                return;
+            };
             defer fallback.deinit();
             if (fallback.value.choices.len > 0) {
                 std.debug.print("Fallback text:\n{s}\n", .{fallback.value.choices[0].text});
@@ -211,7 +215,11 @@ pub fn main() !void {
     }
 
     std.debug.print("Stream response appears incomplete; fallback to non-stream.\n", .{});
-    const fallback = try client.completions().create_completion_with_options(gpa, request, null);
+    const fallback = client.completions().create_completion_with_options(gpa, request, null) catch |err| {
+        std.debug.print("FIM stream fallback request failed: {s}\n", .{@errorName(err)});
+        std.debug.print("\n", .{});
+        return;
+    };
     defer fallback.deinit();
 
     if (fallback.value.choices.len == 0) {

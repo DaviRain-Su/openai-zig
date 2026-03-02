@@ -40,11 +40,14 @@ pub fn main() !void {
         .{ .role = "user", .content = "用中文说你是谁" },
     };
 
-    var chat = try client.chat().create_chat_completion(gpa, .{
+    var chat = client.chat().create_chat_completion(gpa, .{
         .model = conf.model,
         .messages = &messages,
         .max_tokens = 512,
-    });
+    }) catch |err| {
+        std.debug.print("Chat completion request failed: {s}\n", .{@errorName(err)});
+        return;
+    };
     defer chat.deinit();
 
     const content = firstContentString(chat.value) orelse {

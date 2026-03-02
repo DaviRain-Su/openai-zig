@@ -26,7 +26,10 @@ pub fn main() !void {
     });
     defer client.deinit();
 
-    var models = try client.models().list_models(gpa);
+    var models = client.models().list_models(gpa) catch |err| {
+        std.debug.print("Models list request failed: {s}\n", .{@errorName(err)});
+        return;
+    };
     defer models.deinit();
 
     std.debug.print("Models list: {d} items\n", .{models.value.data.len});

@@ -316,7 +316,7 @@ pub fn main() !void {
     };
     defer stream_state.deinit();
 
-    try client.chat().create_chat_completion_stream_with_options_and_done(
+    client.chat().create_chat_completion_stream_with_options_and_done(
         gpa,
         request,
         onChunk,
@@ -324,7 +324,52 @@ pub fn main() !void {
         null,
         onDone,
         &stream_state,
-    );
+    ) catch |err| {
+        std.debug.print("Chat stream request failed: {s}\n", .{@errorName(err)});
+        std.debug.print("Falling back to non-stream chat completion...\n", .{});
+        const fallback_request = sdk.resources.chat.CreateChatCompletionRequest{
+            .model = request.model,
+            .messages = request.messages,
+            .max_tokens = request.max_tokens,
+            .temperature = null,
+            .max_completion_tokens = null,
+            .n = null,
+            .top_p = null,
+            .stop = null,
+            .presence_penalty = null,
+            .frequency_penalty = null,
+            .user = null,
+            .stream_options = null,
+            .tools = null,
+            .tool_choice = null,
+            .parallel_tool_calls = null,
+            .reasoning_effort = null,
+            .service_tier = null,
+            .metadata = null,
+            .logprobs = null,
+            .top_logprobs = null,
+            .thinking = null,
+            .response_format = null,
+            .stream = null,
+            .seed = null,
+        };
+        const response = client.chat().create_chat_completion(gpa, fallback_request) catch {
+            std.debug.print("Fallback chat completion failed.\n", .{});
+            std.debug.print("\n", .{});
+            return;
+        };
+        defer response.deinit();
+        if (firstChoiceText(response.value)) |content| {
+            std.debug.print("{s}\n", .{content});
+        } else {
+            std.debug.print("Fallback chat completion returned non-text content.\n", .{});
+        }
+        if (firstChoiceReasoning(response.value)) |reasoning| {
+            std.debug.print("Reasoning:\n{s}\n", .{reasoning});
+        }
+        std.debug.print("\n", .{});
+        return;
+    };
 
     const is_deepseek = compat.isDeepSeek(conf.base_url);
     const fallback_needed = stream_state.output.items.len == 0 or

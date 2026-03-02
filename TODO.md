@@ -147,6 +147,7 @@
 - [x] 进一步优化流式分片去重与回退判定：新增尾部重叠检测，避免供应商返回累积文本导致重复片段；保留无 `done` 信号时走降级补齐。
 - [x] `examples/completions_stream.zig` 增加 DeepSeek 专用兜底：当流式结果明显截断（长文本却非结尾符）时继续触发非流式补齐，避免偶发尾部截断。
 - [x] 修复流式示例 `done` 回调上下文传递错误：`completions_stream` 与 `chat_completion_stream` 现传入 `&stream_state`，确保 `stream_done` 可由 `onDone` 正确置位。
+- [x] 加固示例主请求路径容错：`chat_completion`、`chat_completion_stream`、`completions_basic`、`completions_stream`、`chat_prefix_completion`、`fim_completion`、`fim_completion_stream`、`models_list` 的关键调用全部改为错误兜底，避免单例失败导致 `run-examples` 链路中断。
 - [x] 补齐 `transport/http.zig` 中 DeepSeek `/beta` 自动切换边界测试（含 `/completions` 查询串、`/chat/completions` 查询串、`prefix` 在带 query 的 chat 路径场景）。
 - [x] 进一步修复 DeepSeek `/beta` 自动切换路径归一化：补齐 `completions`、`chat/completions` 的“无前导 `/` + query 字符串”边界（例如 `completions?stream=true`）。
 - [x] 强化 DeepSeek `/beta` 路由判断对路径形态的兼容（支持无前导 `/`、`?`、带空白的 base_url 场景），避免边界路径误判。
@@ -184,6 +185,20 @@
 - [x] 增加 `completions` 本地序列化回归测试，确保 `suffix` 能正确参与 JSON 请求体构造。
 - [x] 新增 `examples/fim_completion_stream.zig`，验证 FIM 流式续写与 fallback 兜底。
 - [x] 增加 `examples/fim_completion_raw.zig`，通过 `std.json.Value` 直接发起 `/completions` FIM 请求，演示 raw 透传。
+
+### 4.6 音频转写与示例补齐
+- [x] 增加 `audio` 本地文件路径转写/翻译 helper（`create_transcription_from_path` / `create_translation_from_path`）并补齐 `transcriptions_from_path`、`translations_from_path` 别名链路。
+- [x] 修复 Zig 0.15 下 multipart 构建与文件长度读取编译兼容（`ArrayList.writer`、`file.stat` 错误集合适配）。
+- [x] 新增 `examples/audio_transcription.zig` 示例并接入 `run-examples`，支持缺失文件与 DeepSeek 兼容层跳过提示。
+
+### 4.7 JSON Mode / JSON 输出能力
+- [x] 在 `chat` 资源补充 `ResponseFormat` 结构化构造能力，支持 `json_object` 与 `json_schema`。
+- [x] 新增 `examples/chat_json_mode.zig`，演示 `response_format` JSON 模式请求与 JSON Schema 限制输出。
+- [x] 补充 `examples/chat_json_mode.zig` 的 DeepSeek 兼容分支：当 `response_format` `json_schema` 不可用时自动降级到 `json_object`，避免 DeepSeek 兼容链路报错。
+
+### 4.8 Tool Calls
+- [x] 补齐 `chat.create_chat_completion` 的 `tools` 与 `tool_choice` 结构化请求能力（含 `forFunction/forAuto/forNone/forRequired` 与 `raw` 兼容）。
+- [x] 新增 `examples/chat_tool_calls.zig`，展示 `tools` + `tool_choice` 的请求构造与返回 `tool_calls` 解析。
 
 ## 5. 后续执行建议
 - 第一步先做 P0：transport、errors、资源通用层（`common`）。

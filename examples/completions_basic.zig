@@ -34,7 +34,7 @@ pub fn main() !void {
     var prompt = try std.json.parseFromSlice(std.json.Value, gpa, "\"Write a complete 4-line poem about a river. Output only the poem, no explanation. Do not add labels.\"", .{});
     defer prompt.deinit();
 
-    const response = try client.completions().create_completion_with_options(
+    const response = client.completions().create_completion_with_options(
         gpa,
         .{
             .model = model.value,
@@ -57,7 +57,10 @@ pub fn main() !void {
             .user = null,
         },
         null,
-    );
+    ) catch |err| {
+        std.debug.print("Completions request failed: {s}\n", .{@errorName(err)});
+        return;
+    };
     defer response.deinit();
 
     if (response.value.choices.len == 0) {

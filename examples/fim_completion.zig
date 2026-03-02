@@ -37,7 +37,7 @@ pub fn main() !void {
     const prompt_json = try std.json.parseFromSlice(std.json.Value, gpa, "\"def fib(a):\"", .{});
     defer prompt_json.deinit();
 
-    const response = try client.completions().create_completion_with_options(
+    const response = client.completions().create_completion_with_options(
         gpa,
         .{
             .model = model.value,
@@ -60,7 +60,10 @@ pub fn main() !void {
             .user = null,
         },
         null,
-    );
+    ) catch |err| {
+        std.debug.print("FIM completion request failed: {s}\n", .{@errorName(err)});
+        return;
+    };
     defer response.deinit();
 
     if (response.value.choices.len == 0) {

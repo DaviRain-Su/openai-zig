@@ -421,11 +421,15 @@ pub fn main() !void {
         }
         var non_stream = completion_request;
         non_stream.stream = null;
-        const response = try client.completions().create_completion_with_options(
+        const response = client.completions().create_completion_with_options(
             gpa,
             non_stream,
             null,
-        );
+        ) catch |err| {
+            std.debug.print("Completion fallback request failed: {s}\n", .{@errorName(err)});
+            std.debug.print("\n", .{});
+            return;
+        };
         defer response.deinit();
 
         if (response.value.choices.len == 0) {
