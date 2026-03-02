@@ -32,80 +32,17 @@ pub fn main() !void {
     std.debug.print("Models list: {d} items\n", .{models.value.data.len});
     for (models.value.data, 0..) |model_value, idx| {
         std.debug.print("  [{d}] ", .{idx});
-        printModel(gpa, model_value);
+        printModel(model_value);
     }
 }
 
-fn printModel(allocator: std.mem.Allocator, value: std.json.Value) void {
-    _ = allocator;
-    const obj = switch (value) {
-        .object => |o| o,
-        else => {
-            std.debug.print("<non-object model>\n", .{});
-            return;
-        },
-    };
+fn printModel(model: sdk.generated.Model) void {
+    const safe_id = if (std.unicode.utf8ValidateSlice(model.id)) model.id else "[invalid utf8]";
+    const safe_object = if (std.unicode.utf8ValidateSlice(model.object)) model.object else "[invalid utf8]";
+    const safe_owner = if (std.unicode.utf8ValidateSlice(model.owned_by)) model.owned_by else "[invalid utf8]";
 
-    if (!obj.contains("id")) {
-        std.debug.print("<non-object model>\n", .{});
-        return;
-    }
-    const fields = obj;
-
-    std.debug.print("id=", .{});
-    if (fields.get("id")) |id| {
-        switch (id) {
-            .string => |s| if (std.unicode.utf8ValidateSlice(s)) {
-                std.debug.print("{s} ", .{s});
-            } else {
-                std.debug.print("<non-utf8-id> ", .{});
-            },
-            else => std.debug.print("<non-string-id> ", .{}),
-        }
-    } else {
-        std.debug.print("<no-id> ", .{});
-    }
-
-    std.debug.print("object=", .{});
-    if (fields.get("object")) |object| {
-        switch (object) {
-            .string => |s| if (std.unicode.utf8ValidateSlice(s)) {
-                std.debug.print("{s} ", .{s});
-            } else {
-                std.debug.print("<non-utf8-object> ", .{});
-            },
-            else => std.debug.print("<non-string-object> ", .{}),
-        }
-    } else {
-        std.debug.print("<no-object> ", .{});
-    }
-
-    std.debug.print("owned_by=", .{});
-    if (fields.get("owned_by")) |owned_by| {
-        switch (owned_by) {
-            .string => |s| if (std.unicode.utf8ValidateSlice(s)) {
-                std.debug.print("{s}\n", .{s});
-            } else {
-                std.debug.print("<non-utf8-owned-by>\n", .{});
-            },
-            else => std.debug.print("<non-string-owned-by>\n", .{}),
-        }
-    } else {
-        std.debug.print("<no-owned-by>\n", .{});
-    }
-}
-
-fn readBaseUrl(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {
-    const file_result = std.fs.cwd().openFile(path, .{});
-    if (file_result) |file| {
-        defer file.close();
-        const data = try file.readToEndAlloc(allocator, 512);
-        const trimmed = std.mem.trim(u8, data, " \t\r\n");
-        const copy = try allocator.alloc(u8, trimmed.len);
-        @memcpy(copy, trimmed);
-        allocator.free(data);
-        return copy;
-    } else |_| {
-        return allocator.alloc(u8, 0);
-    }
+    std.debug.print(
+        "id={s} object={s} owned_by={s}\n",
+        .{ safe_id, safe_object, safe_owner },
+    );
 }

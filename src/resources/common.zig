@@ -43,6 +43,7 @@ pub inline fn sendJsonTypedWithOptions(
 
     const parsed = std.json.parseFromSlice(T, allocator, body, .{
         .ignore_unknown_fields = true,
+        .allocate = .alloc_always,
     }) catch {
         return errors.Error.DeserializeError;
     };
@@ -90,6 +91,7 @@ pub fn sendRawJsonTypedWithOptions(
 
     const parsed = std.json.parseFromSlice(T, allocator, body, .{
         .ignore_unknown_fields = true,
+        .allocate = .alloc_always,
     }) catch {
         return errors.Error.DeserializeError;
     };
@@ -131,6 +133,7 @@ pub fn sendMultipartTypedWithOptions(
 
     const parsed = std.json.parseFromSlice(T, allocator, body, .{
         .ignore_unknown_fields = true,
+        .allocate = .alloc_always,
     }) catch {
         return errors.Error.DeserializeError;
     };
@@ -153,6 +156,7 @@ pub inline fn sendNoBodyTypedWithOptions(
 
     const parsed = std.json.parseFromSlice(T, allocator, body, .{
         .ignore_unknown_fields = true,
+        .allocate = .alloc_always,
     }) catch {
         return errors.Error.DeserializeError;
     };
@@ -198,6 +202,7 @@ pub fn sendValueOrNullWithOptions(
     const body_to_parse = if (response_body.len == 0) "null" else response_body;
     const parsed = std.json.parseFromSlice(std.json.Value, allocator, body_to_parse, .{
         .ignore_unknown_fields = true,
+        .allocate = .alloc_always,
     }) catch {
         return errors.Error.DeserializeError;
     };
@@ -385,6 +390,7 @@ fn StreamEventParser(comptime T: type) type {
 
             const parsed = std.json.parseFromSlice(T, self.allocator, event_payload, .{
                 .ignore_unknown_fields = true,
+                .allocate = .alloc_always,
             }) catch {
                 return errors.Error.DeserializeError;
             };
