@@ -299,3 +299,4 @@
 - [x] 继续收窄（Realtime 结构化）：`RealtimeTruncation` 从动态值改为 `mode/config/raw` union，`RealtimeTurnDetection` 从动态值改为结构体（`type/threshold/prefix_padding_ms/silence_duration_ms`）；新增回归测试覆盖 mode/object/raw 与 session turn_detection 解析。
 - [x] 别名收敛整理：将剩余 `= std.json.Value` 别名统一重定向到 `JsonObject`（保留 `JsonObject` 作为唯一底层动态值别名），减少动态类型入口分散度并保持向后兼容。
 - [x] 继续收窄（Realtime 事件结构化）：`RealtimeClientEvent` 与 `RealtimeServerEvent` 从动态别名升级为结构化 union（含常见事件分支 + `raw` 回退），并新增兼容解析测试覆盖 typed variant 与未知事件 raw fallback。
+- [x] 继续收窄（Eval 内容结构化）：`EvalItemContent` 与 `EvalItemContentItem` 从动态别名升级为结构化 union（`text/items/raw` 与 `output_text/input_image/raw`），并补充兼容测试验证 typed 解析与未知类型 raw fallback。

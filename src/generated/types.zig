@@ -3775,9 +3775,6 @@ pub const EvalItem = struct {
     content: EvalItemContent,
     type: ?[]const u8,
 };
-pub const EvalItemContent = JsonObject;
-pub const EvalItemContentArray = []const EvalItemContentItem;
-pub const EvalItemContentItem = JsonObject;
 pub const EvalItemContentOutputText = struct {
     type: []const u8,
     text: []const u8,
@@ -3787,6 +3784,106 @@ pub const EvalItemInputImage = struct {
     type: []const u8,
     image_url: []const u8,
     detail: ?[]const u8,
+};
+pub const EvalItemContentItem = union(enum) {
+    output_text: EvalItemContentOutputText,
+    input_image: EvalItemInputImage,
+    raw: JsonObject,
+
+    pub fn forRaw(value: JsonObject) EvalItemContentItem {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: EvalItemContentItem, writer: anytype) !void {
+        switch (self) {
+            .output_text => |value| try writer.write(value),
+            .input_image => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !EvalItemContentItem {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !EvalItemContentItem {
+        switch (source) {
+            .object => |root| {
+                const item_type = root.get("type") orelse return .{ .raw = source };
+                if (item_type != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, item_type.string, "output_text") or
+                    std.mem.eql(u8, item_type.string, "input_text") or
+                    std.mem.eql(u8, item_type.string, "text"))
+                {
+                    const parsed = std.json.parseFromValue(EvalItemContentOutputText, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .output_text = parsed.value };
+                }
+
+                if (std.mem.eql(u8, item_type.string, "input_image")) {
+                    const parsed = std.json.parseFromValue(EvalItemInputImage, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .input_image = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
+pub const EvalItemContentArray = []const EvalItemContentItem;
+pub const EvalItemContent = union(enum) {
+    text: EvalItemContentText,
+    items: EvalItemContentArray,
+    raw: JsonObject,
+
+    pub fn forText(value: EvalItemContentText) EvalItemContent {
+        return .{ .text = value };
+    }
+
+    pub fn forItems(value: EvalItemContentArray) EvalItemContent {
+        return .{ .items = value };
+    }
+
+    pub fn forRaw(value: JsonObject) EvalItemContent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: EvalItemContent, writer: anytype) !void {
+        switch (self) {
+            .text => |value| try writer.write(value),
+            .items => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !EvalItemContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !EvalItemContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue(EvalItemContentArray, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .items = parsed.value };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
 pub const EvalJsonlFileContentSource = struct {
     type: []const u8,

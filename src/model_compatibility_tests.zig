@@ -2570,3 +2570,66 @@ test "realtime server event parses typed variant and keeps raw fallback" {
         else => try std.testing.expect(false),
     }
 }
+
+test "eval item content parses text and array variants" {
+    const text_payload = "\"graded answer\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.EvalItemContent,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("graded answer", value),
+        else => try std.testing.expect(false),
+    }
+
+    const array_payload =
+        \\[
+        \\  {"type":"output_text","text":"hello"},
+        \\  {"type":"input_image","image_url":"https://example.com/a.png"}
+        \\]
+    ;
+    const parsed_items = try std.json.parseFromSlice(
+        gen.EvalItemContent,
+        std.testing.allocator,
+        array_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_items.deinit();
+
+    switch (parsed_items.value) {
+        .items => |items| {
+            try std.testing.expectEqual(@as(usize, 2), items.len);
+            switch (items[0]) {
+                .output_text => |value| try std.testing.expectEqualStrings("hello", value.text),
+                else => try std.testing.expect(false),
+            }
+            switch (items[1]) {
+                .input_image => |value| try std.testing.expectEqualStrings("https://example.com/a.png", value.image_url),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval item content item keeps raw fallback for unknown type" {
+    const raw_payload =
+        \\{"type":"future_eval_item","foo":"bar"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.EvalItemContentItem,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future_eval_item", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
