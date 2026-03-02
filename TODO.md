@@ -277,6 +277,7 @@
 - [x] 继续收窄 chat 流式类型：将 `StreamResponseDelta` 结构化为函数调用/音频字段模型（沿用 `gen.ChatCompletionStreamResponseDelta` 字段语义），并将 `StreamResponseChoice.logprobs` 收窄为 `ChatCompletionTokenLogprob` 列表的结构体。
 - [x] 继续收窄 responses 输出文本结构：`OutputTextContent.annotations` 从必选字段改为 `?[]const Annotation`，与常见返回形态不一致时可安全解析。
 - [x] 继续收窄 `responses` 返回模型：`ResponseObject.output` 改为 `ResponseOutput`（单条/列表/raw）并补齐对应 `gen.Response` 兼容解析回归。
+- [x] 继续收窄 Eval 相关模型：将 `CreateEvalRequest.data_source_config`/`testing_criteria`、`CreateEvalItem`、`EvalItemContent`、`Eval` 返回数据转为结构化 union 并保留 `raw` 回退，新增兼容解析测试。
 - [x] 继续收窄 audio 请求模型：`CreateTranscriptionFromPathRequest.stream` 改为 `?bool`，`CreateTranslationFromPathRequest.response_format` 改为 `?gen.AudioResponseFormat`，避免无谓动态 JSON 解析。
 - [x] 补齐 `StopConfiguration` 为可序列化 union：支持 `single` 字符串与 `multiple` 字符串数组，避免 `stop` 的动态 JSON 兼容差异问题；补充 completions 请求序列化回归测试。
 - [x] 继续收窄 generated/types 高频工具调用资源模型：`ComputerToolCallOutputResource` 改为 `ComputerToolCallOutput`，`FunctionToolCallResource` 与 `FunctionToolCallOutputResource` 分别收敛为 `FunctionToolCall` / `FunctionToolCallOutput`，减少动态类型暴露。

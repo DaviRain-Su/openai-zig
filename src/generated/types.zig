@@ -2789,12 +2789,168 @@ pub const CreateEvalCompletionsRunDataSource = struct {
     model: ?[]const u8,
     source: std.json.Value,
 };
+pub const CreateEvalDataSourceConfig = union(enum) {
+    custom: CreateEvalCustomDataSourceConfig,
+    logs: CreateEvalLogsDataSourceConfig,
+    stored_completions: CreateEvalStoredCompletionsDataSourceConfig,
+    raw: std.json.Value,
+
+    pub fn forCustom(value: CreateEvalCustomDataSourceConfig) CreateEvalDataSourceConfig {
+        return .{ .custom = value };
+    }
+
+    pub fn forLogs(value: CreateEvalLogsDataSourceConfig) CreateEvalDataSourceConfig {
+        return .{ .logs = value };
+    }
+
+    pub fn forStoredCompletions(value: CreateEvalStoredCompletionsDataSourceConfig) CreateEvalDataSourceConfig {
+        return .{ .stored_completions = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) CreateEvalDataSourceConfig {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateEvalDataSourceConfig, writer: anytype) !void {
+        switch (self) {
+            .custom => |value| try writer.write(value),
+            .logs => |value| try writer.write(value),
+            .stored_completions => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(
+        allocator: std.mem.Allocator,
+        source: anytype,
+        options: std.json.ParseOptions,
+    ) !CreateEvalDataSourceConfig {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !CreateEvalDataSourceConfig {
+        if (source != .object) return .{ .raw = source };
+        const root = source.object;
+        const source_type = root.get("type") orelse return .{ .raw = source };
+        if (source_type != .string) return .{ .raw = source };
+
+        if (std.mem.eql(u8, source_type.string, "custom")) {
+            const parsed = std.json.parseFromValue(
+                CreateEvalCustomDataSourceConfig,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .custom = parsed.value };
+        }
+
+        if (std.mem.eql(u8, source_type.string, "logs")) {
+            const parsed = std.json.parseFromValue(
+                CreateEvalLogsDataSourceConfig,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .logs = parsed.value };
+        }
+
+        if (std.mem.eql(u8, source_type.string, "stored_completions")) {
+            const parsed = std.json.parseFromValue(
+                CreateEvalStoredCompletionsDataSourceConfig,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .stored_completions = parsed.value };
+        }
+
+        return .{ .raw = source };
+    }
+};
 pub const CreateEvalCustomDataSourceConfig = struct {
     type: []const u8,
     item_schema: std.json.Value,
     include_sample_schema: ?bool,
 };
-pub const CreateEvalItem = std.json.Value;
+pub const CreateEvalSimpleInputMessage = struct {
+    role: []const u8,
+    content: []const u8,
+};
+pub const CreateEvalItem = union(enum) {
+    simple: CreateEvalSimpleInputMessage,
+    eval_item: EvalItem,
+    raw: std.json.Value,
+
+    pub fn forSimple(value: CreateEvalSimpleInputMessage) CreateEvalItem {
+        return .{ .simple = value };
+    }
+
+    pub fn forEvalItem(value: EvalItem) CreateEvalItem {
+        return .{ .eval_item = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) CreateEvalItem {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateEvalItem, writer: anytype) !void {
+        switch (self) {
+            .simple => |value| try writer.write(value),
+            .eval_item => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(
+        allocator: std.mem.Allocator,
+        source: anytype,
+        options: std.json.ParseOptions,
+    ) !CreateEvalItem {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !CreateEvalItem {
+        if (source != .object) return .{ .raw = source };
+        const root = source.object;
+        const role = root.get("role") orelse return .{ .raw = source };
+        const content = root.get("content") orelse return .{ .raw = source };
+        const has_type = root.get("type") != null;
+
+        if (!has_type and role == .string and content == .string) {
+            if (std.json.parseFromValue(
+                CreateEvalSimpleInputMessage,
+                allocator,
+                source,
+                options,
+            )) |item| {
+                defer item.deinit();
+                return .{ .simple = item.value };
+            }
+        }
+
+        const eval_item = std.json.parseFromValue(
+            EvalItem,
+            allocator,
+            source,
+            options,
+        ) catch return .{ .raw = source };
+        defer eval_item.deinit();
+        return .{ .eval_item = eval_item.value };
+    }
+};
 pub const CreateEvalJsonlRunDataSource = struct {
     type: []const u8,
     source: std.json.Value,
@@ -2811,11 +2967,131 @@ pub const CreateEvalLogsDataSourceConfig = struct {
     type: []const u8,
     metadata: ?std.json.Value,
 };
+pub const CreateEvalTestingCriteria = union(enum) {
+    label_model: CreateEvalLabelModelGrader,
+    string_check: EvalGraderStringCheck,
+    text_similarity: EvalGraderTextSimilarity,
+    python: EvalGraderPython,
+    score_model: EvalGraderScoreModel,
+    raw: std.json.Value,
+
+    pub fn forLabelModel(value: CreateEvalLabelModelGrader) CreateEvalTestingCriteria {
+        return .{ .label_model = value };
+    }
+
+    pub fn forStringCheck(value: EvalGraderStringCheck) CreateEvalTestingCriteria {
+        return .{ .string_check = value };
+    }
+
+    pub fn forTextSimilarity(value: EvalGraderTextSimilarity) CreateEvalTestingCriteria {
+        return .{ .text_similarity = value };
+    }
+
+    pub fn forPython(value: EvalGraderPython) CreateEvalTestingCriteria {
+        return .{ .python = value };
+    }
+
+    pub fn forScoreModel(value: EvalGraderScoreModel) CreateEvalTestingCriteria {
+        return .{ .score_model = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) CreateEvalTestingCriteria {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateEvalTestingCriteria, writer: anytype) !void {
+        switch (self) {
+            .label_model => |value| try writer.write(value),
+            .string_check => |value| try writer.write(value),
+            .text_similarity => |value| try writer.write(value),
+            .python => |value| try writer.write(value),
+            .score_model => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(
+        allocator: std.mem.Allocator,
+        source: anytype,
+        options: std.json.ParseOptions,
+    ) !CreateEvalTestingCriteria {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !CreateEvalTestingCriteria {
+        if (source != .object) return .{ .raw = source };
+        const root = source.object;
+        const criterion_type = root.get("type") orelse return .{ .raw = source };
+        if (criterion_type != .string) return .{ .raw = source };
+
+        if (std.mem.eql(u8, criterion_type.string, "label_model")) {
+            const parsed = std.json.parseFromValue(
+                CreateEvalLabelModelGrader,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .label_model = parsed.value };
+        }
+
+        if (std.mem.eql(u8, criterion_type.string, "string_check")) {
+            const parsed = std.json.parseFromValue(
+                EvalGraderStringCheck,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .string_check = parsed.value };
+        }
+
+        if (std.mem.eql(u8, criterion_type.string, "text_similarity")) {
+            const parsed = std.json.parseFromValue(
+                EvalGraderTextSimilarity,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .text_similarity = parsed.value };
+        }
+
+        if (std.mem.eql(u8, criterion_type.string, "python")) {
+            const parsed = std.json.parseFromValue(
+                EvalGraderPython,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .python = parsed.value };
+        }
+
+        if (std.mem.eql(u8, criterion_type.string, "score_model")) {
+            const parsed = std.json.parseFromValue(
+                EvalGraderScoreModel,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .score_model = parsed.value };
+        }
+
+        return .{ .raw = source };
+    }
+};
 pub const CreateEvalRequest = struct {
     name: ?[]const u8,
     metadata: ?Metadata,
-    data_source_config: std.json.Value,
-    testing_criteria: []const std.json.Value,
+    data_source_config: CreateEvalDataSourceConfig,
+    testing_criteria: []const CreateEvalTestingCriteria,
 };
 pub const CreateEvalResponsesRunDataSource = struct {
     type: []const u8,
@@ -3614,8 +3890,8 @@ pub const Eval = struct {
     object: []const u8,
     id: []const u8,
     name: []const u8,
-    data_source_config: std.json.Value,
-    testing_criteria: []const std.json.Value,
+    data_source_config: CreateEvalDataSourceConfig,
+    testing_criteria: []const CreateEvalTestingCriteria,
     created_at: i64,
     metadata: Metadata,
 };
@@ -3651,9 +3927,196 @@ pub const EvalItem = struct {
     content: EvalItemContent,
     type: ?[]const u8,
 };
-pub const EvalItemContent = std.json.Value;
+pub const EvalItemContent = union(enum) {
+    item: EvalItemContentItem,
+    items: EvalItemContentArray,
+    raw: std.json.Value,
+
+    pub fn forItem(value: EvalItemContentItem) EvalItemContent {
+        return .{ .item = value };
+    }
+
+    pub fn forItems(value: EvalItemContentArray) EvalItemContent {
+        return .{ .items = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) EvalItemContent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: EvalItemContent, writer: anytype) !void {
+        switch (self) {
+            .item => |value| {
+                try writer.write(value);
+            },
+            .items => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(
+        allocator: std.mem.Allocator,
+        source: anytype,
+        options: std.json.ParseOptions,
+    ) !EvalItemContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !EvalItemContent {
+        switch (source) {
+            .array => {
+                const parsed = std.json.parseFromValue(
+                    EvalItemContentArray,
+                    allocator,
+                    source,
+                    options,
+                ) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .items = parsed.value };
+            },
+            else => {
+                const parsed = try EvalItemContentItem.jsonParseFromValue(allocator, source, options);
+                return .{ .item = parsed };
+            },
+        }
+    }
+};
 pub const EvalItemContentArray = []const EvalItemContentItem;
-pub const EvalItemContentItem = std.json.Value;
+pub const EvalItemContentItem = union(enum) {
+    text: EvalItemContentText,
+    input_text: InputTextContent,
+    output_text: EvalItemContentOutputText,
+    input_image: EvalItemInputImage,
+    input_audio: InputAudio,
+    raw: std.json.Value,
+
+    pub fn forText(value: EvalItemContentText) EvalItemContentItem {
+        return .{ .text = value };
+    }
+
+    pub fn forInputText(value: InputTextContent) EvalItemContentItem {
+        return .{ .input_text = value };
+    }
+
+    pub fn forOutputText(value: EvalItemContentOutputText) EvalItemContentItem {
+        return .{ .output_text = value };
+    }
+
+    pub fn forInputImage(value: EvalItemInputImage) EvalItemContentItem {
+        return .{ .input_image = value };
+    }
+
+    pub fn forInputAudio(value: InputAudio) EvalItemContentItem {
+        return .{ .input_audio = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) EvalItemContentItem {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: EvalItemContentItem, writer: anytype) !void {
+        switch (self) {
+            .text => |value| {
+                try writer.write(value);
+            },
+            .input_text => |value| {
+                try writer.write(value);
+            },
+            .output_text => |value| {
+                try writer.write(value);
+            },
+            .input_image => |value| {
+                try writer.write(value);
+            },
+            .input_audio => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(
+        allocator: std.mem.Allocator,
+        source: anytype,
+        options: std.json.ParseOptions,
+    ) !EvalItemContentItem {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !EvalItemContentItem {
+        if (source == .string) {
+            return .{ .text = source.string };
+        }
+
+        if (source != .object) return .{ .raw = source };
+
+        const root = source.object;
+        const kind = root.get("type") orelse return .{ .raw = source };
+        if (kind != .string) return .{ .raw = source };
+
+        if (std.mem.eql(u8, kind.string, "text")) {
+            const parsed = std.json.parseFromValue(
+                InputTextContent,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .input_text = parsed.value };
+        }
+
+        if (std.mem.eql(u8, kind.string, "output_text")) {
+            const parsed = std.json.parseFromValue(
+                EvalItemContentOutputText,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .output_text = parsed.value };
+        }
+
+        if (std.mem.eql(u8, kind.string, "input_image")) {
+            const parsed = std.json.parseFromValue(
+                EvalItemInputImage,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .input_image = parsed.value };
+        }
+
+        if (std.mem.eql(u8, kind.string, "input_audio")) {
+            const parsed = std.json.parseFromValue(
+                InputAudio,
+                allocator,
+                source,
+                options,
+            ) catch return .{ .raw = source };
+            defer parsed.deinit();
+            return .{ .input_audio = parsed.value };
+        }
+
+        return .{ .raw = source };
+    }
+};
 pub const EvalItemContentOutputText = struct {
     type: []const u8,
     text: []const u8,

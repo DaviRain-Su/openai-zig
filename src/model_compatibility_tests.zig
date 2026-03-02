@@ -312,6 +312,110 @@ test "response error supports structured fields and raw fallback" {
     }
 }
 
+test "create eval request parses typed datasource and criteria unions" {
+    const payload =
+        \\{"name":"response-quality","data_source_config":{"type":"custom","item_schema":{"type":"object","properties":{"question":{"type":"string"}},"required":["question"]},"include_sample_schema":true},"testing_criteria":[{"type":"string_check","name":"ContainsHello","input":"{{sample.output_text}}","reference":"hello","operation":"contains"},{"type":"label_model","name":"Labeler","model":"deepseek-chat","input":[{"role":"user","type":"message","content":"Classify this response: {{item.response}}"},{"role":"assistant","type":"message","content":{"type":"output_text","text":"positive"}}],"labels":["positive","negative"],"passing_labels":["positive"]}]}
+    ;
+    const request = try std.json.parseFromSlice(
+        gen.CreateEvalRequest,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer request.deinit();
+
+    switch (request.value.data_source_config) {
+        .custom => |source| {
+            try std.testing.expect(source.include_sample_schema != null);
+            try std.testing.expect(source.include_sample_schema.?);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expectEqual(@as(usize, 2), request.value.testing_criteria.len);
+
+    switch (request.value.testing_criteria[0]) {
+        .string_check => |criterion| {
+            try std.testing.expectEqualStrings("ContainsHello", criterion.name);
+            try std.testing.expectEqualStrings("contains", criterion.operation);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    switch (request.value.testing_criteria[1]) {
+        .label_model => |criterion| {
+            try std.testing.expectEqualStrings("Labeler", criterion.name);
+            try std.testing.expectEqual(@as(usize, 2), criterion.input.len);
+            switch (criterion.input[0]) {
+                .eval_item => |item| {
+                    try std.testing.expectEqualStrings("user", item.role);
+                    switch (item.content) {
+                        .item => |content| {
+                            switch (content) {
+                                .text => |value| {
+                                    try std.testing.expectEqualStrings("Classify this response: {{item.response}}", value);
+                                },
+                                else => try std.testing.expect(false),
+                            }
+                        },
+                        else => try std.testing.expect(false),
+                    }
+                },
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create eval item supports simple and eval-item variants" {
+    const simple_payload =
+        \\{"role":"user","content":"Simple prompt with {{item.name}}."}
+    ;
+    const simple_item = try std.json.parseFromSlice(
+        gen.CreateEvalItem,
+        std.testing.allocator,
+        simple_payload,
+        .{},
+    );
+    defer simple_item.deinit();
+    switch (simple_item.value) {
+        .simple => |item| {
+            try std.testing.expectEqualStrings("user", item.role);
+            try std.testing.expectEqualStrings("Simple prompt with {{item.name}}.", item.content);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const complex_payload =
+        \\{"role":"assistant","type":"message","content":{"type":"output_text","text":"Done"}}
+    ;
+    const complex_item = try std.json.parseFromSlice(
+        gen.CreateEvalItem,
+        std.testing.allocator,
+        complex_payload,
+        .{},
+    );
+    defer complex_item.deinit();
+    switch (complex_item.value) {
+        .eval_item => |item| {
+            try std.testing.expectEqualStrings("assistant", item.role);
+            switch (item.content) {
+                .item => |content| {
+                    switch (content) {
+                        .output_text => |output_text| {
+                            try std.testing.expectEqualStrings("Done", output_text.text);
+                        },
+                        else => try std.testing.expect(false),
+                    }
+                },
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
 test "prompt parses template object and falls back raw on invalid payload" {
     const prompt_payload =
         \\{"id":"prompt-123","version":"v1","variables":{"customer":"Alice"}}
