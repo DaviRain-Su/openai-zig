@@ -2918,7 +2918,49 @@ pub const CreateEvalCustomDataSourceConfig = struct {
     item_schema: EvalSchema,
     include_sample_schema: ?bool,
 };
-pub const CreateEvalItem = JsonObject;
+pub const CreateEvalItem = union(enum) {
+    item: EvalItem,
+    raw: JsonObject,
+
+    pub fn forItem(value: EvalItem) CreateEvalItem {
+        return .{ .item = value };
+    }
+
+    pub fn forRaw(value: JsonObject) CreateEvalItem {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateEvalItem, writer: anytype) !void {
+        switch (self) {
+            .item => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateEvalItem {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !CreateEvalItem {
+        switch (source) {
+            .object => |root| {
+                if (root.get("role") != null and root.get("content") != null) {
+                    const parsed = std.json.parseFromValue(EvalItem, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .item = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const CreateEvalJsonlRunDataSource = struct {
     type: []const u8,
     source: std.json.Value,

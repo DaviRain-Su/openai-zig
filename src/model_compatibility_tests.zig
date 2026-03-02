@@ -2633,3 +2633,43 @@ test "eval item content item keeps raw fallback for unknown type" {
         else => try std.testing.expect(false),
     }
 }
+
+test "create eval item parses typed eval item and raw fallback" {
+    const typed_payload =
+        \\{"role":"assistant","content":"scored output","type":"message"}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.CreateEvalItem,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .item => |value| {
+            try std.testing.expectEqualStrings("assistant", value.role);
+            switch (value.content) {
+                .text => |text| try std.testing.expectEqualStrings("scored output", text),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"foo":"bar"}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.CreateEvalItem,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
+    }
+}
