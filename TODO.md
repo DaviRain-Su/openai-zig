@@ -22,6 +22,7 @@
 - [x] 错误路径中保留 `status`、`body`、`request_id`、`code`、`type`、`param`、`message`（通过增强日志/解析行为）。
 - [x] 调试/日志输出包含可观测字段（不影响返回值解码）。
 - [x] 保留兼容 `errors.Error` 的同时，提供更丰富的错误详情入口（`parseApiError`）。
+- [x] 修复错误日志对非 UTF-8 响应体的直接 `{s}` 打印，改为安全降级输出，避免示例在异常响应下崩溃。
 
 ### 1.3 资源方法行为一致性（兼容别名）
 - [x] 核对核心资源函数命名与 `openai-python` 常见别名（如 `create/retrieve/list/delete` 与具体方法名）基本一致，并补齐 `chat`、`completions`、`models`、`files`、`images`、`responses` 的核心别名。

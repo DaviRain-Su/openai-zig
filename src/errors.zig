@@ -105,11 +105,7 @@ pub fn unexpectedStatus(detail: HttpErrorDetail) Error {
     if (detail.request_id) |request_id| {
         std.debug.print("request_id={s}\n", .{request_id});
     }
-    if (detail.body.len > max_preview) {
-        std.debug.print("http status {d}, body (truncated): {s}...\n", .{ detail.status, preview });
-    } else {
-        std.debug.print("http status {d}, body: {s}\n", .{ detail.status, detail.body });
-    }
+    printBodySafely(detail.status, preview, detail.body.len > max_preview);
     return classifyStatus(detail.status);
 }
 
@@ -147,24 +143,66 @@ fn logDecodedApiError(status: u16, body: []const u8) bool {
     const root = parsed.value;
     if (root.@"error") |api_err| {
         const message = api_err.message orelse "request failed";
-        const typ = api_err.type orelse "unknown";
         std.debug.print(
-            "http status {d}, type={s}, message={s}, code={s}, param={s}\n",
+            "http status {d}, type={s}, code={s}, param={s}\n",
             .{
                 status,
-                typ,
-                message,
+                api_err.type orelse "unknown",
                 api_err.code orelse "n/a",
                 api_err.param orelse "n/a",
             },
         );
+        printStringSafely("message", message);
         return true;
     }
     if (root.detail) |detail| {
-        std.debug.print("http status {d}, detail={s}\n", .{ status, detail });
+        std.debug.print("http status {d}, detail=", .{status});
+        printStringSafely("detail", detail);
         return true;
     }
     return false;
+}
+
+fn printBodySafely(status: u16, body: []const u8, truncated: bool) void {
+    if (body.len == 0) {
+        std.debug.print("http status {d}, body: <empty>\n", .{status});
+        return;
+    }
+
+    if (std.unicode.utf8ValidateSlice(body)) {
+        if (truncated) {
+            std.debug.print("http status {d}, body (truncated): {s}...\n", .{ status, body });
+        } else {
+            std.debug.print("http status {d}, body: {s}\n", .{ status, body });
+        }
+        return;
+    }
+
+    std.debug.print("http status {d}, body ({} bytes, non-utf8): ", .{ status, body.len });
+    const display_len = @min(body.len, 64);
+    for (body[0..display_len], 0..) |byte, idx| {
+        std.debug.print("{x:0>2}", .{byte});
+        if (idx + 1 < display_len) {
+            std.debug.print(" ", .{});
+        }
+    }
+    if (body.len > display_len) {
+        std.debug.print(" ...", .{});
+    }
+    std.debug.print("\n", .{});
+}
+
+fn printStringSafely(_: []const u8, value: []const u8) void {
+    if (std.unicode.utf8ValidateSlice(value)) {
+        std.debug.print("{s}\n", .{value});
+        return;
+    }
+
+    std.debug.print("(non-utf8 {d} bytes): ", .{value.len});
+    for (value) |byte| {
+        std.debug.print("{x:0>2}", .{byte});
+    }
+    std.debug.print("\n", .{});
 }
 
 pub fn parseApiError(body: []const u8) ?ParsedApiError {
