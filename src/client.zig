@@ -492,9 +492,28 @@ pub const Client = struct {
 
     /// Simple helper to validate connectivity by calling GET /models.
     pub fn ping(self: *Client) !void {
-        const resp = try self.transport.request(.GET, "/models", &.{
+        return self.pingWithOptions(null);
+    }
+
+    /// Validate connectivity with request overrides.
+    pub fn pingWithOptions(self: *Client, request_opts: ?RequestOptions) !void {
+        const transport_opts: ?transport_mod.Transport.RequestOptions = if (request_opts) |opts|
+            .{
+                .base_url = opts.base_url,
+                .api_key = opts.api_key,
+                .organization = opts.organization,
+                .project = opts.project,
+                .timeout_ms = opts.timeout_ms,
+                .max_retries = opts.max_retries,
+                .retry_base_delay_ms = opts.retry_base_delay_ms,
+                .extra_headers = opts.extra_headers,
+            }
+        else
+            null;
+
+        const resp = try self.transport.requestWithOptions(.GET, "/models", &.{
             .{ .name = "Accept", .value = "application/json" },
-        }, null);
+        }, null, transport_opts);
         self.transport.allocator.free(resp.body);
     }
 };

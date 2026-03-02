@@ -26,16 +26,17 @@
 
 ### 1.3 资源方法行为一致性（兼容别名）
 - [x] 核对核心资源函数命名与 `openai-python` 常见别名（如 `create/retrieve/list/delete` 与具体方法名）基本一致，并补齐 `chat`、`completions`、`models`、`files`、`images`、`responses` 的核心别名。
-- [ ] 保持 `payload`/可选参数语义，减少 `null` 与“未传”差异。
+- [x] 保持 `payload`/可选参数语义，减少 `null` 与“未传”差异。
   - [x] 已将若干别名/默认 `with_options` 调用改为传 `null`（如 `chat`、`realtime` 的包装方法），避免显式空 request options 与默认行为混淆。
   - [x] 已将 `sendJsonTyped` 与各关键流式/语音/会话 multipart 辅助路径的 JSON 序列化默认改为 `emit_null_optional_fields = false`，默认不发送可选字段的 `null`。
   - [x] 已增加 `chat`/`completions` 的本地序列化回归测试，直接验证可选字段在 JSON 发送阶段被省略。
+  - [x] 已补齐 `audio.create_speech` 与 `responses.count_input_tokens` 的本地序列化回归测试，验证可选字段 null/未传差异一致。
 - [x] 确认 `chat`/`completions` 等核心路径行为优先对齐。
 
 ## 2. 优先级 P1（第二优先）
 
 ### 2.1 资源通用化（减少重复实现）
-- [ ] 将各资源中的发送逻辑统一到 `common` 的 `sendJsonTypedWithOptions` / `sendNoBodyTypedWithOptions`（逐步推进）。
+- [x] 将各资源中的发送逻辑统一到 `common` 的 `sendJsonTypedWithOptions` / `sendNoBodyTypedWithOptions`（逐步推进）。
   - [x] 已统一 `default/audio/files/videos/vector_stores` 中二进制返回分支到 `common.sendBinaryWithOptions`，去除手写 `transport.requestWithOptions`。
   - [x] `realtime` 的 `/realtime/calls` 二进制请求已改为复用 `common.sendBinaryWithOptions`，保留 SDP multipart 等定制构建逻辑。
   - [x] `realtime` 的 `sendNoBodyValueOrNullWithOptions` 已抽象为 `common.sendValueOrNullWithOptions`，保留空体返回 `null` 行为。
@@ -66,7 +67,8 @@
   - [x] 已将 `images` 的 `create_image_edit` / `create_image_variation` 复用公共 `common.sendMultipartTypedWithOptions`。
 - [x] 支持文件上传场景中的常见元数据参数（如 `purpose`）。
   - [x] 已新增 `files.create_file_from_path` / `create_file_from_path_with_options`，可直接按 `file_path + purpose` 构建 multipart。
-- [ ] 最小化内存复制（可后续引入更高效实现）。
+- [x] 最小化内存复制（可后续引入更高效实现）。
+  - [x] 已移除流式解析器的 `chunk` 冗余缓存复制；`readResponseBody` 直接使用持久分配器组装并返回响应体，减少一次中间缓冲拷贝。
 
 ### 2.4 开发体验与回归
 - [x] 已修复 Zig 0.15 兼容性问题（`ArrayList` allocator 生命周期、示例编译路径）并更新回归文档。
@@ -83,13 +85,19 @@
 - [x] 提供分页返回字段一致性检查与文档示例。
 
 ### 3.2 返回模型完整性
-- [ ] 对齐高频模型字段与 `openai-python` 行为（chat/create response、assistants/runs/messages、vector stores、files 等）。
+- [x] 对齐高频模型字段与 `openai-python` 行为（chat/create response、assistants/runs/messages、vector stores、files 等）。
   - [x] 增加高频返回模型 `ignore_unknown_fields` 兼容性回归测试（`ListModelsResponse`、`ListFilesResponse`、`CreateModerationResponse`）。
   - [x] 新增 `ListAssistantsResponse` 与 `ThreadObject` 的 `ignore_unknown_fields` 回归测试。
   - [x] 新增 `ListMessagesResponse`、`ListRunStepsResponse`、`ListVectorStoreFilesResponse`、`ListVectorStoresResponse` 的 `ignore_unknown_fields` 回归测试，并补齐对应 `generated/types.zig` 结构体定义。
   - [x] 新增 `CreateChatCompletionResponse` 与 `ChatCompletionList` 的结构体定义，并补齐 `ignore_unknown_fields` 回归测试。
   - [x] 修复 `CreateChatCompletionResponse` 中 `ChatCompletionResponseMessage` 可选字段的默认值问题，避免 DeepSeek 响应下游路径 `MissingField` 反序列化失败。
-  - [ ] 缺失字段补齐，保持 `ignore_unknown_fields = true` 兜底。
+  - [x] 缺失字段补齐，保持 `ignore_unknown_fields = true` 兜底。
+  - [x] 新增 `OpenAIFile` 与 `ListBatchesResponse` 缺省字段解析回归测试。
+  - [x] 新增 `CreateCompletionResponse`、`CreateEmbeddingResponse`、`ImagesResponse` 的回归测试，覆盖高频返回模型在 extra 字段与可选字段场景下的兼容。
+  - [x] 新增 `ListRunsResponse` 与 `RunObject` 回归测试，覆盖助理运行列表与运行体的未知字段与空值兼容。
+  - [x] 新增 `ListPaginatedFineTuningJobsResponse`、`ListFineTuningJobEventsResponse` 回归测试，覆盖微调任务列表与事件在未知字段场景下的兼容。
+  - [x] 新增 `ListRunStepsResponse`、`RunStepObject`、`FineTuningJob`、`FineTuningJobCheckpoint` 的容错回归测试，覆盖高频响应对象未知字段场景。
+  - [x] 新增 `VectorStoreSearchResultsPage`、`VectorStoreFileContentResponse`、`ListFineTuningJobCheckpointsResponse` 的回归测试，覆盖向量与微调分页列表兼容场景。
 
 ### 3.3 配置层和开发体验
 - [x] 统一环境变量优先级文档（`OPENAI_*` / `DEEPSEEK_*`）。
@@ -100,7 +108,12 @@
 
 ### 4.1 示例与文档
 - [x] 增加错误处理、流式、分页、文件上传案例。
-- [ ] 补齐每个核心资源示例（最少 1~2 个）。
+- [x] 完善 `examples/completions_stream.zig`：DeepSeek 环境下按需切换 `base_url=https://api.deepseek.com/beta`，避免 `/completions` 在 `/v1` 返回 400 的误判。
+- [x] 补齐 DeepSeek 兼容层示例行为：对 `assistants`、`files`、`chat/list`、`images`、`embeddings`、`moderations`、`responses`、`batch`、`audio/speech`、`vector_stores` 等非公开能力，示例在 DeepSeek 模式下直接跳过并输出明确原因，避免误判为 SDK 错误。
+- [x] 补齐每个核心资源示例（最少 1~2 个）。
+  - [x] 新增 `examples/completions_basic.zig`，补充 legacy `/completions` 非流式调用；该示例依赖 transport 的自动 `/completions -> /beta` 兼容，避免重复手工 base 覆盖。
+- [x] 深度兼容 DeepSeek 的 `beta` 约定：为 `Path=/completions` 的调用自动切换到 `.../beta`，无需调用方手工拼接 base_url；仍支持通过 `create_completion_with_options(..., .{ .base_url = "https://api.deepseek.com/beta" })` 显式覆盖。
+  - [x] 在 `README` 与 `completions_stream` 示例中补充了显式 `/beta` 覆盖示例，避免出现 `/completions` 在 DeepSeek 下的兼容性误判。
   - [x] 新增 `examples/responses_basic.zig`：补充 `responses` 资源的基本调用与 provider 降级示例。
   - [x] 新增 `embeddings_and_moderations` 示例：覆盖 `embeddings` 与 `moderations` 核心调用形态。
   - [x] 新增 `assistants_list.zig`：补充 `assistants` 列表示例与 provider 降级处理。
