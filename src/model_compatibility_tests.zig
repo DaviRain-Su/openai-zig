@@ -2734,7 +2734,10 @@ test "create chat completion request parses typed object and raw fallback" {
         .object => |value| {
             try std.testing.expectEqualStrings("gpt-4o-mini", value.model.?);
             try std.testing.expectEqual(@as(usize, 1), value.messages.?.len);
-            try std.testing.expectEqualStrings("user", value.messages.?[0].object.get("role").?.string);
+            switch (value.messages.?[0]) {
+                .user => |message| try std.testing.expectEqualStrings("user", message.role),
+                else => try std.testing.expect(false),
+            }
         },
         else => try std.testing.expect(false),
     }
@@ -2752,6 +2755,50 @@ test "create chat completion request parses typed object and raw fallback" {
 
     switch (raw.value) {
         .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "chat completion request message parses typed role variants and raw fallback" {
+    const typed_payload =
+        \\{"role":"assistant","content":"hi"}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestMessage,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .assistant => |message| {
+            try std.testing.expectEqualStrings("assistant", message.role);
+            const content = message.content orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (content) {
+                .text => |text| try std.testing.expectEqualStrings("hi", text),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"role":"future_role","content":"x"}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestMessage,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future_role", value.object.get("role").?.string),
         else => try std.testing.expect(false),
     }
 }

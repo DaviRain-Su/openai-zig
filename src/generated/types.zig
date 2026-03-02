@@ -1137,6 +1137,93 @@ pub const ChatCompletionRequestMessage = union(enum) {
             },
         }
     }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestMessage {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestMessage {
+        switch (source) {
+            .object => |root| {
+                const role = root.get("role") orelse return .{ .raw = source };
+                if (role != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, role.string, "developer")) {
+                    const parsed = std.json.parseFromValue(
+                        ChatCompletionRequestDeveloperMessage,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .developer = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "system")) {
+                    const parsed = std.json.parseFromValue(
+                        ChatCompletionRequestSystemMessage,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .system = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "user")) {
+                    const parsed = std.json.parseFromValue(
+                        ChatCompletionRequestUserMessage,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .user = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "assistant")) {
+                    const parsed = std.json.parseFromValue(
+                        ChatCompletionRequestAssistantMessage,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .assistant = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "tool")) {
+                    const parsed = std.json.parseFromValue(
+                        ChatCompletionRequestToolMessage,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .tool = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "function")) {
+                    const parsed = std.json.parseFromValue(
+                        ChatCompletionRequestFunctionMessage,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .function = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
 pub const ChatCompletionRequestMessageContentPartAudio = struct {
     type: []const u8,
@@ -2723,7 +2810,7 @@ pub const CreateAssistantRequest = struct {
 };
 pub const CreateChatCompletionRequestObject = struct {
     model: ?[]const u8 = null,
-    messages: ?JsonObjectArray = null,
+    messages: ?[]const ChatCompletionRequestMessage = null,
 };
 pub const CreateChatCompletionRequest = union(enum) {
     object: CreateChatCompletionRequestObject,
