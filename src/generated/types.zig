@@ -2800,7 +2800,15 @@ pub const MessageRole = []const u8;
 pub const MessageStatus = []const u8;
 pub const MessageStreamEvent = std.json.Value;
 pub const Metadata = std.json.Value;
-pub const Model = std.json.Value;
+pub const Model = struct {
+    id: []const u8 = "",
+    object: []const u8 = "",
+    created: ?i64 = null,
+    owned_by: []const u8 = "",
+    permission: ?std.json.Value = null,
+    root: ?[]const u8 = null,
+    parent: ?std.json.Value = null,
+};
 pub const ModelIds = std.json.Value;
 pub const ModelIdsCompaction = std.json.Value;
 pub const ModelIdsResponses = std.json.Value;

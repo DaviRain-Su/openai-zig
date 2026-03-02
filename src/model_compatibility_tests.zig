@@ -173,3 +173,39 @@ test "create chat completion response ignores unknown fields" {
     try std.testing.expectEqual(@as(i64, 0), choices[0].index);
     try std.testing.expectEqual(@as(?[]const gen.ChatCompletionTokenLogprob, null), choices[0].logprobs);
 }
+
+test "model object with missing optional fields still parses" {
+    const payload =
+        \\{"id":"deepseek-chat","object":"model","owned_by":"deepseek","permission":[]}
+    ;
+    const model = try std.json.parseFromSlice(
+        gen.Model,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer model.deinit();
+    try std.testing.expectEqualStrings("deepseek-chat", model.value.id);
+    try std.testing.expectEqualStrings("model", model.value.object);
+    try std.testing.expectEqualStrings("deepseek", model.value.owned_by);
+    try std.testing.expect(model.value.created == null);
+}
+
+test "list models handles model objects without all optional fields" {
+    const payload =
+        \\{"object":"list","data":[{"id":"deepseek-chat","object":"model","owned_by":"deepseek","permission":[]},{"id":"deepseek-reasoner","object":"model","owned_by":"deepseek","created":1700001000}]}
+    ;
+    const models = try std.json.parseFromSlice(
+        gen.ListModelsResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer models.deinit();
+    try std.testing.expectEqualStrings("list", models.value.object);
+    try std.testing.expectEqual(@as(usize, 2), models.value.data.len);
+    try std.testing.expectEqualStrings("deepseek-chat", models.value.data[0].id);
+    try std.testing.expectEqualStrings("model", models.value.data[0].object);
+    try std.testing.expectEqual(@as(?i64, null), models.value.data[0].created);
+    try std.testing.expectEqual(@as(i64, 1700001000), models.value.data[1].created);
+}
