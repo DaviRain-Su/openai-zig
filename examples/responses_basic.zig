@@ -33,10 +33,11 @@ pub fn main() !void {
     const request_payload =
         \\{"model":"deepseek-chat","input":"用中文写一个三行短诗","stream":false}
     ;
-    var request = try std.json.parseFromSlice(std.json.Value, gpa, request_payload, .{});
-    defer request.deinit();
+    const parsed_request = try std.json.parseFromSlice(std.json.Value, gpa, request_payload, .{});
+    defer parsed_request.deinit();
+    const request = sdk.generated.CreateResponse{ .raw = parsed_request.value };
 
-    const response = client.responses().create(gpa, request.value) catch |err| {
+    const response = client.responses().create(gpa, request) catch |err| {
         switch (err) {
             errors.Error.NotFoundError => {
                 std.debug.print("responses endpoint unavailable on this provider (HTTP 404).\n", .{});
