@@ -3058,7 +3058,67 @@ pub const CreateModerationResponse = struct {
         },
     },
 };
-pub const CreateResponse = std.json.Value;
+pub const CreateResponseObject = struct {
+    input: ?std.json.Value = null,
+    model: ?[]const u8 = null,
+    instructions: ?[]const u8 = null,
+    tools: ?[]const std.json.Value = null,
+    tool_choice: ?std.json.Value = null,
+    parallel_tool_calls: ?bool = null,
+    temperature: ?f64 = null,
+    top_p: ?f64 = null,
+    max_output_tokens: ?i64 = null,
+    stream: ?bool = null,
+    response_format: ?std.json.Value = null,
+    previous_response_id: ?[]const u8 = null,
+    conversation: ?std.json.Value = null,
+    metadata: ?Metadata = null,
+};
+
+pub const CreateResponse = union(enum) {
+    object: CreateResponseObject,
+    raw: std.json.Value,
+
+    pub fn forObject(value: CreateResponseObject) CreateResponse {
+        return .{ .object = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) CreateResponse {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateResponse, writer: anytype) !void {
+        switch (self) {
+            .object => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateResponse {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !CreateResponse {
+        const parsed = std.json.parseFromValue(
+            CreateResponseObject,
+            allocator,
+            source,
+            options,
+        ) catch return .{ .raw = source };
+        defer parsed.deinit();
+
+        return .{ .object = parsed.value };
+    }
+};
 pub const CreateRunRequest = struct {
     assistant_id: []const u8,
     model: ?[]const u8,
@@ -4683,7 +4743,6 @@ pub const InputImageContentParamAutoParam = struct {
     file_id: ?[]const u8,
     detail: ?ImageDetail,
 };
-pub const InputItem = std.json.Value;
 pub const InputMessage = struct {
     type: ?[]const u8,
     role: []const u8,
@@ -4691,8 +4750,68 @@ pub const InputMessage = struct {
     content: InputMessageContentList,
 };
 pub const InputMessageContentList = []const InputContent;
-pub const InputMessageResource = std.json.Value;
-pub const InputParam = std.json.Value;
+pub const InputMessageResource = struct {
+    id: []const u8,
+    type: ?[]const u8,
+    role: []const u8,
+    status: ?[]const u8,
+    content: InputMessageContentList,
+};
+pub const InputParam = union(enum) {
+    text: []const u8,
+    items: []const InputItem,
+    raw: std.json.Value,
+
+    pub fn forText(value: []const u8) InputParam {
+        return .{ .text = value };
+    }
+
+    pub fn forItems(value: []const InputItem) InputParam {
+        return .{ .items = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) InputParam {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: InputParam, writer: anytype) !void {
+        switch (self) {
+            .text => |value| {
+                try writer.write(value);
+            },
+            .items => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !InputParam {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !InputParam {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => |arr| {
+                _ = arr;
+                const parsed_items = std.json.parseFromValue([]const InputItem, allocator, source, options) catch {
+                    return .{ .raw = source };
+                };
+                defer parsed_items.deinit();
+                return .{ .items = parsed_items.value };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const InputTextContent = struct {
     type: []const u8,
     text: []const u8,
@@ -4738,14 +4857,562 @@ pub const InviteRequest = struct {
         id: []const u8,
         role: []const u8,
     },
+}; 
+pub const Item = union(enum) {
+    input_message: InputMessage,
+    output_message: OutputMessage,
+    file_search_tool_call: FileSearchToolCall,
+    computer_tool_call: ComputerToolCall,
+    computer_tool_call_output: ComputerCallOutputItemParam,
+    web_search_tool_call: WebSearchToolCall,
+    function_tool_call: FunctionToolCall,
+    function_tool_call_output: FunctionCallOutputItemParam,
+    reasoning: ReasoningItem,
+    compaction: CompactionSummaryItemParam,
+    image_gen_tool_call: ImageGenToolCall,
+    code_interpreter_tool_call: CodeInterpreterToolCall,
+    local_shell_tool_call: LocalShellToolCall,
+    local_shell_tool_call_output: LocalShellToolCallOutput,
+    function_shell_call: FunctionShellCall,
+    function_shell_call_output: FunctionShellCallOutput,
+    apply_patch_tool_call: ApplyPatchToolCall,
+    apply_patch_tool_call_output: ApplyPatchToolCallOutputItemParam,
+    mcp_list_tools: MCPListTools,
+    mcp_approval_request: MCPApprovalRequest,
+    mcp_approval_response: MCPApprovalResponse,
+    mcp_tool_call: MCPToolCall,
+    custom_tool_call: CustomToolCall,
+    custom_tool_call_output: CustomToolCallOutput,
+    raw: std.json.Value,
+
+    pub fn forInputMessage(value: InputMessage) Item {
+        return .{ .input_message = value };
+    }
+
+    pub fn forOutputMessage(value: OutputMessage) Item {
+        return .{ .output_message = value };
+    }
+
+    pub fn forFileSearchToolCall(value: FileSearchToolCall) Item {
+        return .{ .file_search_tool_call = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) Item {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: Item, writer: anytype) !void {
+        switch (self) {
+            .input_message => |value| try writer.write(value),
+            .output_message => |value| try writer.write(value),
+            .file_search_tool_call => |value| try writer.write(value),
+            .computer_tool_call => |value| try writer.write(value),
+            .computer_tool_call_output => |value| try writer.write(value),
+            .web_search_tool_call => |value| try writer.write(value),
+            .function_tool_call => |value| try writer.write(value),
+            .function_tool_call_output => |value| try writer.write(value),
+            .reasoning => |value| try writer.write(value),
+            .compaction => |value| try writer.write(value),
+            .image_gen_tool_call => |value| try writer.write(value),
+            .code_interpreter_tool_call => |value| try writer.write(value),
+            .local_shell_tool_call => |value| try writer.write(value),
+            .local_shell_tool_call_output => |value| try writer.write(value),
+            .function_shell_call => |value| try writer.write(value),
+            .function_shell_call_output => |value| try writer.write(value),
+            .apply_patch_tool_call => |value| try writer.write(value),
+            .apply_patch_tool_call_output => |value| try writer.write(value),
+            .mcp_list_tools => |value| try writer.write(value),
+            .mcp_approval_request => |value| try writer.write(value),
+            .mcp_approval_response => |value| try writer.write(value),
+            .mcp_tool_call => |value| try writer.write(value),
+            .custom_tool_call => |value| try writer.write(value),
+            .custom_tool_call_output => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Item {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !Item {
+        switch (source) {
+            .object => |root| {
+                const item_type = root.get("type") orelse return .{ .raw = source };
+                if (item_type != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, item_type.string, "message")) {
+                    if (root.get("id") != null) {
+                        if (std.json.parseFromValue(OutputMessage, allocator, source, options)) |parsed| {
+                            defer parsed.deinit();
+                            return .{ .output_message = parsed.value };
+                        } else |_| {}
+                    }
+
+                    if (std.json.parseFromValue(InputMessage, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .input_message = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "file_search_call")) {
+                    if (std.json.parseFromValue(FileSearchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .file_search_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "computer_call")) {
+                    if (std.json.parseFromValue(ComputerToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .computer_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "computer_call_output")) {
+                    if (std.json.parseFromValue(ComputerCallOutputItemParam, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .computer_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "web_search_call")) {
+                    if (std.json.parseFromValue(WebSearchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .web_search_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "function_call")) {
+                    if (std.json.parseFromValue(FunctionToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "function_call_output")) {
+                    if (std.json.parseFromValue(FunctionCallOutputItemParam, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "reasoning")) {
+                    if (std.json.parseFromValue(ReasoningItem, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .reasoning = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "compaction")) {
+                    if (std.json.parseFromValue(CompactionSummaryItemParam, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .compaction = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "image_generation_call")) {
+                    if (std.json.parseFromValue(ImageGenToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .image_gen_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "code_interpreter_call")) {
+                    if (std.json.parseFromValue(CodeInterpreterToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .code_interpreter_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "local_shell_call")) {
+                    if (std.json.parseFromValue(LocalShellToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .local_shell_tool_call = parsed.value };
+                    } else |_| {}
+
+                    if (std.json.parseFromValue(LocalShellToolCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .local_shell_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "shell_call")) {
+                    if (std.json.parseFromValue(FunctionShellCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_shell_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "shell_call_output")) {
+                    if (std.json.parseFromValue(FunctionShellCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_shell_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "apply_patch_call")) {
+                    if (std.json.parseFromValue(ApplyPatchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .apply_patch_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "apply_patch_call_output")) {
+                    if (std.json.parseFromValue(ApplyPatchToolCallOutputItemParam, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .apply_patch_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_list_tools")) {
+                    if (std.json.parseFromValue(MCPListTools, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_list_tools = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_approval_request")) {
+                    if (std.json.parseFromValue(MCPApprovalRequest, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_approval_request = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_approval_response")) {
+                    if (std.json.parseFromValue(MCPApprovalResponse, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_approval_response = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_call")) {
+                    if (std.json.parseFromValue(MCPToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "custom_tool_call")) {
+                    if (std.json.parseFromValue(CustomToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .custom_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "custom_tool_call_output")) {
+                    if (std.json.parseFromValue(CustomToolCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .custom_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
-pub const Item = std.json.Value;
-pub const ItemField = std.json.Value;
+pub const ItemField = Item;
+pub const InputItem = union(enum) {
+    easy_message: EasyInputMessage,
+    item: Item,
+    item_reference: ItemReferenceParam,
+    raw: std.json.Value,
+
+    pub fn forEasyMessage(value: EasyInputMessage) InputItem {
+        return .{ .easy_message = value };
+    }
+
+    pub fn forItem(value: Item) InputItem {
+        return .{ .item = value };
+    }
+
+    pub fn forReference(value: ItemReferenceParam) InputItem {
+        return .{ .item_reference = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) InputItem {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: InputItem, writer: anytype) !void {
+        switch (self) {
+            .easy_message => |value| try writer.write(value),
+            .item => |value| try writer.write(value),
+            .item_reference => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !InputItem {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !InputItem {
+        switch (source) {
+            .object => |root| {
+                const item_type = root.get("type");
+                if (item_type == null) {
+                    if (std.json.parseFromValue(EasyInputMessage, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .easy_message = parsed.value };
+                    } else |_| {
+                        return .{ .raw = source };
+                    }
+                }
+                if (item_type.? != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, item_type.?.string, "item_reference")) {
+                    if (std.json.parseFromValue(ItemReferenceParam, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .item_reference = parsed.value };
+                    } else |_| {}
+                }
+
+                if (Item.jsonParseFromValue(allocator, source, options)) |value| {
+                    return .{ .item = value };
+                } else |_| {
+                    return .{ .raw = source };
+                }
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const ItemReferenceParam = struct {
     type: ?[]const u8,
     id: []const u8,
 };
-pub const ItemResource = std.json.Value;
+pub const ItemResource = union(enum) {
+    input_message: InputMessageResource,
+    output_message: OutputMessage,
+    file_search_tool_call: FileSearchToolCall,
+    computer_tool_call: ComputerToolCall,
+    computer_tool_call_output: ComputerToolCallOutput,
+    web_search_tool_call: WebSearchToolCall,
+    function_tool_call: FunctionToolCallResource,
+    function_tool_call_output: FunctionToolCallOutputResource,
+    image_gen_tool_call: ImageGenToolCall,
+    code_interpreter_tool_call: CodeInterpreterToolCall,
+    local_shell_tool_call: LocalShellToolCall,
+    local_shell_tool_call_output: LocalShellToolCallOutput,
+    function_shell_call: FunctionShellCall,
+    function_shell_call_output: FunctionShellCallOutput,
+    apply_patch_tool_call: ApplyPatchToolCall,
+    apply_patch_tool_call_output: ApplyPatchToolCallOutput,
+    mcp_list_tools: MCPListTools,
+    mcp_approval_request: MCPApprovalRequest,
+    mcp_approval_response: MCPApprovalResponseResource,
+    mcp_tool_call: MCPToolCall,
+    raw: std.json.Value,
+
+    pub fn forRaw(value: std.json.Value) ItemResource {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ItemResource, writer: anytype) !void {
+        switch (self) {
+            .input_message => |value| try writer.write(value),
+            .output_message => |value| try writer.write(value),
+            .file_search_tool_call => |value| try writer.write(value),
+            .computer_tool_call => |value| try writer.write(value),
+            .computer_tool_call_output => |value| try writer.write(value),
+            .web_search_tool_call => |value| try writer.write(value),
+            .function_tool_call => |value| try writer.write(value),
+            .function_tool_call_output => |value| try writer.write(value),
+            .image_gen_tool_call => |value| try writer.write(value),
+            .code_interpreter_tool_call => |value| try writer.write(value),
+            .local_shell_tool_call => |value| try writer.write(value),
+            .local_shell_tool_call_output => |value| try writer.write(value),
+            .function_shell_call => |value| try writer.write(value),
+            .function_shell_call_output => |value| try writer.write(value),
+            .apply_patch_tool_call => |value| try writer.write(value),
+            .apply_patch_tool_call_output => |value| try writer.write(value),
+            .mcp_list_tools => |value| try writer.write(value),
+            .mcp_approval_request => |value| try writer.write(value),
+            .mcp_approval_response => |value| try writer.write(value),
+            .mcp_tool_call => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ItemResource {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ItemResource {
+        switch (source) {
+            .object => |root| {
+                const item_type = root.get("type") orelse return .{ .raw = source };
+                if (item_type != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, item_type.string, "message")) {
+                    if (root.get("id") != null) {
+                        if (std.json.parseFromValue(InputMessageResource, allocator, source, options)) |parsed| {
+                            defer parsed.deinit();
+                            return .{ .input_message = parsed.value };
+                        } else |_| {}
+
+                        if (std.json.parseFromValue(OutputMessage, allocator, source, options)) |parsed| {
+                            defer parsed.deinit();
+                            return .{ .output_message = parsed.value };
+                        } else |_| {}
+                    } else {
+                        if (std.json.parseFromValue(OutputMessage, allocator, source, options)) |parsed| {
+                            defer parsed.deinit();
+                            return .{ .output_message = parsed.value };
+                        } else |_| {}
+                    }
+                }
+
+                if (std.mem.eql(u8, item_type.string, "file_search_call")) {
+                    if (std.json.parseFromValue(FileSearchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .file_search_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "computer_call")) {
+                    if (std.json.parseFromValue(ComputerToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .computer_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "computer_call_output")) {
+                    if (std.json.parseFromValue(ComputerToolCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .computer_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "web_search_call")) {
+                    if (std.json.parseFromValue(WebSearchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .web_search_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "function_call")) {
+                    if (std.json.parseFromValue(FunctionToolCallResource, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "function_call_output")) {
+                    if (std.json.parseFromValue(FunctionToolCallOutputResource, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "image_generation_call")) {
+                    if (std.json.parseFromValue(ImageGenToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .image_gen_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "code_interpreter_call")) {
+                    if (std.json.parseFromValue(CodeInterpreterToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .code_interpreter_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "local_shell_call")) {
+                    if (std.json.parseFromValue(LocalShellToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .local_shell_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "local_shell_call_output")) {
+                    if (std.json.parseFromValue(LocalShellToolCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .local_shell_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "shell_call")) {
+                    if (std.json.parseFromValue(FunctionShellCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_shell_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "shell_call_output")) {
+                    if (std.json.parseFromValue(FunctionShellCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_shell_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "apply_patch_call")) {
+                    if (std.json.parseFromValue(ApplyPatchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .apply_patch_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "apply_patch_call_output")) {
+                    if (std.json.parseFromValue(ApplyPatchToolCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .apply_patch_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_list_tools")) {
+                    if (std.json.parseFromValue(MCPListTools, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_list_tools = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_approval_request")) {
+                    if (std.json.parseFromValue(MCPApprovalRequest, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_approval_request = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_approval_response")) {
+                    if (std.json.parseFromValue(MCPApprovalResponseResource, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_approval_response = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_call")) {
+                    if (std.json.parseFromValue(MCPToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const KeyPressAction = struct {
     type: []const u8,
     keys: []const []const u8,
@@ -5715,11 +6382,21 @@ pub const OutputAudio = struct {
 };
 pub const OutputContent = union(enum) {
     text: OutputTextContent,
+    refusal: RefusalContent,
+    reasoning: ReasoningTextContent,
     audio: OutputAudio,
     raw: std.json.Value,
 
     pub fn forText(value: OutputTextContent) OutputContent {
         return .{ .text = value };
+    }
+
+    pub fn forRefusal(value: RefusalContent) OutputContent {
+        return .{ .refusal = value };
+    }
+
+    pub fn forReasoning(value: ReasoningTextContent) OutputContent {
+        return .{ .reasoning = value };
     }
 
     pub fn forAudio(value: OutputAudio) OutputContent {
@@ -5733,6 +6410,12 @@ pub const OutputContent = union(enum) {
     pub fn jsonStringify(self: OutputContent, writer: anytype) !void {
         switch (self) {
             .text => |value| {
+                try writer.write(value);
+            },
+            .refusal => |value| {
+                try writer.write(value);
+            },
+            .reasoning => |value| {
                 try writer.write(value);
             },
             .audio => |value| {
@@ -5770,6 +6453,28 @@ pub const OutputContent = union(enum) {
                     return .{ .text = parsed.value };
                 }
 
+                if (std.mem.eql(u8, kind.string, "refusal")) {
+                    const parsed = std.json.parseFromValue(
+                        RefusalContent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .refusal = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "reasoning_text")) {
+                    const parsed = std.json.parseFromValue(
+                        ReasoningTextContent,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .reasoning = parsed.value };
+                }
+
                 if (std.mem.eql(u8, kind.string, "output_audio")) {
                     const parsed = std.json.parseFromValue(
                         OutputAudio,
@@ -5787,7 +6492,274 @@ pub const OutputContent = union(enum) {
         }
     }
 };
-pub const OutputItem = std.json.Value;
+pub const OutputItem = union(enum) {
+    message: OutputMessage,
+    file_search_tool_call: FileSearchToolCall,
+    function_tool_call: FunctionToolCall,
+    web_search_tool_call: WebSearchToolCall,
+    computer_tool_call: ComputerToolCall,
+    reasoning: ReasoningItem,
+    compaction: CompactionBody,
+    image_gen_tool_call: ImageGenToolCall,
+    code_interpreter_tool_call: CodeInterpreterToolCall,
+    local_shell_tool_call: LocalShellToolCall,
+    function_shell_call: FunctionShellCall,
+    function_shell_call_output: FunctionShellCallOutput,
+    apply_patch_tool_call: ApplyPatchToolCall,
+    apply_patch_tool_call_output: ApplyPatchToolCallOutput,
+    mcp_tool_call: MCPToolCall,
+    mcp_list_tools: MCPListTools,
+    mcp_approval_request: MCPApprovalRequest,
+    custom_tool_call: CustomToolCall,
+    raw: std.json.Value,
+
+    pub fn forMessage(value: OutputMessage) OutputItem {
+        return .{ .message = value };
+    }
+
+    pub fn forFileSearchToolCall(value: FileSearchToolCall) OutputItem {
+        return .{ .file_search_tool_call = value };
+    }
+
+    pub fn forFunctionToolCall(value: FunctionToolCall) OutputItem {
+        return .{ .function_tool_call = value };
+    }
+
+    pub fn forWebSearchToolCall(value: WebSearchToolCall) OutputItem {
+        return .{ .web_search_tool_call = value };
+    }
+
+    pub fn forComputerToolCall(value: ComputerToolCall) OutputItem {
+        return .{ .computer_tool_call = value };
+    }
+
+    pub fn forReasoning(value: ReasoningItem) OutputItem {
+        return .{ .reasoning = value };
+    }
+
+    pub fn forCompaction(value: CompactionBody) OutputItem {
+        return .{ .compaction = value };
+    }
+
+    pub fn forImageGenToolCall(value: ImageGenToolCall) OutputItem {
+        return .{ .image_gen_tool_call = value };
+    }
+
+    pub fn forCodeInterpreterToolCall(value: CodeInterpreterToolCall) OutputItem {
+        return .{ .code_interpreter_tool_call = value };
+    }
+
+    pub fn forLocalShellToolCall(value: LocalShellToolCall) OutputItem {
+        return .{ .local_shell_tool_call = value };
+    }
+
+    pub fn forFunctionShellCall(value: FunctionShellCall) OutputItem {
+        return .{ .function_shell_call = value };
+    }
+
+    pub fn forFunctionShellCallOutput(value: FunctionShellCallOutput) OutputItem {
+        return .{ .function_shell_call_output = value };
+    }
+
+    pub fn forApplyPatchToolCall(value: ApplyPatchToolCall) OutputItem {
+        return .{ .apply_patch_tool_call = value };
+    }
+
+    pub fn forApplyPatchToolCallOutput(value: ApplyPatchToolCallOutput) OutputItem {
+        return .{ .apply_patch_tool_call_output = value };
+    }
+
+    pub fn forMCPToolCall(value: MCPToolCall) OutputItem {
+        return .{ .mcp_tool_call = value };
+    }
+
+    pub fn forMCPListTools(value: MCPListTools) OutputItem {
+        return .{ .mcp_list_tools = value };
+    }
+
+    pub fn forMCPApprovalRequest(value: MCPApprovalRequest) OutputItem {
+        return .{ .mcp_approval_request = value };
+    }
+
+    pub fn forCustomToolCall(value: CustomToolCall) OutputItem {
+        return .{ .custom_tool_call = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) OutputItem {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: OutputItem, writer: anytype) !void {
+        switch (self) {
+            .message => |value| try writer.write(value),
+            .file_search_tool_call => |value| try writer.write(value),
+            .function_tool_call => |value| try writer.write(value),
+            .web_search_tool_call => |value| try writer.write(value),
+            .computer_tool_call => |value| try writer.write(value),
+            .reasoning => |value| try writer.write(value),
+            .compaction => |value| try writer.write(value),
+            .image_gen_tool_call => |value| try writer.write(value),
+            .code_interpreter_tool_call => |value| try writer.write(value),
+            .local_shell_tool_call => |value| try writer.write(value),
+            .function_shell_call => |value| try writer.write(value),
+            .function_shell_call_output => |value| try writer.write(value),
+            .apply_patch_tool_call => |value| try writer.write(value),
+            .apply_patch_tool_call_output => |value| try writer.write(value),
+            .mcp_tool_call => |value| try writer.write(value),
+            .mcp_list_tools => |value| try writer.write(value),
+            .mcp_approval_request => |value| try writer.write(value),
+            .custom_tool_call => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !OutputItem {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !OutputItem {
+        switch (source) {
+            .object => |root| {
+                const item_type = root.get("type") orelse return .{ .raw = source };
+                if (item_type != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, item_type.string, "message")) {
+                    if (std.json.parseFromValue(OutputMessage, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .message = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "file_search_call")) {
+                    if (std.json.parseFromValue(FileSearchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .file_search_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "function_call")) {
+                    if (std.json.parseFromValue(FunctionToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "web_search_call")) {
+                    if (std.json.parseFromValue(WebSearchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .web_search_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "computer_call")) {
+                    if (std.json.parseFromValue(ComputerToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .computer_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "reasoning")) {
+                    if (std.json.parseFromValue(ReasoningItem, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .reasoning = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "compaction")) {
+                    if (std.json.parseFromValue(CompactionBody, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .compaction = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "image_generation_call")) {
+                    if (std.json.parseFromValue(ImageGenToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .image_gen_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "code_interpreter_call")) {
+                    if (std.json.parseFromValue(CodeInterpreterToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .code_interpreter_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "local_shell_call")) {
+                    if (std.json.parseFromValue(LocalShellToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .local_shell_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "shell_call")) {
+                    if (std.json.parseFromValue(FunctionShellCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_shell_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "shell_call_output")) {
+                    if (std.json.parseFromValue(FunctionShellCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .function_shell_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "apply_patch_call")) {
+                    if (std.json.parseFromValue(ApplyPatchToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .apply_patch_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "apply_patch_call_output")) {
+                    if (std.json.parseFromValue(ApplyPatchToolCallOutput, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .apply_patch_tool_call_output = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_call")) {
+                    if (std.json.parseFromValue(MCPToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_list_tools")) {
+                    if (std.json.parseFromValue(MCPListTools, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_list_tools = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "mcp_approval_request")) {
+                    if (std.json.parseFromValue(MCPApprovalRequest, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .mcp_approval_request = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.mem.eql(u8, item_type.string, "custom_tool_call")) {
+                    if (std.json.parseFromValue(CustomToolCall, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .custom_tool_call = parsed.value };
+                    } else |_| {}
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const OutputMessage = struct {
     id: []const u8,
     type: []const u8,
@@ -5962,7 +6934,72 @@ pub const ProjectUserListResponse = struct {
 pub const ProjectUserUpdateRequest = struct {
     role: []const u8,
 };
-pub const Prompt = std.json.Value;
+pub const PromptTemplate = struct {
+    id: []const u8,
+    version: ?[]const u8 = null,
+    variables: ?ResponsePromptVariables = null,
+};
+
+pub const Prompt = union(enum) {
+    template: PromptTemplate,
+    raw: std.json.Value,
+
+    pub fn forTemplate(value: PromptTemplate) Prompt {
+        return .{ .template = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) Prompt {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: Prompt, writer: anytype) !void {
+        switch (self) {
+            .template => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Prompt {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !Prompt {
+        _ = allocator;
+        _ = options;
+
+        switch (source) {
+            .object => |root| {
+                const id = root.get("id") orelse return .{ .raw = source };
+                if (id != .string) return .{ .raw = source };
+
+                return .{
+                    .template = .{
+                        .id = id.string,
+                        .version = if (root.get("version")) |value| switch (value) {
+                            .null => null,
+                            .string => value.string,
+                            else => return .{ .raw = source },
+                        } else null,
+                        .variables = if (root.get("variables")) |value| switch (value) {
+                            .null => null,
+                            else => value,
+                        } else null,
+                    },
+                };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const PublicAssignOrganizationGroupRoleBody = struct {
     role_id: []const u8,
 };
@@ -5991,7 +7028,103 @@ pub const RankingOptions = struct {
 pub const RateLimitsParam = struct {
     max_requests_per_1_minute: ?i64,
 };
-pub const RealtimeAudioFormats = std.json.Value;
+pub const RealtimeAudioFormatPcm = struct {
+    type: []const u8,
+    rate: ?i64 = null,
+};
+
+pub const RealtimeAudioFormatPcmu = struct {
+    type: []const u8,
+};
+
+pub const RealtimeAudioFormatPcma = struct {
+    type: []const u8,
+};
+
+pub const RealtimeAudioFormats = union(enum) {
+    pcm: RealtimeAudioFormatPcm,
+    pcmu: RealtimeAudioFormatPcmu,
+    pcma: RealtimeAudioFormatPcma,
+    raw: std.json.Value,
+
+    pub fn forPcm(value: RealtimeAudioFormatPcm) RealtimeAudioFormats {
+        return .{ .pcm = value };
+    }
+
+    pub fn forPcmu(value: RealtimeAudioFormatPcmu) RealtimeAudioFormats {
+        return .{ .pcmu = value };
+    }
+
+    pub fn forPcma(value: RealtimeAudioFormatPcma) RealtimeAudioFormats {
+        return .{ .pcma = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) RealtimeAudioFormats {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: RealtimeAudioFormats, writer: anytype) !void {
+        switch (self) {
+            .pcm => |value| {
+                try writer.write(value);
+            },
+            .pcmu => |value| {
+                try writer.write(value);
+            },
+            .pcma => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeAudioFormats {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !RealtimeAudioFormats {
+        _ = allocator;
+        _ = options;
+
+        switch (source) {
+            .object => |root| {
+                const format_type = root.get("type") orelse return .{ .raw = source };
+                if (format_type != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, format_type.string, "audio/pcm")) {
+                    return .{
+                        .pcm = .{
+                            .type = format_type.string,
+                            .rate = if (root.get("rate")) |rate| switch (rate) {
+                                .null => null,
+                                .integer => rate.integer,
+                                else => return .{ .raw = source },
+                            } else null,
+                        },
+                    };
+                }
+
+                if (std.mem.eql(u8, format_type.string, "audio/pcmu")) {
+                    return .{ .pcmu = .{ .type = format_type.string } };
+                }
+
+                if (std.mem.eql(u8, format_type.string, "audio/pcma")) {
+                    return .{ .pcma = .{ .type = format_type.string } };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const RealtimeBetaClientEventConversationItemCreate = struct {
     event_id: ?[]const u8,
     type: []const u8,
@@ -7459,7 +8592,134 @@ pub const RefusalContent = struct {
     type: []const u8,
     refusal: []const u8,
 };
-pub const Response = std.json.Value;
+pub const ResponseOutput = union(enum) {
+    item: OutputItem,
+    items: []const OutputItem,
+    raw: std.json.Value,
+
+    pub fn forItem(value: OutputItem) ResponseOutput {
+        return .{ .item = value };
+    }
+
+    pub fn forItems(value: []const OutputItem) ResponseOutput {
+        return .{ .items = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) ResponseOutput {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ResponseOutput, writer: anytype) !void {
+        switch (self) {
+            .item => |value| {
+                try writer.write(value);
+            },
+            .items => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ResponseOutput {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        defer parsed.deinit();
+        return try jsonParseFromValue(allocator, parsed.value, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ResponseOutput {
+        switch (source) {
+            .object => {
+                if (std.json.parseFromValue(
+                    OutputItem,
+                    allocator,
+                    source,
+                    options,
+                )) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .item = parsed.value };
+                } else |_| {}
+                return .{ .raw = source };
+            },
+            .array => {
+                const parsed = std.json.parseFromValue(
+                    []const OutputItem,
+                    allocator,
+                    source,
+                    options,
+                ) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .items = parsed.value };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
+pub const ResponseObject = struct {
+    id: ?[]const u8 = null,
+    object: ?[]const u8 = null,
+    created_at: ?i64 = null,
+    status: ?[]const u8 = null,
+    model: ?[]const u8 = null,
+    @"error": ?ResponseError = null,
+    output: ?ResponseOutput = null,
+    instructions: ?[]const u8 = null,
+    stream: ?bool = null,
+    usage: ?ResponseUsage = null,
+    metadata: ?Metadata = null,
+    finish_reason: ?[]const u8 = null,
+};
+
+pub const Response = union(enum) {
+    object: ResponseObject,
+    raw: std.json.Value,
+
+    pub fn forObject(value: ResponseObject) Response {
+        return .{ .object = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) Response {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: Response, writer: anytype) !void {
+        switch (self) {
+            .object => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Response {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !Response {
+        const parsed = std.json.parseFromValue(
+            ResponseObject,
+            allocator,
+            source,
+            options,
+        ) catch return .{ .raw = source };
+        defer parsed.deinit();
+
+        return .{ .object = parsed.value };
+    }
+};
 pub const ResponseAudioDeltaEvent = struct {
     type: []const u8,
     sequence_number: i64,
@@ -7550,8 +8810,81 @@ pub const ResponseCustomToolCallInputDoneEvent = struct {
     item_id: []const u8,
     input: []const u8,
 };
-pub const ResponseError = std.json.Value;
 pub const ResponseErrorCode = []const u8;
+pub const ResponseError = union(enum) {
+    object: struct {
+        type: ?[]const u8 = null,
+        code: ?ResponseErrorCode = null,
+        message: []const u8,
+        param: ?[]const u8 = null,
+    },
+    raw: std.json.Value,
+
+    pub fn forObject(
+        error_type: ?[]const u8,
+        code: ?ResponseErrorCode,
+        message: []const u8,
+        param: ?[]const u8,
+    ) ResponseError {
+        return .{ .object = .{
+            .type = error_type,
+            .code = code,
+            .message = message,
+            .param = param,
+        } };
+    }
+
+    pub fn forRaw(value: std.json.Value) ResponseError {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ResponseError, writer: anytype) !void {
+        switch (self) {
+            .object => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ResponseError {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ResponseError {
+        const parsed = std.json.parseFromValue(
+            struct {
+                type: ?[]const u8 = null,
+                code: ?ResponseErrorCode = null,
+                message: ?[]const u8 = null,
+                param: ?[]const u8 = null,
+            },
+            allocator,
+            source,
+            options,
+        ) catch return .{ .raw = source };
+        defer parsed.deinit();
+
+        if (parsed.value.message) |message| {
+            return .{
+                .object = .{
+                    .type = parsed.value.type,
+                    .code = parsed.value.code,
+                    .message = message,
+                    .param = parsed.value.param,
+                },
+            };
+        }
+        return .{ .raw = source };
+    }
+};
 pub const ResponseErrorEvent = struct {
     type: []const u8,
     code: ?[]const u8,
