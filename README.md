@@ -27,7 +27,31 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
   - `OPENAI_BASE_URL`, `OPENAI_MODEL`
   - `OPENAI_ORGANIZATION`, `OPENAI_PROJECT`
   - `OPENAI_TIMEOUT_MS`, `OPENAI_MAX_RETRIES`, `OPENAI_RETRY_BASE_DELAY_MS`
+  - `DEEPSEEK_BASE_URL`, `DEEPSEEK_MODEL`, `DEEPSEEK_TIMEOUT_MS`, `DEEPSEEK_MAX_RETRIES`, `DEEPSEEK_RETRY_BASE_DELAY_MS`
   `api_key` is required for live calls; `base_url` defaults to DeepSeek if omitted.
+
+### Runtime/config precedence
+
+- `config.load()` resolves each field in this order:
+  - Environment variable override
+  - TOML file field
+  - Built-in default (for `base_url`, `model`, retry settings, and timeout)
+- For credentials and routing fields, supported env keys are:
+  - `OPENAI_API_KEY`, `DEEPSEEK_API_KEY`
+  - `OPENAI_BASE_URL`, `DEEPSEEK_BASE_URL`
+  - `OPENAI_MODEL`, `DEEPSEEK_MODEL`
+  - `OPENAI_ORGANIZATION`, `OPENAI_PROJECT`
+  - `OPENAI_TIMEOUT_MS`, `OPENAI_MAX_RETRIES`, `OPENAI_RETRY_BASE_DELAY_MS`
+  - `DEEPSEEK_TIMEOUT_MS`, `DEEPSEEK_MAX_RETRIES`, `DEEPSEEK_RETRY_BASE_DELAY_MS`
+- `OPENAI_*` keys are checked before `DEEPSEEK_*` keys for each field.
+
+### Client init / with_options behavior
+
+- `initClient` / `init` creates a new client with fully isolated transport state; option values are copied into owned transport buffers.
+- `withOptions` and `with_options` return a new cloned client, inheriting unspecified values from the source client and replacing only explicitly provided fields.
+- Typical pattern:
+  - `base = init(...)` -> `runtime = try base.with_options(..., .{ .timeout_ms = 1000 })`
+  - The returned client is useful for scoped configuration and does not mutate `base`.
 
 ## Build and run
 ```sh
@@ -38,12 +62,24 @@ bash scripts/check-op-coverage.sh     # verify operation coverage against genera
 ```
 
 ## Examples
-- `examples/models_list.zig`
-- `examples/chat_completion.zig`
-- `examples/chat_completion_stream.zig`
-- `examples/chat_list.zig`
-- `examples/files_list.zig`
-- `examples/audio_speech.zig`
+- `examples/models_list.zig` — list available models
+- `examples/chat_completion.zig` — single chat completion call
+- `examples/chat_completion_stream.zig` — chat completion stream
+- `examples/chat_list.zig` — list chat completion objects
+- `examples/chat_multiturn.zig` — multi-turn chat continuation
+- `examples/chat_json_extract.zig` — function-like structured chat output demo
+- `examples/files_list.zig` — list files
+- `examples/assistants_list.zig` — assistants list with fallback handling
+- `examples/embeddings_and_moderations.zig` — embeddings + moderations call path
+- `examples/completions_stream.zig` — completions stream wrapper
+- `examples/responses_basic.zig` — responses API baseline sample
+- `examples/batch_basic.zig` — batch list/detail sample
+- `examples/files_list_paged.zig` — manual pagination helper
+- `examples/files_list_auto_paged.zig` — auto pagination helper
+- `examples/audio_speech.zig` — speech synthesis
+- `examples/vector_stores_list.zig` — list vector stores
+- `examples/images_generation.zig` — images generation baseline sample
+- `examples/error_handling_and_options.zig` — per-request options and clone behavior
 
 ## Generator
 ```sh

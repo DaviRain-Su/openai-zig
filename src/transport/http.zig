@@ -789,6 +789,16 @@ fn sleepForRetry(
     retry_after_ms: ?u64,
     request_opts: Transport.ActiveRequestOptions,
 ) void {
+    const capped_delay_ms = nextRetryDelayMs(attempt, retry_after_ms, request_opts);
+    if (capped_delay_ms == 0) return;
+    std.Thread.sleep(capped_delay_ms * std.time.ns_per_ms);
+}
+
+fn nextRetryDelayMs(
+    attempt: u8,
+    retry_after_ms: ?u64,
+    request_opts: Transport.ActiveRequestOptions,
+) u64 {
     const attempt_u64: u64 = attempt;
     var delay_ms = request_opts.retry_base_delay_ms;
     var i: u64 = 0;
@@ -804,8 +814,8 @@ fn sleepForRetry(
         @min(delay_ms, timeout_ms)
     else
         delay_ms;
-    if (capped_delay_ms == 0) return;
-    std.Thread.sleep(capped_delay_ms * std.time.ns_per_ms);
+
+    return capped_delay_ms;
 }
 
 fn uriPort(raw_proxy_url: []const u8, protocol: std.http.Client.Protocol) u16 {
@@ -840,4 +850,78 @@ fn uriPort(raw_proxy_url: []const u8, protocol: std.http.Client.Protocol) u16 {
     }
 
     return default_port;
+}
+
+test "uriPort derives explicit and default proxy ports" {
+    try std.testing.expectEqual(@as(u16, 80), uriPort("http://proxy.local", .plain));
+    try std.testing.expectEqual(@as(u16, 443), uriPort("https://proxy.local", .tls));
+    try std.testing.expectEqual(@as(u16, 8080), uriPort("http://proxy.local:8080", .plain));
+    try std.testing.expectEqual(@as(u16, 9443), uriPort("https://proxy.local:9443", .tls));
+    try std.testing.expectEqual(@as(u16, 8443), uriPort("http://user:pass@[::1]:8443", .plain));
+}
+
+test "nextRetryDelayMs uses exponential backoff, retry-after, and timeout cap" {
+    var opts = Transport.ActiveRequestOptions{
+        .base_url = "https://api.local",
+        .api_key = null,
+        .organization = null,
+        .project = null,
+        .timeout_ms = null,
+        .max_retries = 3,
+        .retry_base_delay_ms = 500,
+        .extra_headers = null,
+    };
+
+    try std.testing.expectEqual(@as(u64, 500), nextRetryDelayMs(0, null, opts));
+    try std.testing.expectEqual(@as(u64, 1000), nextRetryDelayMs(1, null, opts));
+    try std.testing.expectEqual(@as(u64, 2000), nextRetryDelayMs(2, null, opts));
+
+    opts.timeout_ms = 700;
+    try std.testing.expectEqual(@as(u64, 700), nextRetryDelayMs(1, null, opts));
+
+    opts.timeout_ms = null;
+    try std.testing.expectEqual(@as(u64, 2500), nextRetryDelayMs(0, 2500, opts));
+    opts.timeout_ms = 700;
+    try std.testing.expectEqual(@as(u64, 700), nextRetryDelayMs(0, 200, opts));
+}
+
+test "resolveRequestOptions uses transport defaults and per-request override" {
+    var transport = try Transport.init(std.testing.allocator, .{
+        .base_url = "https://api.local",
+        .api_key = "k-default",
+        .organization = "org-default",
+        .project = "proj-default",
+        .timeout_ms = 5000,
+        .max_retries = 4,
+        .retry_base_delay_ms = 250,
+    });
+    defer transport.deinit();
+
+    const default_opts = transport.resolveRequestOptions(null);
+    try std.testing.expectEqualStrings("https://api.local", default_opts.base_url);
+    try std.testing.expectEqual(@as(u64, 5000), default_opts.timeout_ms.?);
+    try std.testing.expectEqual(@as(u8, 4), default_opts.max_retries);
+    try std.testing.expectEqual(@as(u64, 250), default_opts.retry_base_delay_ms);
+    try std.testing.expectEqualStrings("k-default", default_opts.api_key.?);
+    try std.testing.expectEqualStrings("org-default", default_opts.organization.?);
+    try std.testing.expectEqualStrings("proj-default", default_opts.project.?);
+    try std.testing.expectEqual(@as(?[]const std.http.Header, null), default_opts.extra_headers);
+
+    const override_opts = transport.resolveRequestOptions(.{
+        .base_url = "https://api.overridden",
+        .api_key = "k-override",
+        .organization = null,
+        .project = null,
+        .timeout_ms = 1200,
+        .max_retries = 1,
+        .retry_base_delay_ms = 80,
+        .extra_headers = null,
+    });
+    try std.testing.expectEqualStrings("https://api.overridden", override_opts.base_url);
+    try std.testing.expectEqual(@as(u64, 1200), override_opts.timeout_ms.?);
+    try std.testing.expectEqual(@as(u8, 1), override_opts.max_retries);
+    try std.testing.expectEqual(@as(u64, 80), override_opts.retry_base_delay_ms);
+    try std.testing.expectEqualStrings("k-override", override_opts.api_key.?);
+    try std.testing.expectEqualStrings("org-default", override_opts.organization.?);
+    try std.testing.expectEqualStrings("proj-default", override_opts.project.?);
 }

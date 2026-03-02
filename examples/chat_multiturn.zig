@@ -45,11 +45,31 @@ pub fn main() !void {
     };
     defer resp.deinit();
 
-    // Response is dynamic JSON (schema varies by model); just print the full payload.
-    var out: std.io.Writer.Allocating = .init(gpa);
-    defer out.deinit();
-    var stream: std.json.Stringify = .{ .writer = &out.writer, .options = .{} };
-    try stream.write(resp.value);
+    if (resp.value.choices.len == 0) {
+        std.debug.print("Response had no choices\n", .{});
+        return;
+    }
+    const first_choice = resp.value.choices[0];
+    const message = first_choice.message orelse {
+        std.debug.print("Response first choice has no message\n", .{});
+        return;
+    };
 
-    std.debug.print("Response JSON:\n{s}\n", .{out.written()});
+    std.debug.print("Choice index: {d}\n", .{first_choice.index});
+
+    if (message.content) |content| {
+        switch (content) {
+            .string => |text| std.debug.print("Content:\n{s}\n", .{text}),
+            else => std.debug.print("Content: <non-text payload>\n", .{}),
+        }
+    } else {
+        std.debug.print("Content: <null>\n", .{});
+    }
+
+    if (message.refusal) |refusal| {
+        switch (refusal) {
+            .string => |value| std.debug.print("Refusal:\n{s}\n", .{value}),
+            else => std.debug.print("Refusal: <non-text payload>\n", .{}),
+        }
+    }
 }

@@ -176,20 +176,62 @@ pub fn parseApiError(body: []const u8) ?ParsedApiError {
     ) catch {
         return null;
     };
-    defer parsed.deinit();
+    const detail = parsed.value;
+    const clone = std.heap.page_allocator;
 
-    const root = parsed.value;
-    if (root.@"error") |api_err| {
+    const cloneSlice = struct {
+        fn run(src: []const u8) ?[]const u8 {
+            const out = clone.alloc(u8, src.len) catch null;
+            if (out) |buf| {
+                std.mem.copyForwards(u8, buf, src);
+            }
+            return out;
+        }
+    }.run;
+
+    if (detail.@"error") |api_err| {
+        const message = if (api_err.message) |value| cloneSlice(value) else null;
+        const typ = if (api_err.type) |value| cloneSlice(value) else null;
+        const param = if (api_err.param) |value| cloneSlice(value) else null;
+        const code = if (api_err.code) |value| cloneSlice(value) else null;
+        parsed.deinit();
         return ParsedApiError{
-            .message = api_err.message,
-            .type = api_err.type,
-            .param = api_err.param,
-            .code = api_err.code,
+            .message = message,
+            .type = typ,
+            .param = param,
+            .code = code,
             .detail = null,
         };
     }
-    if (root.detail) |detail| {
-        return ParsedApiError{ .detail = detail };
+    if (detail.detail) |msg| {
+        const detail_text = cloneSlice(msg);
+        parsed.deinit();
+        return ParsedApiError{ .detail = detail_text };
     }
+    parsed.deinit();
     return null;
+}
+
+test "unexpectedStatus maps http status to specific errors" {
+    const cases = [_]struct {
+        status: u16,
+        expect: Error,
+    }{
+        .{ .status = 400, .expect = Error.BadRequestError },
+        .{ .status = 401, .expect = Error.AuthenticationError },
+        .{ .status = 403, .expect = Error.PermissionDeniedError },
+        .{ .status = 404, .expect = Error.NotFoundError },
+        .{ .status = 409, .expect = Error.ConflictError },
+        .{ .status = 422, .expect = Error.UnprocessableEntityError },
+        .{ .status = 429, .expect = Error.RateLimitError },
+        .{ .status = 408, .expect = Error.TimeoutError },
+        .{ .status = 500, .expect = Error.InternalServerError },
+        .{ .status = 502, .expect = Error.InternalServerError },
+        .{ .status = 999, .expect = Error.HttpError },
+    };
+
+    inline for (cases) |case| {
+        const got = try unexpectedStatus(.{ .status = case.status, .body = "{}" });
+        try std.testing.expectEqual(case.expect, got);
+    }
 }

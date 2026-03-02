@@ -130,7 +130,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListInvitesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.InviteListResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -160,7 +160,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: InviteRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Invite) {
         return self.sendJsonTypedWithOptions(
             allocator,
@@ -185,7 +185,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         invite_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Invite) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/invites/{s}", .{invite_id}) catch {
@@ -207,7 +207,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         invite_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.InviteDeleteResponse) {
         var path_buf: [128]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/invites/{s}", .{invite_id}) catch {
@@ -220,7 +220,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListInvitesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.InviteListResponse) {
         return self.list_invites_with_options(allocator, params, request_opts);
     }
@@ -229,7 +229,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: InviteRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Invite) {
         return self.create_invite_with_options(allocator, req, request_opts);
     }
@@ -238,7 +238,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         invite_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Invite) {
         return self.retrieve_invite_with_options(allocator, invite_id, request_opts);
     }
@@ -247,7 +247,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         invite_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.InviteDeleteResponse) {
         return self.delete_invite_with_options(allocator, invite_id, request_opts);
     }

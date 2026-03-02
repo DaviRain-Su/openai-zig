@@ -5,28 +5,12 @@ const config = @import("config");
 
 const ExampleError = error{BadResponse};
 
-fn firstContentString(val: std.json.Value) ExampleError![]const u8 {
-    const root_obj = switch (val) {
-        .object => |o| o,
-        else => return ExampleError.BadResponse,
-    };
-    const choices_val = root_obj.get("choices") orelse return ExampleError.BadResponse;
-    const choices_arr = switch (choices_val) {
-        .array => |a| a,
-        else => return ExampleError.BadResponse,
-    };
-    if (choices_arr.items.len == 0) return ExampleError.BadResponse;
-    const choice_obj = switch (choices_arr.items[0]) {
-        .object => |o| o,
-        else => return ExampleError.BadResponse,
-    };
-    const msg_val = choice_obj.get("message") orelse return ExampleError.BadResponse;
-    const msg_obj = switch (msg_val) {
-        .object => |o| o,
-        else => return ExampleError.BadResponse,
-    };
-    const content_val = msg_obj.get("content") orelse return ExampleError.BadResponse;
-    return switch (content_val) {
+fn firstContentString(val: sdk.generated.CreateChatCompletionResponse) ExampleError![]const u8 {
+    const choices = val.choices;
+    if (choices.len == 0) return ExampleError.BadResponse;
+    const msg = choices[0].message orelse return ExampleError.BadResponse;
+    const content = msg.content orelse return ExampleError.BadResponse;
+    return switch (content) {
         .string => |s| s,
         else => ExampleError.BadResponse,
     };

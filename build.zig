@@ -172,9 +172,19 @@ pub fn build(b: *std.Build) void {
             .{ .name = "chat_completion_stream", .path = "examples/chat_completion_stream.zig" },
             .{ .name = "chat_multiturn", .path = "examples/chat_multiturn.zig" },
             .{ .name = "chat_json_extract", .path = "examples/chat_json_extract.zig" },
+            .{ .name = "assistants_list", .path = "examples/assistants_list.zig" },
             .{ .name = "files_list", .path = "examples/files_list.zig" },
+            .{ .name = "images_generation", .path = "examples/images_generation.zig" },
+            .{ .name = "embeddings_and_moderations", .path = "examples/embeddings_and_moderations.zig" },
             .{ .name = "chat_list", .path = "examples/chat_list.zig" },
+            .{ .name = "completions_stream", .path = "examples/completions_stream.zig" },
             .{ .name = "audio_speech", .path = "examples/audio_speech.zig" },
+            .{ .name = "responses_basic", .path = "examples/responses_basic.zig" },
+            .{ .name = "batch_basic", .path = "examples/batch_basic.zig" },
+            .{ .name = "files_list_paged", .path = "examples/files_list_paged.zig" },
+            .{ .name = "files_list_auto_paged", .path = "examples/files_list_auto_paged.zig" },
+            .{ .name = "vector_stores_list", .path = "examples/vector_stores_list.zig" },
+            .{ .name = "error_handling_and_options", .path = "examples/error_handling_and_options.zig" },
         };
         const run_examples = b.step("run-examples", "Run all examples");
         inline for (examples) |ex| {

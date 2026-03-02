@@ -1,7 +1,16 @@
 const std = @import("std");
 const sdk = @import("openai_zig");
-const errors = sdk.errors;
 const config = @import("config");
+const gen = sdk.generated;
+
+fn firstContentString(val: gen.CreateChatCompletionResponse) ?[]const u8 {
+    if (val.choices.len == 0) return null;
+    const msg = val.choices[0].message orelse return null;
+    return switch (msg.content orelse return null) {
+        .string => |text| text,
+        else => null,
+    };
+}
 
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
@@ -31,22 +40,15 @@ pub fn main() !void {
         .{ .role = "user", .content = "用中文说你是谁" },
     };
 
-    var chat = client.chat().create_chat_completion(gpa, .{
+    var chat = try client.chat().create_chat_completion(gpa, .{
         .model = conf.model,
         .messages = &messages,
-    }) catch |err| {
-        if (err == errors.Error.HttpError) {
-            std.debug.print("HTTP error (likely invalid key)\n", .{});
-            return;
-        }
-        return err;
-    };
+    });
     defer chat.deinit();
 
-    var out: std.io.Writer.Allocating = .init(gpa);
-    defer out.deinit();
-    var stream: std.json.Stringify = .{ .writer = &out.writer, .options = .{} };
-    try stream.write(chat.value);
-
-    std.debug.print("Chat completion:\n{s}\n", .{out.written()});
+    const content = firstContentString(chat.value) orelse {
+        std.debug.print("Unexpected response shape.\n", .{});
+        return;
+    };
+    std.debug.print("Chat completion:\n{s}\n", .{content});
 }

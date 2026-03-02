@@ -31,7 +31,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: gen.CreateEmbeddingRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.CreateEmbeddingResponse) {
         return common.sendJsonTypedWithOptions(
             self.transport,
@@ -57,7 +57,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: gen.CreateEmbeddingRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.CreateEmbeddingResponse) {
         return self.create_embedding_with_options(allocator, req, request_opts);
     }

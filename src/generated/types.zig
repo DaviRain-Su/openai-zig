@@ -556,11 +556,11 @@ pub const ChatCompletionFunctions = struct {
     parameters: ?FunctionParameters,
 };
 pub const ChatCompletionList = struct {
-    object: ?[]const u8,
-    data: ?[]const CreateChatCompletionResponse,
-    first_id: ?[]const u8,
-    last_id: ?[]const u8,
-    has_more: ?bool,
+    object: []const u8,
+    data: []const CreateChatCompletionResponse,
+    first_id: []const u8,
+    last_id: []const u8,
+    has_more: bool,
 };
 pub const ChatCompletionMessageCustomToolCall = struct {
     id: []const u8,
@@ -571,11 +571,11 @@ pub const ChatCompletionMessageCustomToolCall = struct {
 },
 };
 pub const ChatCompletionMessageList = struct {
-    object: ?[]const u8,
-    data: ?[]const std.json.Value,
-    first_id: ?[]const u8,
-    last_id: ?[]const u8,
-    has_more: ?bool,
+    object: []const u8,
+    data: []const ChatCompletionResponseMessage,
+    first_id: []const u8,
+    last_id: []const u8,
+    has_more: bool,
 };
 pub const ChatCompletionMessageToolCall = struct {
     id: []const u8,
@@ -596,6 +596,16 @@ pub const ChatCompletionMessageToolCallChunk = struct {
 };
 pub const ChatCompletionMessageToolCalls = []const std.json.Value;
 pub const ChatCompletionModalities = std.json.Value;
+pub const ChatCompletionChoice = struct {
+    index: i64 = 0,
+    message: ?ChatCompletionResponseMessage = null,
+    logprobs: ?ChatCompletionChoiceLogprobs = null,
+    finish_reason: ?[]const u8 = null,
+};
+pub const ChatCompletionChoiceLogprobs = struct {
+    content: ?[]const ChatCompletionTokenLogprob = null,
+    refusal: ?[]const ChatCompletionTokenLogprob = null,
+};
 pub const ChatCompletionNamedToolChoice = struct {
     type: []const u8,
     function: struct {
@@ -678,9 +688,9 @@ pub const ChatCompletionRequestUserMessage = struct {
 };
 pub const ChatCompletionRequestUserMessageContentPart = std.json.Value;
 pub const ChatCompletionResponseMessage = struct {
-    content: ?std.json.Value,
-    refusal: ?std.json.Value,
-    tool_calls: ?ChatCompletionMessageToolCalls,
+    content: ?std.json.Value = null,
+    refusal: ?std.json.Value = null,
+    tool_calls: ?ChatCompletionMessageToolCalls = null,
     annotations: ?[]const struct {
     type: []const u8,
     url_citation: struct {
@@ -689,13 +699,13 @@ pub const ChatCompletionResponseMessage = struct {
     url: []const u8,
     title: []const u8,
 },
-},
-    role: ?[]const u8,
+    } = null,
+    role: ?[]const u8 = null,
     function_call: ?struct {
     arguments: []const u8,
     name: []const u8,
-},
-    audio: ?std.json.Value,
+    } = null,
+    audio: ?std.json.Value = null,
 };
 pub const ChatCompletionRole = []const u8;
 pub const ChatCompletionStreamOptions = std.json.Value;
@@ -873,15 +883,15 @@ pub const CompletionUsage = struct {
     prompt_tokens: i64,
     total_tokens: i64,
     completion_tokens_details: ?struct {
-    accepted_prediction_tokens: ?i64,
-    audio_tokens: ?i64,
-    reasoning_tokens: ?i64,
-    rejected_prediction_tokens: ?i64,
-},
+    accepted_prediction_tokens: ?i64 = null,
+    audio_tokens: ?i64 = null,
+    reasoning_tokens: ?i64 = null,
+    rejected_prediction_tokens: ?i64 = null,
+} = null,
     prompt_tokens_details: ?struct {
-    audio_tokens: ?i64,
-    cached_tokens: ?i64,
-},
+    audio_tokens: ?i64 = null,
+    cached_tokens: ?i64 = null,
+} = null,
 };
 pub const CompoundFilter = struct {
     type: []const u8,
@@ -1026,7 +1036,16 @@ pub const CreateAssistantRequest = struct {
     response_format: ?std.json.Value,
 };
 pub const CreateChatCompletionRequest = std.json.Value;
-pub const CreateChatCompletionResponse = std.json.Value;
+pub const CreateChatCompletionResponse = struct {
+    id: []const u8 = "",
+    choices: []const ChatCompletionChoice = &.{},
+    created: i64 = 0,
+    model: []const u8 = "",
+    service_tier: ?ServiceTier = null,
+    system_fingerprint: ?[]const u8 = null,
+    object: []const u8 = "",
+    usage: ?CompletionUsage = null,
+};
 pub const CreateChatCompletionStreamResponse = struct {
     id: []const u8,
     choices: []const struct {
@@ -2502,7 +2521,13 @@ pub const ListFineTuningJobEventsResponse = struct {
     object: []const u8,
     has_more: bool,
 };
-pub const ListMessagesResponse = std.json.Value;
+pub const ListMessagesResponse = struct {
+    object: []const u8,
+    data: []const MessageObject,
+    first_id: []const u8,
+    last_id: []const u8,
+    has_more: bool,
+};
 pub const ListModelsResponse = struct {
     object: []const u8,
     data: []const Model,
@@ -2512,7 +2537,13 @@ pub const ListPaginatedFineTuningJobsResponse = struct {
     has_more: bool,
     object: []const u8,
 };
-pub const ListRunStepsResponse = std.json.Value;
+pub const ListRunStepsResponse = struct {
+    object: []const u8,
+    data: []const RunStepObject,
+    first_id: []const u8,
+    last_id: []const u8,
+    has_more: bool,
+};
 pub const ListRunsResponse = struct {
     object: []const u8,
     data: []const RunObject,
@@ -2520,8 +2551,20 @@ pub const ListRunsResponse = struct {
     last_id: []const u8,
     has_more: bool,
 };
-pub const ListVectorStoreFilesResponse = std.json.Value;
-pub const ListVectorStoresResponse = std.json.Value;
+pub const ListVectorStoreFilesResponse = struct {
+    object: []const u8,
+    data: []const VectorStoreFileObject,
+    first_id: []const u8,
+    last_id: []const u8,
+    has_more: bool,
+};
+pub const ListVectorStoresResponse = struct {
+    object: []const u8,
+    data: []const VectorStoreObject,
+    first_id: []const u8,
+    last_id: []const u8,
+    has_more: bool,
+};
 pub const LocalShellCallStatus = []const u8;
 pub const LocalShellExecAction = struct {
     type: []const u8,

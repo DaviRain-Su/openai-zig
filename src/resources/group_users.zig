@@ -121,7 +121,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         params: ListGroupUsersParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.UserListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -153,7 +153,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         req: CreateGroupUserRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.GroupUserAssignment) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/groups/{s}/users", .{group_id}) catch {
@@ -178,7 +178,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         user_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.GroupUserDeletedResource) {
         var path_buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/groups/{s}/users/{s}", .{ group_id, user_id }) catch {
@@ -193,7 +193,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         params: ListGroupUsersParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.UserListResource) {
         return self.list_group_users_with_options(allocator, group_id, params, request_opts);
     }
@@ -203,7 +203,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         req: CreateGroupUserRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.GroupUserAssignment) {
         return self.add_group_user_with_options(allocator, group_id, req, request_opts);
     }
@@ -213,7 +213,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         user_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.GroupUserDeletedResource) {
         return self.remove_group_user_with_options(allocator, group_id, user_id, request_opts);
     }

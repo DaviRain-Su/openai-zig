@@ -35,94 +35,313 @@ pub const Resource = struct {
         return fbs.getWritten();
     }
 
-    fn getUsage(self: *const Resource, allocator: std.mem.Allocator, path: []const u8, params: UsageParams, comptime T: type) errors.Error!std.json.Parsed(T) {
+    fn getUsage(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        path: []const u8,
+        params: UsageParams,
+        comptime T: type,
+    ) errors.Error!std.json.Parsed(T) {
+        return self.getUsageWithOptions(allocator, path, params, T, null);
+    }
+
+    fn getUsageWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        path: []const u8,
+        params: UsageParams,
+        comptime T: type,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
         var buf: [256]u8 = undefined;
         const full_path = buildPath(&buf, path, params) catch {
             return errors.Error.SerializeError;
         };
 
-        const resp = try self.transport.request(.GET, full_path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-        }, null);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-
-        const parsed = std.json.parseFromSlice(T, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .GET,
+            full_path,
+            T,
+            request_opts,
+        );
     }
 
     pub fn costs(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.CostsResult) {
         return self.getUsage(allocator, "/organization/costs", params, gen.CostsResult);
     }
 
+    pub fn costs_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CostsResult) {
+        return self.getUsageWithOptions(allocator, "/organization/costs", params, gen.CostsResult, request_opts);
+    }
+
     pub fn usage_costs(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.CostsResult) {
         return self.costs(allocator, params);
+    }
+
+    pub fn usage_costs_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CostsResult) {
+        return self.costs_with_options(allocator, params, request_opts);
     }
 
     pub fn audio_speeches(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageAudioSpeechesResult) {
         return self.getUsage(allocator, "/organization/usage/audio_speeches", params, gen.UsageAudioSpeechesResult);
     }
 
+    pub fn audio_speeches_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageAudioSpeechesResult) {
+        return self.getUsageWithOptions(
+            allocator,
+            "/organization/usage/audio_speeches",
+            params,
+            gen.UsageAudioSpeechesResult,
+            request_opts,
+        );
+    }
+
     pub fn usage_audio_speeches(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageAudioSpeechesResult) {
         return self.audio_speeches(allocator, params);
+    }
+
+    pub fn usage_audio_speeches_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageAudioSpeechesResult) {
+        return self.audio_speeches_with_options(allocator, params, request_opts);
     }
 
     pub fn audio_transcriptions(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageAudioTranscriptionsResult) {
         return self.getUsage(allocator, "/organization/usage/audio_transcriptions", params, gen.UsageAudioTranscriptionsResult);
     }
 
+    pub fn audio_transcriptions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageAudioTranscriptionsResult) {
+        return self.getUsageWithOptions(
+            allocator,
+            "/organization/usage/audio_transcriptions",
+            params,
+            gen.UsageAudioTranscriptionsResult,
+            request_opts,
+        );
+    }
+
     pub fn usage_audio_transcriptions(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageAudioTranscriptionsResult) {
         return self.audio_transcriptions(allocator, params);
+    }
+
+    pub fn usage_audio_transcriptions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageAudioTranscriptionsResult) {
+        return self.audio_transcriptions_with_options(allocator, params, request_opts);
     }
 
     pub fn code_interpreter_sessions(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageCodeInterpreterSessionsResult) {
         return self.getUsage(allocator, "/organization/usage/code_interpreter_sessions", params, gen.UsageCodeInterpreterSessionsResult);
     }
 
+    pub fn code_interpreter_sessions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageCodeInterpreterSessionsResult) {
+        return self.getUsageWithOptions(
+            allocator,
+            "/organization/usage/code_interpreter_sessions",
+            params,
+            gen.UsageCodeInterpreterSessionsResult,
+            request_opts,
+        );
+    }
+
     pub fn usage_code_interpreter_sessions(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageCodeInterpreterSessionsResult) {
         return self.code_interpreter_sessions(allocator, params);
+    }
+
+    pub fn usage_code_interpreter_sessions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageCodeInterpreterSessionsResult) {
+        return self.code_interpreter_sessions_with_options(allocator, params, request_opts);
     }
 
     pub fn completions(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageCompletionsResult) {
         return self.getUsage(allocator, "/organization/usage/completions", params, gen.UsageCompletionsResult);
     }
 
+    pub fn completions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageCompletionsResult) {
+        return self.getUsageWithOptions(
+            allocator,
+            "/organization/usage/completions",
+            params,
+            gen.UsageCompletionsResult,
+            request_opts,
+        );
+    }
+
     pub fn usage_completions(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageCompletionsResult) {
         return self.completions(allocator, params);
+    }
+
+    pub fn usage_completions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageCompletionsResult) {
+        return self.completions_with_options(allocator, params, request_opts);
     }
 
     pub fn embeddings(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageEmbeddingsResult) {
         return self.getUsage(allocator, "/organization/usage/embeddings", params, gen.UsageEmbeddingsResult);
     }
 
+    pub fn embeddings_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageEmbeddingsResult) {
+        return self.getUsageWithOptions(
+            allocator,
+            "/organization/usage/embeddings",
+            params,
+            gen.UsageEmbeddingsResult,
+            request_opts,
+        );
+    }
+
     pub fn usage_embeddings(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageEmbeddingsResult) {
         return self.embeddings(allocator, params);
+    }
+
+    pub fn usage_embeddings_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageEmbeddingsResult) {
+        return self.embeddings_with_options(allocator, params, request_opts);
     }
 
     pub fn images(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageImagesResult) {
         return self.getUsage(allocator, "/organization/usage/images", params, gen.UsageImagesResult);
     }
 
+    pub fn images_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageImagesResult) {
+        return self.getUsageWithOptions(allocator, "/organization/usage/images", params, gen.UsageImagesResult, request_opts);
+    }
+
     pub fn usage_images(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageImagesResult) {
         return self.images(allocator, params);
+    }
+
+    pub fn usage_images_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageImagesResult) {
+        return self.images_with_options(allocator, params, request_opts);
     }
 
     pub fn moderations(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageModerationsResult) {
         return self.getUsage(allocator, "/organization/usage/moderations", params, gen.UsageModerationsResult);
     }
 
+    pub fn moderations_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageModerationsResult) {
+        return self.getUsageWithOptions(
+            allocator,
+            "/organization/usage/moderations",
+            params,
+            gen.UsageModerationsResult,
+            request_opts,
+        );
+    }
+
     pub fn usage_moderations(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageModerationsResult) {
         return self.moderations(allocator, params);
+    }
+
+    pub fn usage_moderations_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageModerationsResult) {
+        return self.moderations_with_options(allocator, params, request_opts);
     }
 
     pub fn vector_stores(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageVectorStoresResult) {
         return self.getUsage(allocator, "/organization/usage/vector_stores", params, gen.UsageVectorStoresResult);
     }
 
+    pub fn vector_stores_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageVectorStoresResult) {
+        return self.getUsageWithOptions(
+            allocator,
+            "/organization/usage/vector_stores",
+            params,
+            gen.UsageVectorStoresResult,
+            request_opts,
+        );
+    }
+
     pub fn usage_vector_stores(self: *const Resource, allocator: std.mem.Allocator, params: UsageParams) errors.Error!std.json.Parsed(gen.UsageVectorStoresResult) {
         return self.vector_stores(allocator, params);
+    }
+
+    pub fn usage_vector_stores_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageVectorStoresResult) {
+        return self.vector_stores_with_options(allocator, params, request_opts);
     }
 
     pub fn list_costs(
@@ -133,12 +352,30 @@ pub const Resource = struct {
         return self.costs(allocator, params);
     }
 
+    pub fn list_costs_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CostsResult) {
+        return self.costs_with_options(allocator, params, request_opts);
+    }
+
     pub fn list_audio_speeches(
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: UsageParams,
     ) errors.Error!std.json.Parsed(gen.UsageAudioSpeechesResult) {
         return self.audio_speeches(allocator, params);
+    }
+
+    pub fn list_audio_speeches_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageAudioSpeechesResult) {
+        return self.audio_speeches_with_options(allocator, params, request_opts);
     }
 
     pub fn list_audio_transcriptions(
@@ -149,12 +386,30 @@ pub const Resource = struct {
         return self.audio_transcriptions(allocator, params);
     }
 
+    pub fn list_audio_transcriptions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageAudioTranscriptionsResult) {
+        return self.audio_transcriptions_with_options(allocator, params, request_opts);
+    }
+
     pub fn list_code_interpreter_sessions(
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: UsageParams,
     ) errors.Error!std.json.Parsed(gen.UsageCodeInterpreterSessionsResult) {
         return self.code_interpreter_sessions(allocator, params);
+    }
+
+    pub fn list_code_interpreter_sessions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageCodeInterpreterSessionsResult) {
+        return self.code_interpreter_sessions_with_options(allocator, params, request_opts);
     }
 
     pub fn list_completions(
@@ -165,12 +420,30 @@ pub const Resource = struct {
         return self.completions(allocator, params);
     }
 
+    pub fn list_completions_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageCompletionsResult) {
+        return self.completions_with_options(allocator, params, request_opts);
+    }
+
     pub fn list_embeddings(
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: UsageParams,
     ) errors.Error!std.json.Parsed(gen.UsageEmbeddingsResult) {
         return self.embeddings(allocator, params);
+    }
+
+    pub fn list_embeddings_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageEmbeddingsResult) {
+        return self.embeddings_with_options(allocator, params, request_opts);
     }
 
     pub fn list_images(
@@ -181,6 +454,15 @@ pub const Resource = struct {
         return self.images(allocator, params);
     }
 
+    pub fn list_images_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageImagesResult) {
+        return self.images_with_options(allocator, params, request_opts);
+    }
+
     pub fn list_moderations(
         self: *const Resource,
         allocator: std.mem.Allocator,
@@ -189,11 +471,42 @@ pub const Resource = struct {
         return self.moderations(allocator, params);
     }
 
+    pub fn list_moderations_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageModerationsResult) {
+        return self.moderations_with_options(allocator, params, request_opts);
+    }
+
     pub fn list_vector_stores(
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: UsageParams,
     ) errors.Error!std.json.Parsed(gen.UsageVectorStoresResult) {
         return self.vector_stores(allocator, params);
+    }
+
+    pub fn list_vector_stores_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: UsageParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.UsageVectorStoresResult) {
+        return self.vector_stores_with_options(allocator, params, request_opts);
+    }
+
+    test "usage buildPath encodes query params" {
+        var buf: [256]u8 = undefined;
+        const path = try buildPath(&buf, "/organization/costs", .{
+            .start_time = 10,
+            .end_time = 20,
+            .limit = 7,
+        });
+        try std.testing.expectEqualStrings(
+            "/organization/costs?start_time=10&end_time=20&limit=7",
+            path,
+        );
     }
 };

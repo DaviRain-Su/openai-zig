@@ -123,7 +123,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListUsersParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.UserListResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -158,7 +158,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         user_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.User) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/users/{s}", .{user_id}) catch {
@@ -183,7 +183,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         user_id: []const u8,
         req: UpdateUserRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.User) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/users/{s}", .{user_id}) catch {
@@ -205,7 +205,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         user_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.User) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/users/{s}", .{user_id}) catch {
@@ -219,7 +219,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListUsersParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.UserListResponse) {
         return self.list_users_with_options(allocator, params, request_opts);
     }
@@ -228,7 +228,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         user_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.User) {
         return self.retrieve_user_with_options(allocator, user_id, request_opts);
     }
@@ -238,7 +238,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         user_id: []const u8,
         req: UpdateUserRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.User) {
         return self.modify_user_with_options(allocator, user_id, req, request_opts);
     }
@@ -247,7 +247,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         user_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.User) {
         return self.delete_user_with_options(allocator, user_id, request_opts);
     }

@@ -29,12 +29,70 @@ pub fn main() !void {
     var models = try client.models().list_models(gpa);
     defer models.deinit();
 
-    var out: std.io.Writer.Allocating = .init(gpa);
-    defer out.deinit();
-    var stream: std.json.Stringify = .{ .writer = &out.writer, .options = .{} };
-    try stream.write(models.value);
+    std.debug.print("Models list: {d} items\n", .{models.value.data.len});
+    for (models.value.data, 0..) |model_value, idx| {
+        std.debug.print("  [{d}] ", .{idx});
+        printModel(gpa, model_value);
+    }
+}
 
-    std.debug.print("Models list:\n{s}\n", .{out.written()});
+fn printModel(allocator: std.mem.Allocator, value: std.json.Value) void {
+    _ = allocator;
+    const obj = switch (value) {
+        .object => |o| o,
+        else => {
+            std.debug.print("<non-object model>\n", .{});
+            return;
+        },
+    };
+
+    if (!obj.contains("id")) {
+        std.debug.print("<non-object model>\n", .{});
+        return;
+    }
+    const fields = obj;
+
+    std.debug.print("id=", .{});
+    if (fields.get("id")) |id| {
+        switch (id) {
+            .string => |s| if (std.unicode.utf8ValidateSlice(s)) {
+                std.debug.print("{s} ", .{s});
+            } else {
+                std.debug.print("<non-utf8-id> ", .{});
+            },
+            else => std.debug.print("<non-string-id> ", .{}),
+        }
+    } else {
+        std.debug.print("<no-id> ", .{});
+    }
+
+    std.debug.print("object=", .{});
+    if (fields.get("object")) |object| {
+        switch (object) {
+            .string => |s| if (std.unicode.utf8ValidateSlice(s)) {
+                std.debug.print("{s} ", .{s});
+            } else {
+                std.debug.print("<non-utf8-object> ", .{});
+            },
+            else => std.debug.print("<non-string-object> ", .{}),
+        }
+    } else {
+        std.debug.print("<no-object> ", .{});
+    }
+
+    std.debug.print("owned_by=", .{});
+    if (fields.get("owned_by")) |owned_by| {
+        switch (owned_by) {
+            .string => |s| if (std.unicode.utf8ValidateSlice(s)) {
+                std.debug.print("{s}\n", .{s});
+            } else {
+                std.debug.print("<non-utf8-owned-by>\n", .{});
+            },
+            else => std.debug.print("<non-string-owned-by>\n", .{}),
+        }
+    } else {
+        std.debug.print("<no-owned-by>\n", .{});
+    }
 }
 
 fn readBaseUrl(allocator: std.mem.Allocator, path: []const u8) ![]const u8 {

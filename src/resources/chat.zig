@@ -50,98 +50,6 @@ pub const StreamEventHandler = *const fn (
     event: std.json.Parsed(CreateChatCompletionStreamResponse),
 ) errors.Error!void;
 
-const StreamChunkParser = struct {
-    allocator: std.mem.Allocator,
-    handler: StreamEventHandler,
-    user_ctx: ?*anyopaque,
-    line_buf: std.ArrayList(u8),
-
-    fn init(
-        allocator: std.mem.Allocator,
-        handler: StreamEventHandler,
-        user_ctx: ?*anyopaque,
-    ) StreamChunkParser {
-        return StreamChunkParser{
-            .allocator = allocator,
-            .handler = handler,
-            .user_ctx = user_ctx,
-            .line_buf = std.ArrayList(u8).initCapacity(allocator, 0) catch unreachable,
-        };
-    }
-
-    fn deinit(self: *StreamChunkParser) void {
-        self.line_buf.deinit(self.allocator);
-    }
-
-    fn onTransportChunk(context: ?*anyopaque, chunk: []const u8) errors.Error!void {
-        const parser: *StreamChunkParser = @ptrCast(@alignCast(context.?));
-        return parser.onChunk(chunk);
-    }
-
-    fn onChunk(self: *StreamChunkParser, chunk: []const u8) errors.Error!void {
-        for (chunk) |byte| {
-            if (byte == '\n') {
-                const line = self.trimLine(self.line_buf.items);
-                if (line.len > 0) {
-                    try self.consumeLine(line);
-                }
-                self.line_buf.clearRetainingCapacity();
-                continue;
-            }
-
-            if (byte == '\r') continue;
-            self.line_buf.append(self.allocator, byte) catch {
-                return errors.Error.HttpError;
-            };
-        }
-    }
-
-    fn flush(self: *StreamChunkParser) errors.Error!void {
-        if (self.line_buf.items.len > 0) {
-            const line = self.trimLine(self.line_buf.items);
-            if (line.len > 0) {
-                try self.consumeLine(line);
-            }
-            self.line_buf.clearRetainingCapacity();
-        }
-    }
-
-    fn trimLine(self: *StreamChunkParser, line: []const u8) []const u8 {
-        _ = self;
-        var start: usize = 0;
-        while (start < line.len and (line[start] == ' ' or line[start] == '\t')) {
-            start += 1;
-        }
-
-        var end: usize = line.len;
-        while (end > start and (line[end - 1] == ' ' or line[end - 1] == '\t')) {
-            end -= 1;
-        }
-
-        return line[start..end];
-    }
-
-    fn consumeLine(self: *StreamChunkParser, line: []const u8) errors.Error!void {
-        if (!std.mem.startsWith(u8, line, "data:")) return;
-
-        const raw_payload = line[5..];
-        const payload = std.mem.trimLeft(u8, raw_payload, " \t");
-        if (payload.len == 0 or std.mem.eql(u8, payload, "[DONE]")) return;
-
-        const parsed = std.json.parseFromSlice(
-            CreateChatCompletionStreamResponse,
-            self.allocator,
-            payload,
-            .{ .ignore_unknown_fields = true },
-        ) catch {
-            return errors.Error.DeserializeError;
-        };
-        defer parsed.deinit();
-
-        try self.handler(self.user_ctx, parsed);
-    }
-};
-
 pub const Resource = struct {
     transport: *transport_mod.Transport,
 
@@ -162,6 +70,21 @@ pub const Resource = struct {
         return self.list_chat_completions(allocator);
     }
 
+    pub fn list_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ChatCompletionList) {
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            .GET,
+            "/chat/completions",
+            gen.ChatCompletionList,
+            request_opts,
+        );
+    }
+
     /// POST /chat/completions -> dynamic JSON.
     pub fn create_chat_completion(
         self: *const Resource,
@@ -175,7 +98,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateChatCompletionRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
         return common.sendJsonTypedWithOptions(
             self.transport,
@@ -201,7 +124,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateChatCompletionRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
         return self.create_chat_completion_with_options(allocator, req, request_opts);
     }
@@ -235,20 +158,29 @@ pub const Resource = struct {
         completion_id: []const u8,
         payload: ?[]const u8,
     ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
+        return self.update_chat_completion_with_options(allocator, completion_id, payload, null);
+    }
+
+    pub fn update_chat_completion_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        completion_id: []const u8,
+        payload: ?[]const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateChatCompletionResponse) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/chat/completions/{s}", .{completion_id}) catch {
             return errors.Error.SerializeError;
         };
-        const resp = try self.transport.request(.POST, path, &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = "application/json" },
-        }, payload);
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
-        const parsed = std.json.parseFromSlice(gen.CreateChatCompletionResponse, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return common.sendRawJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            .POST,
+            path,
+            payload,
+            gen.CreateChatCompletionResponse,
+            request_opts,
+        );
     }
 
     /// DELETE /chat/completions/{completion_id}
@@ -290,33 +222,7 @@ pub const Resource = struct {
         on_event: StreamEventHandler,
         user_ctx: ?*anyopaque,
     ) errors.Error!void {
-        var stream_req = req;
-        stream_req.stream = true;
-
-        var body_writer = std.io.Writer.Allocating.init(allocator);
-        defer body_writer.deinit();
-
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
-        json_stream.write(stream_req) catch {
-            return errors.Error.SerializeError;
-        };
-        const payload = body_writer.written();
-
-        var parser = StreamChunkParser.init(allocator, on_event, user_ctx);
-        defer parser.deinit();
-
-        try self.transport.requestStream(
-            .POST,
-            "/chat/completions",
-            &.{
-                .{ .name = "Accept", .value = "text/event-stream" },
-                .{ .name = "Content-Type", .value = "application/json" },
-            },
-            payload,
-            StreamChunkParser.onTransportChunk,
-            &parser,
-        );
-        try parser.flush();
+        return self.create_chat_completion_stream_with_options(allocator, req, on_event, user_ctx, null);
     }
 
     pub fn create_chat_completion_stream_with_options(
@@ -325,7 +231,7 @@ pub const Resource = struct {
         req: CreateChatCompletionRequest,
         on_event: StreamEventHandler,
         user_ctx: ?*anyopaque,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!void {
         var stream_req = req;
         stream_req.stream = true;
@@ -333,16 +239,18 @@ pub const Resource = struct {
         var body_writer = std.io.Writer.Allocating.init(allocator);
         defer body_writer.deinit();
 
-        var json_stream: std.json.Stringify = .{ .writer = &body_writer.writer, .options = .{} };
+        var json_stream: std.json.Stringify = .{
+            .writer = &body_writer.writer,
+            .options = .{ .emit_null_optional_fields = false },
+        };
         json_stream.write(stream_req) catch {
             return errors.Error.SerializeError;
         };
         const payload = body_writer.written();
 
-        var parser = StreamChunkParser.init(allocator, on_event, user_ctx);
-        defer parser.deinit();
-
-        try self.transport.requestStreamWithOptions(
+        try common.sendStreamTypedWithOptions(
+            self.transport,
+            allocator,
             .POST,
             "/chat/completions",
             &.{
@@ -350,11 +258,11 @@ pub const Resource = struct {
                 .{ .name = "Content-Type", .value = "application/json" },
             },
             payload,
-            StreamChunkParser.onTransportChunk,
-            &parser,
+            CreateChatCompletionStreamResponse,
+            on_event,
+            user_ctx,
             request_opts,
         );
-        try parser.flush();
     }
 
     pub fn create_with_options_stream(
@@ -363,7 +271,7 @@ pub const Resource = struct {
         req: CreateChatCompletionRequest,
         on_event: StreamEventHandler,
         user_ctx: ?*anyopaque,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!void {
         return self.create_chat_completion_stream_with_options(
             allocator,
@@ -374,3 +282,43 @@ pub const Resource = struct {
         );
     }
 };
+
+test "create chat request omits null optional fields" {
+    const req = CreateChatCompletionRequest{
+        .model = "test-model",
+        .messages = &[_]ChatMessage{
+            .{ .role = "user", .content = "hi" },
+        },
+        .max_tokens = null,
+        .temperature = null,
+        .stream = null,
+        .response_format = null,
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body,
+        .{},
+    );
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}

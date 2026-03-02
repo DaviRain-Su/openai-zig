@@ -175,7 +175,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListRolesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.PublicRoleListResource) {
         var buf: [256]u8 = undefined;
         const path = buildListPath(&buf, "/organization/roles", params) catch {
@@ -197,7 +197,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Role) {
         return self.sendJsonTypedWithOptions(
             allocator,
@@ -224,7 +224,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         role_id: []const u8,
         req: UpdateRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Role) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/roles/{s}", .{role_id}) catch {
@@ -246,7 +246,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         role_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.RoleDeletedResource) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/roles/{s}", .{role_id}) catch {
@@ -270,7 +270,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         params: ListRolesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.PublicRoleListResource) {
         var path_buf: [256]u8 = undefined;
         const base = std.fmt.bufPrint(&path_buf, "/projects/{s}/roles", .{project_id}) catch {
@@ -298,7 +298,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         req: CreateRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Role) {
         var path_buf: [160]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/projects/{s}/roles", .{project_id}) catch {
@@ -324,7 +324,7 @@ pub const Resource = struct {
         project_id: []const u8,
         role_id: []const u8,
         req: UpdateRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Role) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/projects/{s}/roles/{s}", .{ project_id, role_id }) catch {
@@ -348,7 +348,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         role_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.RoleDeletedResource) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/projects/{s}/roles/{s}", .{ project_id, role_id }) catch {
@@ -361,7 +361,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListRolesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.PublicRoleListResource) {
         return self.list_roles_with_options(allocator, params, request_opts);
     }
@@ -370,7 +370,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Role) {
         return self.create_role_with_options(allocator, req, request_opts);
     }
@@ -380,7 +380,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         role_id: []const u8,
         req: UpdateRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Role) {
         return self.update_role_with_options(allocator, role_id, req, request_opts);
     }
@@ -389,7 +389,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         role_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.RoleDeletedResource) {
         return self.delete_role_with_options(allocator, role_id, request_opts);
     }
@@ -399,7 +399,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         params: ListRolesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.PublicRoleListResource) {
         return self.list_project_roles_with_options(allocator, project_id, params, request_opts);
     }
@@ -409,7 +409,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         req: CreateRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Role) {
         return self.create_project_role_with_options(allocator, project_id, req, request_opts);
     }
@@ -420,7 +420,7 @@ pub const Resource = struct {
         project_id: []const u8,
         role_id: []const u8,
         req: UpdateRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Role) {
         return self.update_project_role_with_options(allocator, project_id, role_id, req, request_opts);
     }
@@ -430,7 +430,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         role_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.RoleDeletedResource) {
         return self.delete_project_role_with_options(allocator, project_id, role_id, request_opts);
     }

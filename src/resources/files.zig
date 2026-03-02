@@ -9,6 +9,14 @@ pub const MultipartRequest = struct {
     body: []const u8,
 };
 
+pub const CreateFileUploadRequest = struct {
+    file_path: []const u8,
+    purpose: []const u8,
+    filename: ?[]const u8 = null,
+    file_content_type: ?[]const u8 = null,
+    expires_after: ?gen.FileExpirationAfter = null,
+};
+
 pub const BinaryResponse = struct {
     allocator: std.mem.Allocator,
     data: []u8,
@@ -70,7 +78,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListFilesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ListFilesResponse) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -117,7 +125,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListFilesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ListFilesResponse) {
         return self.list_files_with_options(allocator, params, request_opts);
     }
@@ -137,23 +145,35 @@ pub const Resource = struct {
         payload: MultipartRequest,
         request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
-        const resp = try self.transport.requestWithOptions(
+        return common.sendMultipartTypedWithOptions(
+            self.transport,
+            allocator,
             .POST,
             "/files",
-            &.{
-                .{ .name = "Accept", .value = "application/json" },
-                .{ .name = "Content-Type", .value = payload.content_type },
-            },
-            payload.body,
+            payload,
+            gen.OpenAIFile,
             request_opts,
         );
-        const body = resp.body;
-        defer self.transport.allocator.free(body);
+    }
 
-        const parsed = std.json.parseFromSlice(gen.OpenAIFile, allocator, body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+    /// POST /files (multipart with path + purpose helper)
+    pub fn create_file_from_path(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: CreateFileUploadRequest,
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
+        return self.create_file_from_path_with_options(allocator, payload, null);
+    }
+
+    pub fn create_file_from_path_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        payload: CreateFileUploadRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
+        const multipart = try buildCreateFileMultipartPayload(allocator, payload);
+        defer allocator.free(multipart.body);
+        return self.create_file_with_options(allocator, multipart, request_opts);
     }
 
     /// POST /files (multipart)
@@ -169,7 +189,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         payload: MultipartRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
         return self.create_file_with_options(allocator, payload, request_opts);
     }
@@ -191,7 +211,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         file_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.DeleteFileResponse) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
@@ -216,7 +236,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         file_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.DeleteFileResponse) {
         return self.delete_file_with_options(allocator, file_id, request_opts);
     }
@@ -238,7 +258,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         file_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/files/{s}", .{file_id}) catch {
@@ -263,7 +283,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         file_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.OpenAIFile) {
         return self.retrieve_file_with_options(allocator, file_id, request_opts);
     }
@@ -285,11 +305,17 @@ pub const Resource = struct {
         const path = std.fmt.bufPrint(&path_buf, "/files/{s}/content", .{file_id}) catch {
             return errors.Error.SerializeError;
         };
-
-        const resp = try self.transport.requestWithOptions(.GET, path, &.{}, null, request_opts);
-        return BinaryResponse{
+        const response_body = try common.sendBinaryWithOptions(
+            self.transport,
+            .GET,
+            path,
+            &.{},
+            null,
+            request_opts,
+        );
+        return .{
             .allocator = self.transport.allocator,
-            .data = resp.body,
+            .data = response_body,
         };
     }
 
@@ -301,8 +327,51 @@ pub const Resource = struct {
     pub fn download_with_options(
         self: *const Resource,
         file_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!BinaryResponse {
         return self.download_file_with_options(file_id, request_opts);
     }
 };
+
+const file_upload_boundary = "----openai-zig-file-upload-0f9e";
+
+fn buildCreateFileMultipartPayload(
+    allocator: std.mem.Allocator,
+    req: CreateFileUploadRequest,
+) errors.Error!MultipartRequest {
+    var multipart = try common.MultipartBuilder.init(allocator, file_upload_boundary);
+    errdefer multipart.deinit();
+
+    try multipart.appendTextField("purpose", req.purpose);
+
+    if (req.expires_after) |expiration| {
+        try multipart.appendTextField("expires_after[anchor]", expiration.anchor);
+        var seconds_buf: [32]u8 = undefined;
+        const seconds = std.fmt.bufPrint(&seconds_buf, "{d}", .{expiration.seconds}) catch {
+            return errors.Error.SerializeError;
+        };
+        try multipart.appendTextField("expires_after[seconds]", seconds);
+    }
+
+    const file = std.fs.cwd().openFile(req.file_path, .{}) catch {
+        return errors.Error.SerializeError;
+    };
+    defer file.close();
+
+    const file_size = try file.stat();
+    const file_len = std.math.cast(usize, file_size.size) orelse return errors.Error.SerializeError;
+    const file_data = file.readToEndAlloc(allocator, file_len) catch {
+        return errors.Error.SerializeError;
+    };
+    defer allocator.free(file_data);
+
+    const filename = req.filename orelse std.fs.path.basename(req.file_path);
+    const content_type = req.file_content_type orelse "application/octet-stream";
+    try multipart.appendFileField("file", filename, content_type, file_data);
+    try multipart.appendFooter();
+
+    return MultipartRequest{
+        .content_type = "multipart/form-data; boundary=" ++ file_upload_boundary,
+        .body = try multipart.toOwnedSlice(),
+    };
+}

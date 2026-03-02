@@ -122,7 +122,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         params: ListProjectGroupsParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ProjectGroupListResource) {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -153,7 +153,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         req: InviteProjectGroupRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ProjectGroup) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/projects/{s}/groups", .{project_id}) catch {
@@ -185,7 +185,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         group_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ProjectGroupDeletedResource) {
         var path_buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/projects/{s}/groups/{s}", .{ project_id, group_id }) catch {
@@ -200,7 +200,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         params: ListProjectGroupsParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ProjectGroupListResource) {
         return self.list_project_groups_with_options(allocator, project_id, params, request_opts);
     }
@@ -210,7 +210,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         req: InviteProjectGroupRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ProjectGroup) {
         return self.add_project_group_with_options(allocator, project_id, req, request_opts);
     }
@@ -220,7 +220,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
         group_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ProjectGroupDeletedResource) {
         return self.remove_project_group_with_options(allocator, project_id, group_id, request_opts);
     }

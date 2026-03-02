@@ -216,6 +216,26 @@ pub const Resource = struct {
         return common.sendJsonTyped(self.transport, allocator, method, path, value, T);
     }
 
+    fn sendJsonTypedWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        value: anytype,
+        comptime T: type,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
+        return common.sendJsonTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            value,
+            T,
+            request_opts,
+        );
+    }
+
     fn sendNoBodyTyped(
         self: *const Resource,
         allocator: std.mem.Allocator,
@@ -226,8 +246,39 @@ pub const Resource = struct {
         return common.sendNoBodyTyped(self.transport, allocator, method, path, T);
     }
 
+    fn sendNoBodyTypedWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        comptime T: type,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(T) {
+        return common.sendNoBodyTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            T,
+            request_opts,
+        );
+    }
+
     /// Projects
-    pub fn list_projects(self: *const Resource, allocator: std.mem.Allocator, params: ListParams) errors.Error!std.json.Parsed(gen.ProjectListResponse) {
+    pub fn list_projects(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListParams,
+    ) errors.Error!std.json.Parsed(gen.ProjectListResponse) {
+        return self.list_projects_with_options(allocator, params, null);
+    }
+
+    pub fn list_projects_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        params: ListParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectListResponse) {
         var buf: [200]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -235,11 +286,37 @@ pub const Resource = struct {
         var first = true;
         try appendListParams(w, params, &first);
         const path = fbs.getWritten();
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectListResponse);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.ProjectListResponse,
+            request_opts,
+        );
     }
 
-    pub fn create_project(self: *const Resource, allocator: std.mem.Allocator, body: gen.ProjectCreateRequest) errors.Error!std.json.Parsed(gen.Project) {
-        return self.sendJsonTyped(allocator, .POST, "/organization/projects", body, gen.Project);
+    pub fn create_project(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.ProjectCreateRequest,
+    ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.create_project_with_options(allocator, body, null);
+    }
+
+    pub fn create_project_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        body: gen.ProjectCreateRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.sendJsonTypedWithOptions(
+            allocator,
+            .POST,
+            "/organization/projects",
+            body,
+            gen.Project,
+            request_opts,
+        );
     }
 
     pub fn retrieve_project(
@@ -247,11 +324,26 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.retrieve_project_with_options(allocator, project_id, null);
+    }
+
+    pub fn retrieve_project_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Project) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}", .{project_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.Project);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.Project,
+            request_opts,
+        );
     }
 
     pub fn modify_project(
@@ -260,11 +352,28 @@ pub const Resource = struct {
         project_id: []const u8,
         body: gen.ProjectCreateRequest,
     ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.modify_project_with_options(allocator, project_id, body, null);
+    }
+
+    pub fn modify_project_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        body: gen.ProjectCreateRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Project) {
         var buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}", .{project_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJsonTyped(allocator, .POST, path, body, gen.Project);
+        return self.sendJsonTypedWithOptions(
+            allocator,
+            .POST,
+            path,
+            body,
+            gen.Project,
+            request_opts,
+        );
     }
 
     pub fn archive_project(
@@ -272,11 +381,26 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         project_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.Project) {
+        return self.archive_project_with_options(allocator, project_id, null);
+    }
+
+    pub fn archive_project_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.Project) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/archive", .{project_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBodyTyped(allocator, .POST, path, gen.Project);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .POST,
+            path,
+            gen.Project,
+            request_opts,
+        );
     }
 
     /// API keys
@@ -286,6 +410,16 @@ pub const Resource = struct {
         project_id: []const u8,
         params: ListOrderParams,
     ) errors.Error!std.json.Parsed(gen.ProjectApiKeyListResponse) {
+        return self.list_project_api_keys_with_options(allocator, project_id, params, null);
+    }
+
+    pub fn list_project_api_keys_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListOrderParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectApiKeyListResponse) {
         var buf: [240]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -293,7 +427,13 @@ pub const Resource = struct {
         var first = true;
         try appendListOrderParams(w, params, &first);
         const path = fbs.getWritten();
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectApiKeyListResponse);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.ProjectApiKeyListResponse,
+            request_opts,
+        );
     }
 
     pub fn retrieve_project_api_key(
@@ -302,11 +442,27 @@ pub const Resource = struct {
         project_id: []const u8,
         key_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.ProjectApiKey) {
+        return self.retrieve_project_api_key_with_options(allocator, project_id, key_id, null);
+    }
+
+    pub fn retrieve_project_api_key_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        key_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectApiKey) {
         var buf: [280]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/api_keys/{s}", .{ project_id, key_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectApiKey);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.ProjectApiKey,
+            request_opts,
+        );
     }
 
     pub fn delete_project_api_key(
@@ -315,11 +471,27 @@ pub const Resource = struct {
         project_id: []const u8,
         key_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.ProjectApiKeyDeleteResponse) {
+        return self.delete_project_api_key_with_options(allocator, project_id, key_id, null);
+    }
+
+    pub fn delete_project_api_key_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        key_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectApiKeyDeleteResponse) {
         var buf: [280]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/api_keys/{s}", .{ project_id, key_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.ProjectApiKeyDeleteResponse);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .DELETE,
+            path,
+            gen.ProjectApiKeyDeleteResponse,
+            request_opts,
+        );
     }
 
     /// Rate limits
@@ -329,6 +501,16 @@ pub const Resource = struct {
         project_id: []const u8,
         params: ListOrderParams,
     ) errors.Error!std.json.Parsed(gen.ProjectRateLimitListResponse) {
+        return self.list_project_rate_limits_with_options(allocator, project_id, params, null);
+    }
+
+    pub fn list_project_rate_limits_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListOrderParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectRateLimitListResponse) {
         var buf: [240]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -336,7 +518,13 @@ pub const Resource = struct {
         var first = true;
         try appendListOrderParams(w, params, &first);
         const path = fbs.getWritten();
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectRateLimitListResponse);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.ProjectRateLimitListResponse,
+            request_opts,
+        );
     }
 
     pub fn update_project_rate_limits(
@@ -346,11 +534,29 @@ pub const Resource = struct {
         rate_limit_id: []const u8,
         body: gen.ProjectRateLimit,
     ) errors.Error!std.json.Parsed(gen.ProjectRateLimit) {
+        return self.update_project_rate_limits_with_options(allocator, project_id, rate_limit_id, body, null);
+    }
+
+    pub fn update_project_rate_limits_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        rate_limit_id: []const u8,
+        body: gen.ProjectRateLimit,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectRateLimit) {
         var buf: [320]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/rate_limits/{s}", .{ project_id, rate_limit_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJsonTyped(allocator, .POST, path, body, gen.ProjectRateLimit);
+        return self.sendJsonTypedWithOptions(
+            allocator,
+            .POST,
+            path,
+            body,
+            gen.ProjectRateLimit,
+            request_opts,
+        );
     }
 
     /// Service accounts
@@ -360,6 +566,16 @@ pub const Resource = struct {
         project_id: []const u8,
         params: ListOrderParams,
     ) errors.Error!std.json.Parsed(gen.ProjectServiceAccountListResponse) {
+        return self.list_project_service_accounts_with_options(allocator, project_id, params, null);
+    }
+
+    pub fn list_project_service_accounts_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListOrderParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectServiceAccountListResponse) {
         var buf: [240]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -367,7 +583,13 @@ pub const Resource = struct {
         var first = true;
         try appendListOrderParams(w, params, &first);
         const path = fbs.getWritten();
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectServiceAccountListResponse);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.ProjectServiceAccountListResponse,
+            request_opts,
+        );
     }
 
     pub fn create_project_service_account(
@@ -376,11 +598,28 @@ pub const Resource = struct {
         project_id: []const u8,
         body: gen.ProjectServiceAccount,
     ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
+        return self.create_project_service_account_with_options(allocator, project_id, body, null);
+    }
+
+    pub fn create_project_service_account_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        body: gen.ProjectServiceAccount,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/service_accounts", .{project_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJsonTyped(allocator, .POST, path, body, gen.ProjectServiceAccount);
+        return self.sendJsonTypedWithOptions(
+            allocator,
+            .POST,
+            path,
+            body,
+            gen.ProjectServiceAccount,
+            request_opts,
+        );
     }
 
     pub fn retrieve_project_service_account(
@@ -389,11 +628,27 @@ pub const Resource = struct {
         project_id: []const u8,
         service_account_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
+        return self.retrieve_project_service_account_with_options(allocator, project_id, service_account_id, null);
+    }
+
+    pub fn retrieve_project_service_account_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        service_account_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
         var buf: [300]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/service_accounts/{s}", .{ project_id, service_account_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectServiceAccount);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.ProjectServiceAccount,
+            request_opts,
+        );
     }
 
     pub fn delete_project_service_account(
@@ -402,11 +657,27 @@ pub const Resource = struct {
         project_id: []const u8,
         service_account_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
+        return self.delete_project_service_account_with_options(allocator, project_id, service_account_id, null);
+    }
+
+    pub fn delete_project_service_account_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        service_account_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectServiceAccount) {
         var buf: [300]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/service_accounts/{s}", .{ project_id, service_account_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.ProjectServiceAccount);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .DELETE,
+            path,
+            gen.ProjectServiceAccount,
+            request_opts,
+        );
     }
 
     /// Project users
@@ -416,6 +687,16 @@ pub const Resource = struct {
         project_id: []const u8,
         params: ListOrderParams,
     ) errors.Error!std.json.Parsed(gen.ProjectUserListResponse) {
+        return self.list_project_users_with_options(allocator, project_id, params, null);
+    }
+
+    pub fn list_project_users_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        params: ListOrderParams,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectUserListResponse) {
         var buf: [240]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const w = fbs.writer();
@@ -423,7 +704,13 @@ pub const Resource = struct {
         var first = true;
         try appendListOrderParams(w, params, &first);
         const path = fbs.getWritten();
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectUserListResponse);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.ProjectUserListResponse,
+            request_opts,
+        );
     }
 
     pub fn create_project_user(
@@ -432,11 +719,28 @@ pub const Resource = struct {
         project_id: []const u8,
         body: gen.ProjectUserCreateRequest,
     ) errors.Error!std.json.Parsed(gen.ProjectUser) {
+        return self.create_project_user_with_options(allocator, project_id, body, null);
+    }
+
+    pub fn create_project_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        body: gen.ProjectUserCreateRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectUser) {
         var buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/users", .{project_id}) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJsonTyped(allocator, .POST, path, body, gen.ProjectUser);
+        return self.sendJsonTypedWithOptions(
+            allocator,
+            .POST,
+            path,
+            body,
+            gen.ProjectUser,
+            request_opts,
+        );
     }
 
     pub fn retrieve_project_user(
@@ -445,11 +749,27 @@ pub const Resource = struct {
         project_id: []const u8,
         user_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.ProjectUser) {
+        return self.retrieve_project_user_with_options(allocator, project_id, user_id, null);
+    }
+
+    pub fn retrieve_project_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        user_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectUser) {
         var buf: [280]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/users/{s}", .{ project_id, user_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBodyTyped(allocator, .GET, path, gen.ProjectUser);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .GET,
+            path,
+            gen.ProjectUser,
+            request_opts,
+        );
     }
 
     pub fn modify_project_user(
@@ -459,11 +779,29 @@ pub const Resource = struct {
         user_id: []const u8,
         body: gen.ProjectUser,
     ) errors.Error!std.json.Parsed(gen.ProjectUser) {
+        return self.modify_project_user_with_options(allocator, project_id, user_id, body, null);
+    }
+
+    pub fn modify_project_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        user_id: []const u8,
+        body: gen.ProjectUser,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectUser) {
         var buf: [280]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/users/{s}", .{ project_id, user_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendJsonTyped(allocator, .POST, path, body, gen.ProjectUser);
+        return self.sendJsonTypedWithOptions(
+            allocator,
+            .POST,
+            path,
+            body,
+            gen.ProjectUser,
+            request_opts,
+        );
     }
 
     pub fn delete_project_user(
@@ -472,10 +810,26 @@ pub const Resource = struct {
         project_id: []const u8,
         user_id: []const u8,
     ) errors.Error!std.json.Parsed(gen.ProjectUser) {
+        return self.delete_project_user_with_options(allocator, project_id, user_id, null);
+    }
+
+    pub fn delete_project_user_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        project_id: []const u8,
+        user_id: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.ProjectUser) {
         var buf: [280]u8 = undefined;
         const path = std.fmt.bufPrint(&buf, "/organization/projects/{s}/users/{s}", .{ project_id, user_id }) catch {
             return errors.Error.SerializeError;
         };
-        return self.sendNoBodyTyped(allocator, .DELETE, path, gen.ProjectUser);
+        return self.sendNoBodyTypedWithOptions(
+            allocator,
+            .DELETE,
+            path,
+            gen.ProjectUser,
+            request_opts,
+        );
     }
 };

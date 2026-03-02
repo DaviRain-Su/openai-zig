@@ -14,6 +14,30 @@ pub const Resource = struct {
         return Resource{ .transport = transport };
     }
 
+    fn sendMultipartWithOptions(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        method: std.http.Method,
+        path: []const u8,
+        content_type: []const u8,
+        body: []const u8,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(ImagesResponse) {
+        const payload = struct {
+            content_type: []const u8,
+            body: []const u8,
+        }{ .content_type = content_type, .body = body };
+        return common.sendMultipartTypedWithOptions(
+            self.transport,
+            allocator,
+            method,
+            path,
+            payload,
+            ImagesResponse,
+            request_opts,
+        );
+    }
+
     /// POST /images/generations
     pub fn create_image(
         self: *const Resource,
@@ -40,17 +64,14 @@ pub const Resource = struct {
         body: []const u8,
         request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(ImagesResponse) {
-        const resp = try self.transport.requestWithOptions(.POST, "/images/edits", &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = content_type },
-        }, body, request_opts);
-        const resp_body = resp.body;
-        defer self.transport.allocator.free(resp_body);
-
-        const parsed = std.json.parseFromSlice(ImagesResponse, allocator, resp_body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return self.sendMultipartWithOptions(
+            allocator,
+            .POST,
+            "/images/edits",
+            content_type,
+            body,
+            request_opts,
+        );
     }
 
     /// POST /images/edits (multipart, caller builds payload)
@@ -68,7 +89,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         content_type: []const u8,
         body: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(ImagesResponse) {
         return self.create_image_edit_with_options(allocator, content_type, body, request_opts);
     }
@@ -90,17 +111,14 @@ pub const Resource = struct {
         body: []const u8,
         request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(ImagesResponse) {
-        const resp = try self.transport.requestWithOptions(.POST, "/images/variations", &.{
-            .{ .name = "Accept", .value = "application/json" },
-            .{ .name = "Content-Type", .value = content_type },
-        }, body, request_opts);
-        const resp_body = resp.body;
-        defer self.transport.allocator.free(resp_body);
-
-        const parsed = std.json.parseFromSlice(ImagesResponse, allocator, resp_body, .{ .ignore_unknown_fields = true }) catch {
-            return errors.Error.DeserializeError;
-        };
-        return parsed;
+        return self.sendMultipartWithOptions(
+            allocator,
+            .POST,
+            "/images/variations",
+            content_type,
+            body,
+            request_opts,
+        );
     }
 
     /// POST /images/variations (multipart, caller builds payload)
@@ -118,7 +136,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         content_type: []const u8,
         body: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(ImagesResponse) {
         return self.create_image_variation_with_options(allocator, content_type, body, request_opts);
     }
@@ -136,7 +154,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateImageRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(ImagesResponse) {
         return self.create_image_generation_with_options(allocator, req, request_opts);
     }
@@ -154,7 +172,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateImageRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(ImagesResponse) {
         return self.create_image_generation_with_options(allocator, req, request_opts);
     }
@@ -179,7 +197,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateImageRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(ImagesResponse) {
         return common.sendJsonTypedWithOptions(
             self.transport,

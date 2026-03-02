@@ -43,7 +43,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListAuditLogsParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ListAuditLogsResponse) {
         var buf: [1024]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
@@ -122,7 +122,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListAuditLogsParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ListAuditLogsResponse) {
         return self.list_audit_logs_with_options(allocator, params, request_opts);
     }

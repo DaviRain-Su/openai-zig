@@ -4,21 +4,34 @@ const transport_mod = @import("transport/http.zig");
 const resources = @import("resources.zig");
 
 pub const Client = struct {
+    /// Core resources owned by the client are stored inside transport.
+    /// The client value itself is immutable by convention, and per-request overrides
+    /// are produced by cloning with `withOptions` / `with_options`.
     allocator: std.mem.Allocator,
     transport: transport_mod.Transport,
 
     pub const Options = struct {
+        /// Transport base URL used for all outgoing requests.
         base_url: []const u8,
+        /// Optional API key. When null, requests are sent without Authorization header.
         api_key: ?[]const u8 = null,
+        /// Optional organization header (`OpenAI-Organization`).
         organization: ?[]const u8 = null,
+        /// Optional project header (`OpenAI-Project`).
         project: ?[]const u8 = null,
+        /// Extra default headers merged into every request.
         extra_headers: ?[]const std.http.Header = null,
+        /// Optional proxy URL.
         proxy: ?[]const u8 = null,
+        /// Optional timeout in milliseconds; if null, transport uses default behavior.
         timeout_ms: ?u64 = null,
+        /// Retry attempts for transient failures.
         max_retries: u8 = 2,
+        /// Exponential retry base delay (milliseconds).
         retry_base_delay_ms: u64 = 500,
     };
 
+    /// Per-call override options. Null fields inherit from the existing client transport.
     pub const RequestOptions = struct {
         base_url: ?[]const u8 = null,
         api_key: ?[]const u8 = null,
@@ -31,6 +44,10 @@ pub const Client = struct {
         retry_base_delay_ms: ?u64 = null,
     };
 
+    /// Create a new client from explicit options.
+    ///
+    /// `opts` are fully applied to the returned client and copied into transport-owned
+    /// memory, so callers keep ownership of their original buffers.
     pub fn init(allocator: std.mem.Allocator, opts: Options) !Client {
         const transport = try transport_mod.Transport.init(allocator, .{
             .base_url = opts.base_url,
@@ -49,6 +66,12 @@ pub const Client = struct {
         };
     }
 
+    /// Clone this client while applying per-request overrides.
+    ///
+    /// Non-null override fields replace existing values; null fields keep the current
+    /// client's transport setting. This matches the common OpenAI client pattern where
+    /// a call like `client.with_options(... )` returns a new configured client and
+    /// leaves the original untouched.
     pub fn withOptions(
         self: *const Client,
         allocator: std.mem.Allocator,
@@ -475,3 +498,58 @@ pub const Client = struct {
         self.transport.allocator.free(resp.body);
     }
 };
+
+test "with_options overrides selected transport fields" {
+    const gpa = std.heap.page_allocator;
+
+    var base_client = try Client.init(gpa, .{
+        .base_url = "https://api.openai.com/v1",
+        .api_key = "base-key",
+        .organization = "org-base",
+        .project = "project-base",
+        .timeout_ms = 111,
+        .max_retries = 3,
+        .retry_base_delay_ms = 200,
+    });
+    defer base_client.deinit();
+
+    var with_override = try base_client.with_options(gpa, .{
+        .base_url = "https://api.deepseek.com/v1",
+        .api_key = "override-key",
+        .organization = "org-override",
+        .project = "project-override",
+        .max_retries = 7,
+    });
+    defer with_override.deinit();
+
+    const base_transport = base_client.transport;
+    const override_transport = with_override.transport;
+
+    try std.testing.expectEqualStrings("https://api.openai.com/v1", base_transport.base_url);
+    try std.testing.expectEqualStrings("base-key", base_transport.api_key.?);
+    try std.testing.expectEqualStrings("org-base", base_transport.organization.?);
+    try std.testing.expectEqualStrings("project-base", base_transport.project.?);
+    try std.testing.expectEqual(@as(u8, 3), base_transport.max_retries);
+    try std.testing.expectEqual(@as(u64, 200), base_transport.retry_base_delay_ms);
+
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", override_transport.base_url);
+    try std.testing.expectEqualStrings("override-key", override_transport.api_key.?);
+    try std.testing.expectEqualStrings("org-override", override_transport.organization.?);
+    try std.testing.expectEqualStrings("project-override", override_transport.project.?);
+    try std.testing.expectEqual(@as(u8, 7), override_transport.max_retries);
+    try std.testing.expectEqual(@as(u64, 200), override_transport.retry_base_delay_ms);
+
+    var with_fallback = try base_client.with_options(gpa, .{
+        .base_url = null,
+        .api_key = null,
+        .organization = null,
+        .project = null,
+        .max_retries = null,
+    });
+    defer with_fallback.deinit();
+
+    const fallback_transport = with_fallback.transport;
+    try std.testing.expectEqualStrings(base_transport.base_url, fallback_transport.base_url);
+    try std.testing.expectEqualStrings(base_transport.api_key.?, fallback_transport.api_key.?);
+    try std.testing.expectEqual(base_transport.max_retries, fallback_transport.max_retries);
+}

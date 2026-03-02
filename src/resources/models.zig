@@ -22,7 +22,7 @@ pub const Resource = struct {
     pub fn list_models_with_options(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ListModelsResponse) {
         return common.sendNoBodyTypedWithOptions(
             self.transport,
@@ -43,7 +43,7 @@ pub const Resource = struct {
     pub fn list_with_options(
         self: *const Resource,
         allocator: std.mem.Allocator,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ListModelsResponse) {
         return self.list_models_with_options(allocator, request_opts);
     }
@@ -65,7 +65,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         model: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Model) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/models/{s}", .{model}) catch {
@@ -90,7 +90,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         model: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Model) {
         return self.retrieve_model_with_options(allocator, model, request_opts);
     }
@@ -112,7 +112,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         model: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.DeleteModelResponse) {
         var path_buf: [256]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/models/{s}", .{model}) catch {
@@ -137,7 +137,7 @@ pub const Resource = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         model: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.DeleteModelResponse) {
         return self.delete_model_with_options(allocator, model, request_opts);
     }

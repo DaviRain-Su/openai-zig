@@ -134,7 +134,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         params: ListAssignmentsParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.RoleListResource) {
         var buf: [256]u8 = undefined;
         const path = buildListPath(&buf, group_id, params) catch {
@@ -158,7 +158,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         req: AssignRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
         var path_buf: [200]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/groups/{s}/roles", .{group_id}) catch {
@@ -182,7 +182,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         role_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.DeletedRoleAssignmentResource) {
         var path_buf: [240]u8 = undefined;
         const path = std.fmt.bufPrint(&path_buf, "/organization/groups/{s}/roles/{s}", .{ group_id, role_id }) catch {
@@ -196,7 +196,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         params: ListAssignmentsParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.RoleListResource) {
         return self.list_group_role_assignments_with_options(allocator, group_id, params, request_opts);
     }
@@ -206,7 +206,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         req: AssignRoleRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.GroupRoleAssignment) {
         return self.assign_group_role_with_options(allocator, group_id, req, request_opts);
     }
@@ -216,7 +216,7 @@ pub const Resource = struct {
         allocator: std.mem.Allocator,
         group_id: []const u8,
         role_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.DeletedRoleAssignmentResource) {
         return self.unassign_group_role_with_options(allocator, group_id, role_id, request_opts);
     }

@@ -22,7 +22,7 @@ pub const CreateBatchRequest = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         req: CreateBatchRequest,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Batch) {
         return self.create_batch_with_options(allocator, req, request_opts);
     }
@@ -39,7 +39,7 @@ pub const CreateBatchRequest = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         params: ListBatchesParams,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.ListBatchesResponse) {
         return self.list_batches_with_options(allocator, params, request_opts);
     }
@@ -56,7 +56,7 @@ pub const CreateBatchRequest = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         batch_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Batch) {
         return self.retrieve_batch_with_options(allocator, batch_id, request_opts);
     }
@@ -73,7 +73,7 @@ pub const CreateBatchRequest = struct {
         self: *const Resource,
         allocator: std.mem.Allocator,
         batch_id: []const u8,
-        request_opts: transport_mod.Transport.RequestOptions,
+        request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.Batch) {
         return self.cancel_batch_with_options(allocator, batch_id, request_opts);
     }
@@ -135,7 +135,9 @@ pub const Resource = struct {
         var buf: [256]u8 = undefined;
         var fbs = std.io.fixedBufferStream(&buf);
         const writer = fbs.writer();
-        try writer.writeAll("/batches");
+        writer.writeAll("/batches") catch {
+            return errors.Error.SerializeError;
+        };
 
         var first = true;
         try common.appendOptionalQueryParam(writer, &first, "after", params.after);

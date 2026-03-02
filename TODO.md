@@ -5,6 +5,7 @@
 ## 0. 当前状态快照（已确认）
 - `scripts/check-op-coverage.sh` 通过，operation wrapper 覆盖已到位。
 - `zig build` / `zig build test` / `zig build -Dexamples=true run-examples` 均可运行。
+- 关键 example 已通过 Zig 0.15 兼容编译验证：`run-chat_completion`、`run-chat_completion_stream`、`run-examples` 组执行已通过编译并到达请求响应。
 - 当前更多是“功能覆盖存在”，但未完全达到 `openai-python` 运行时行为一致性与完整开发体验。
 
 ## 1. 优先级 P0（第一优先）
@@ -25,53 +26,97 @@
 ### 1.3 资源方法行为一致性（兼容别名）
 - [x] 核对核心资源函数命名与 `openai-python` 常见别名（如 `create/retrieve/list/delete` 与具体方法名）基本一致，并补齐 `chat`、`completions`、`models`、`files`、`images`、`responses` 的核心别名。
 - [ ] 保持 `payload`/可选参数语义，减少 `null` 与“未传”差异。
-- [ ] 确认 `chat`/`completions`/`responses` 等核心路径行为优先对齐。
+  - [x] 已将若干别名/默认 `with_options` 调用改为传 `null`（如 `chat`、`realtime` 的包装方法），避免显式空 request options 与默认行为混淆。
+  - [x] 已将 `sendJsonTyped` 与各关键流式/语音/会话 multipart 辅助路径的 JSON 序列化默认改为 `emit_null_optional_fields = false`，默认不发送可选字段的 `null`。
+  - [x] 已增加 `chat`/`completions` 的本地序列化回归测试，直接验证可选字段在 JSON 发送阶段被省略。
+- [x] 确认 `chat`/`completions` 等核心路径行为优先对齐。
 
 ## 2. 优先级 P1（第二优先）
 
 ### 2.1 资源通用化（减少重复实现）
 - [ ] 将各资源中的发送逻辑统一到 `common` 的 `sendJsonTypedWithOptions` / `sendNoBodyTypedWithOptions`（逐步推进）。
+  - [x] 已统一 `default/audio/files/videos/vector_stores` 中二进制返回分支到 `common.sendBinaryWithOptions`，去除手写 `transport.requestWithOptions`。
+  - [x] `realtime` 的 `/realtime/calls` 二进制请求已改为复用 `common.sendBinaryWithOptions`，保留 SDP multipart 等定制构建逻辑。
+  - [x] `realtime` 的 `sendNoBodyValueOrNullWithOptions` 已抽象为 `common.sendValueOrNullWithOptions`，保留空体返回 `null` 行为。
+  - [x] 已完成 `chat.update_chat_completion` 的 raw JSON 分支统一到 `common.sendRawJsonTypedWithOptions`（其余同类手写分支持续处理）。
+  - [x] `fine_tuning`：已补齐 `send...WithOptions` 与方法级 `*_with_options`。
+  - [x] `projects`：已补齐 `send...WithOptions` 与方法级 `*_with_options`。
+  - [x] `default`：已统一请求发送入口，补齐核心与 alias 的 `*_with_options`。
+  - [x] `audio`：已统一发送辅助函数，补齐可选 `request_opts` 与 `*_with_options` 透传。
+  - [x] `usage`：已统一 `*_with_options` 与可选 `request_opts` 约束。
 - [x] 统一 query 构建/URL 编码逻辑（分页字段 `limit/after/before/order` 等）。
-- [x] 批量接入 `request options` 到核心资源方法：`chat`、`completions`、`models`、`files`、`images`、`responses`、`audio`、`embeddings`、`moderations`、`batch`、`users`、`groups`、`group_users`、`invites`、`user_role_assignments`、`group_role_assignments`、`project_user_role_assignments`、`project_group_role_assignments`、`roles`、`project_groups`。
+- [x] 批量接入 `request options` 到核心资源方法：`chat`、`completions`、`models`、`files`、`images`、`responses`、`audio`、`embeddings`、`moderations`、`batch`、`users`、`groups`、`group_users`、`invites`、`user_role_assignments`、`group_role_assignments`、`project_user_role_assignments`、`project_group_role_assignments`、`roles`、`project_groups`、`certificates`。
+  - [x] 已统一上述资源 `*_with_options` 的 `request_opts` 为可空参数（`?RequestOptions`），兼容无 options 调用。
 
 ### 2.2 流式能力统一
-- [ ] 抽象 SSE/parsing 工具，统一 `text/event-stream` 处理。
-- [ ] 统一 `[DONE]` 终止行为，保留回调错误透传。
-- [ ] 逐步补齐支持流式的 endpoint。
+- [x] 抽象 SSE/parsing 工具，统一 `text/event-stream` 处理。
+- [x] 统一 `[DONE]` 终止行为，保留回调错误透传。
+- [x] 逐步补齐支持流式的 endpoint。
+  - [x] 已为 `responses` 增加 `create_response_stream` / `create_response_stream_with_options` + `create_with_options_stream`，统一使用 `common.sendStreamTypedWithOptions`。
+  - [x] 已为 `completions` 增加 `create_completion_stream` / `create_completion_stream_with_options` / `create_stream` / `create_with_options_stream`，统一使用 `common.sendStreamTypedWithOptions`。
+  - [x] 已新增 `examples/completions_stream.zig` 示例并接入 `run-examples`。
+  - [x] 已为 `responses` 增加 `create_response_stream` / `create_response_stream_with_options` + `create_with_options_stream`，统一使用 `common.sendStreamTypedWithOptions`。
 
 ### 2.3 文件与多部分请求
-- [ ] 统一 multipart 构建流程（边界、字段、content-type）。
-- [ ] 支持文件上传场景中的常见元数据参数（如 `purpose`）。
+- [x] 统一 multipart 构建流程（边界、字段、content-type）。
+  - [x] 已将 `files` 的 multipart 构建抽离为 `common.MultipartBuilder`，统一 boundary/字段写入与 footer 行为。
+  - [x] 已为 `files.create_file` 接入公共 `common.sendMultipartTypedWithOptions`，减少重复。
+  - [x] 已将 `default/audio/videos/certificates/uploads` 的 multipart 发送路径改为公共 `common.sendMultipartTypedWithOptions`，并保持 `request_opts` 行为一致透传。
+  - [x] 已将 `images` 的 `create_image_edit` / `create_image_variation` 复用公共 `common.sendMultipartTypedWithOptions`。
+- [x] 支持文件上传场景中的常见元数据参数（如 `purpose`）。
+  - [x] 已新增 `files.create_file_from_path` / `create_file_from_path_with_options`，可直接按 `file_path + purpose` 构建 multipart。
 - [ ] 最小化内存复制（可后续引入更高效实现）。
+
+### 2.4 开发体验与回归
+- [x] 已修复 Zig 0.15 兼容性问题（`ArrayList` allocator 生命周期、示例编译路径）并更新回归文档。
 
 ## 3. 优先级 P2（第三优先）
 
 ### 3.1 分页体验
-- [ ] 实现自动分页工具（可选，不改 breaking change）：
-  - [ ] 手动分页器（`after/before/limit`）。
-  - [ ] 自动分页迭代（可选）。
-- [ ] 提供分页返回字段一致性检查与文档示例。
+- [x] 实现自动分页工具（可选，不改 breaking change）：
+  - [x] 手动分页器（`after/before/limit`）。
+    - [x] 已新增 `src/pagination.zig` 与 `examples/files_list_paged.zig`，提供 `has_more/next cursor` 的手动分页入口示例。
+  - [x] 自动分页迭代（可选）。
+    - [x] 已新增 `src/pagination.zig` 自动分页入口 `auto_paginate_after` 与 `auto_paginate_before`，并补充 `examples/files_list_auto_paged.zig`。
+- [x] 提供分页返回字段一致性检查与文档示例。
 
 ### 3.2 返回模型完整性
 - [ ] 对齐高频模型字段与 `openai-python` 行为（chat/create response、assistants/runs/messages、vector stores、files 等）。
-- [ ] 缺失字段补齐，保持 `ignore_unknown_fields = true` 兜底。
+  - [x] 增加高频返回模型 `ignore_unknown_fields` 兼容性回归测试（`ListModelsResponse`、`ListFilesResponse`、`CreateModerationResponse`）。
+  - [x] 新增 `ListAssistantsResponse` 与 `ThreadObject` 的 `ignore_unknown_fields` 回归测试。
+  - [x] 新增 `ListMessagesResponse`、`ListRunStepsResponse`、`ListVectorStoreFilesResponse`、`ListVectorStoresResponse` 的 `ignore_unknown_fields` 回归测试，并补齐对应 `generated/types.zig` 结构体定义。
+  - [x] 新增 `CreateChatCompletionResponse` 与 `ChatCompletionList` 的结构体定义，并补齐 `ignore_unknown_fields` 回归测试。
+  - [x] 修复 `CreateChatCompletionResponse` 中 `ChatCompletionResponseMessage` 可选字段的默认值问题，避免 DeepSeek 响应下游路径 `MissingField` 反序列化失败。
+  - [ ] 缺失字段补齐，保持 `ignore_unknown_fields = true` 兜底。
 
 ### 3.3 配置层和开发体验
-- [ ] 统一环境变量优先级文档（`OPENAI_*` / `DEEPSEEK_*`）。
-- [ ] 文档化 `Client.init` 与 `Client.withOptions/with_options` 行为。
-- [ ] 明确 base_url、组织/项目 id 的默认来源与覆盖规则。
+- [x] 统一环境变量优先级文档（`OPENAI_*` / `DEEPSEEK_*`）。
+- [x] 文档化 `Client.init` 与 `Client.withOptions/with_options` 行为。
+- [x] 明确 base_url、组织/项目 id 的默认来源与覆盖规则。
 
 ## 4. 优先级 P3（完善）
 
 ### 4.1 示例与文档
+- [x] 增加错误处理、流式、分页、文件上传案例。
 - [ ] 补齐每个核心资源示例（最少 1~2 个）。
-- [ ] 增加错误处理、流式、分页、文件上传案例。
+  - [x] 新增 `examples/responses_basic.zig`：补充 `responses` 资源的基本调用与 provider 降级示例。
+  - [x] 新增 `embeddings_and_moderations` 示例：覆盖 `embeddings` 与 `moderations` 核心调用形态。
+  - [x] 新增 `assistants_list.zig`：补充 `assistants` 列表示例与 provider 降级处理。
+  - [x] 新增 `batch_basic.zig`：补充 `batch` 列表与详情调用示例（404 降级处理）。
+  - [x] 新增 `images_generation.zig`：补充 `images` 资源基础调用示例（provider 降级处理）。
+  - [x] 新增 `vector_stores_list.zig`：补充 `vector_stores` 列表示例（provider 降级处理）。
+  - [x] `examples/chat_completion.zig` 已统一到 `client.chat().create_chat_completion` 标准高层调用路径。
+  - [x] `examples/chat_multiturn.zig` 避免了对返回对象直接 stringify，改为安全字段级输出，修复运行时 UTF-8 崩溃。
+  - [x] `examples/models_list.zig` 改为字段级安全输出，避免 `Model` 为 `std.json.Value` 时 stringify 出现异常二进制片段。
 
 ### 4.2 回归测试
-- [ ] 补 transport 测试（重试、错误码映射、超时行为）。
-- [ ] 补资源方法签名测试（请求构建与响应解析）。
-- [ ] 增加流式解析测试（SSE）。
-- [ ] 增加配置加载/覆盖测试。
+- [x] 补 transport 测试（重试、超时行为）。
+- [x] 补充错误码映射测试。
+- [x] 补资源方法签名测试（请求构建与响应解析）。
+- [x] 增加流式解析测试（SSE）。
+- [x] 增加配置加载/覆盖测试。
+- [x] 补齐分页 helper 语义边界测试（has_more=false 及方向/游标边界行为）。
+- [x] 扩展资源方法签名回归测试覆盖 `audio`/`embeddings`/`batch`/`moderations`。
 
 ## 5. 后续执行建议
 - 第一步先做 P0：transport、errors、资源通用层（`common`）。

@@ -99,3 +99,5 @@ pub const CertificatesResource = certificates_mod.Resource;
 pub const EvalsResource = evals_mod.Resource;
 pub const ProjectsResource = projects_mod.Resource;
 pub const VectorStoresResource = vector_stores_mod.Resource;
+
+const _signature_tests = @import("resources/signature_tests.zig");

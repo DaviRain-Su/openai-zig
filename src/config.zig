@@ -46,21 +46,22 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
     errdefer if (organization) |val| allocator.free(val);
     errdefer if (project) |val| allocator.free(val);
 
-    const env_api_key = try readOptionalEnvVar(allocator, "OPENAI_API_KEY");
+    const env_api_key = try readOptionalEnvVarFrom(allocator, &.{ "OPENAI_API_KEY", "DEEPSEEK_API_KEY" });
     defer if (env_api_key) |val| allocator.free(val);
-    const env_deepseek_api_key = try readOptionalEnvVar(allocator, "DEEPSEEK_API_KEY");
-    defer if (env_deepseek_api_key) |val| allocator.free(val);
-    const env_base_url = try readOptionalEnvVar(allocator, "OPENAI_BASE_URL");
+    const env_base_url = try readOptionalEnvVarFrom(allocator, &.{ "OPENAI_BASE_URL", "DEEPSEEK_BASE_URL" });
     defer if (env_base_url) |val| allocator.free(val);
-    const env_model = try readOptionalEnvVar(allocator, "OPENAI_MODEL");
+    const env_model = try readOptionalEnvVarFrom(allocator, &.{ "OPENAI_MODEL", "DEEPSEEK_MODEL" });
     defer if (env_model) |val| allocator.free(val);
-    const env_organization = try readOptionalEnvVar(allocator, "OPENAI_ORGANIZATION");
+    const env_organization = try readOptionalEnvVarFrom(allocator, &.{"OPENAI_ORGANIZATION"});
     defer if (env_organization) |val| allocator.free(val);
-    const env_project = try readOptionalEnvVar(allocator, "OPENAI_PROJECT");
+    const env_project = try readOptionalEnvVarFrom(allocator, &.{"OPENAI_PROJECT"});
     defer if (env_project) |val| allocator.free(val);
-    const env_timeout_ms = try readOptionalEnvInt(allocator, "OPENAI_TIMEOUT_MS");
-    const env_max_retries = try readOptionalEnvInt(allocator, "OPENAI_MAX_RETRIES");
-    const env_retry_base_delay_ms = try readOptionalEnvInt(allocator, "OPENAI_RETRY_BASE_DELAY_MS");
+    const env_timeout_ms = try readOptionalEnvIntFrom(allocator, &.{ "OPENAI_TIMEOUT_MS", "DEEPSEEK_TIMEOUT_MS" });
+    const env_max_retries = try readOptionalEnvIntFrom(allocator, &.{ "OPENAI_MAX_RETRIES", "DEEPSEEK_MAX_RETRIES" });
+    const env_retry_base_delay_ms = try readOptionalEnvIntFrom(
+        allocator,
+        &.{ "OPENAI_RETRY_BASE_DELAY_MS", "DEEPSEEK_RETRY_BASE_DELAY_MS" },
+    );
 
     if (std.fs.cwd().openFile(path, .{})) |file| {
         defer file.close();
@@ -76,8 +77,8 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
 
         const api_key_src = if (table.keys.get("api_key")) |val| blk: {
             if (val == .String) break :blk val.String;
-            break :blk env_api_key orelse env_deepseek_api_key orelse defaults.api_key;
-        } else env_api_key orelse env_deepseek_api_key orelse defaults.api_key;
+            break :blk env_api_key orelse defaults.api_key;
+        } else env_api_key orelse defaults.api_key;
 
         const base_url_src = if (table.keys.get("base_url")) |val| blk: {
             if (val == .String) break :blk val.String;
@@ -152,7 +153,7 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
         max_retries = max_retries_src;
         retry_base_delay_ms = retry_base_delay_ms_src;
     } else |_| {
-        api_key = try allocator.dupe(u8, env_api_key orelse env_deepseek_api_key orelse defaults.api_key);
+        api_key = try allocator.dupe(u8, env_api_key orelse defaults.api_key);
         base_url = try allocator.dupe(u8, env_base_url orelse defaults.base_url);
         model = try allocator.dupe(u8, env_model orelse defaults.model);
         organization = if (env_organization) |value| try allocator.dupe(u8, value) else null;
@@ -161,9 +162,7 @@ pub fn load(allocator: std.mem.Allocator, path: []const u8) !Config {
         max_retries = if (env_max_retries) |value| if (value <= std.math.maxInt(u8))
             @as(u8, @intCast(value))
         else
-            defaults.max_retries
-        else
-            defaults.max_retries;
+            defaults.max_retries else defaults.max_retries;
         retry_base_delay_ms = env_retry_base_delay_ms orelse defaults.retry_base_delay_ms;
     }
 
@@ -186,11 +185,111 @@ fn readOptionalEnvVar(allocator: std.mem.Allocator, key: []const u8) !?[]const u
     };
 }
 
-fn readOptionalEnvInt(allocator: std.mem.Allocator, key: []const u8) !?u64 {
-    const raw = std.process.getEnvVarOwned(allocator, key) catch |err| switch (err) {
-        error.EnvironmentVariableNotFound => return null,
-        else => return err,
+fn readOptionalEnvVarFrom(allocator: std.mem.Allocator, keys: []const []const u8) !?[]const u8 {
+    for (keys) |key| {
+        if (try readOptionalEnvVar(allocator, key)) |value| {
+            return value;
+        }
+    }
+    return null;
+}
+
+fn readOptionalEnvIntFrom(allocator: std.mem.Allocator, keys: []const []const u8) !?u64 {
+    for (keys) |key| {
+        const raw = try readOptionalEnvVar(allocator, key);
+        if (raw) |value| {
+            defer allocator.free(value);
+            const parsed = std.fmt.parseInt(u64, value, 10) catch continue;
+            return parsed;
+        }
+    }
+    return null;
+}
+
+test "config load resolves file values and fallback chain for missing file" {
+    const gpa = std.heap.page_allocator;
+    const cwd = std.fs.cwd();
+    const pid = std.process.getSelfPid();
+
+    var file_path_buf: [64]u8 = undefined;
+    const file_path = try std.fmt.bufPrint(&file_path_buf, "tmp-openai-zig-config-{d}.toml", .{pid});
+    {
+        var file = try cwd.createFile(file_path, .{ .truncate = true, .read = true, .write = true });
+        defer file.close();
+        defer _ = cwd.deleteFile(file_path) catch {};
+
+        try file.writer().print(
+            \\api_key = "from-file"
+            \\base_url = "https://api.example.com/v1"
+            \\model = "file-model"
+            \\organization = "org-file"
+            \\project = "project-file"
+            \\timeout_ms = 1234
+            \\max_retries = 4
+            \\retry_base_delay_ms = 888
+        , .{});
+    }
+
+    var cfg = try load(gpa, file_path);
+    defer cfg.deinit(gpa);
+
+    try std.testing.expectEqualStrings("from-file", cfg.api_key);
+    try std.testing.expectEqualStrings("https://api.example.com/v1", cfg.base_url);
+    try std.testing.expectEqualStrings("file-model", cfg.model);
+    try std.testing.expectEqualStrings("org-file", cfg.organization.?);
+    try std.testing.expectEqualStrings("project-file", cfg.project.?);
+    try std.testing.expectEqual(@as(?u64, 1234), cfg.timeout_ms);
+    try std.testing.expectEqual(@as(u8, 4), cfg.max_retries);
+    try std.testing.expectEqual(@as(u64, 888), cfg.retry_base_delay_ms);
+
+    var missing_path_buf: [64]u8 = undefined;
+    const missing_path = try std.fmt.bufPrint(&missing_path_buf, "tmp-openai-zig-config-missing-{d}.toml", .{pid});
+
+    const env_api_key = try readOptionalEnvVarFrom(gpa, &.{ "OPENAI_API_KEY", "DEEPSEEK_API_KEY" });
+    defer if (env_api_key) |value| gpa.free(value);
+    const env_base_url = try readOptionalEnvVarFrom(gpa, &.{ "OPENAI_BASE_URL", "DEEPSEEK_BASE_URL" });
+    defer if (env_base_url) |value| gpa.free(value);
+    const env_model = try readOptionalEnvVarFrom(gpa, &.{ "OPENAI_MODEL", "DEEPSEEK_MODEL" });
+    defer if (env_model) |value| gpa.free(value);
+    const env_organization = try readOptionalEnvVarFrom(gpa, &.{"OPENAI_ORGANIZATION"});
+    defer if (env_organization) |value| gpa.free(value);
+    const env_project = try readOptionalEnvVarFrom(gpa, &.{"OPENAI_PROJECT"});
+    defer if (env_project) |value| gpa.free(value);
+    const env_timeout_ms = try readOptionalEnvIntFrom(gpa, &.{ "OPENAI_TIMEOUT_MS", "DEEPSEEK_TIMEOUT_MS" });
+    const env_max_retries = try readOptionalEnvIntFrom(gpa, &.{ "OPENAI_MAX_RETRIES", "DEEPSEEK_MAX_RETRIES" });
+    const env_retry_base_delay_ms = try readOptionalEnvIntFrom(
+        gpa,
+        &.{ "OPENAI_RETRY_BASE_DELAY_MS", "DEEPSEEK_RETRY_BASE_DELAY_MS" },
+    );
+
+    var fallback = try load(gpa, missing_path);
+    defer fallback.deinit(gpa);
+
+    const defaults = .{
+        .base_url = "https://api.deepseek.com/v1",
+        .model = "deepseek-chat",
+        .max_retries = @as(u8, 2),
+        .retry_base_delay_ms = @as(u64, 500),
     };
-    defer allocator.free(raw);
-    return std.fmt.parseInt(u64, raw, 10) catch null;
+
+    try std.testing.expectEqualStrings(env_api_key orelse "", fallback.api_key);
+    try std.testing.expectEqualStrings(env_base_url orelse defaults.base_url, fallback.base_url);
+    try std.testing.expectEqualStrings(env_model orelse defaults.model, fallback.model);
+    if (env_organization) |value| {
+        try std.testing.expectEqualStrings(value, fallback.organization.?);
+    } else {
+        try std.testing.expect(fallback.organization == null);
+    }
+    if (env_project) |value| {
+        try std.testing.expectEqualStrings(value, fallback.project.?);
+    } else {
+        try std.testing.expect(fallback.project == null);
+    }
+    try std.testing.expectEqual(if (env_timeout_ms) |v| v else @as(?u64, null), fallback.timeout_ms);
+    const fallback_expected_retries = if (env_max_retries) |value|
+        if (value <= std.math.maxInt(u8)) @as(u8, @intCast(value)) else defaults.max_retries
+    else
+        defaults.max_retries;
+    try std.testing.expectEqual(fallback_expected_retries, fallback.max_retries);
+    try std.testing.expectEqual(env_retry_base_delay_ms orelse defaults.retry_base_delay_ms, fallback.retry_base_delay_ms);
 }
