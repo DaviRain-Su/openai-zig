@@ -277,6 +277,7 @@
 - [x] 补齐 `StopConfiguration` 为可序列化 union：支持 `single` 字符串与 `multiple` 字符串数组，避免 `stop` 的动态 JSON 兼容差异问题；补充 completions 请求序列化回归测试。
 - [x] 继续收窄 generated/types 高频工具调用资源模型：`ComputerToolCallOutputResource` 改为 `ComputerToolCallOutput`，`FunctionToolCallResource` 与 `FunctionToolCallOutputResource` 分别收敛为 `FunctionToolCall` / `FunctionToolCallOutput`，减少动态类型暴露。
 - [x] 继续收窄 generated/types 高频请求类型：`CreateCompletionRequest.logit_bias` 改为结构化 `CreateCompletionLogitBias`（`entries`/`raw` 双模式），新增 `CreateCompletionLogitBiasEntry` 并补充序列化回归。
+- [x] 继续收窄 generated/types 工具调用动作：将 `ComputerAction` 由 `std.json.Value` 收窄为结构化联合（`click/double_click/drag/keypress/move/screenshot/scroll/type/wait`）并保留 `raw` 回退；将 `ComputerCallOutputItemParam.acknowledged_safety_checks` 改为 `?[]const ComputerCallSafetyCheckParam`。
 - [x] 继续收窄 generated/types 分块策略模型：`ChunkingStrategyRequestParam`、`ChunkingStrategyResponse`、`TranscriptionChunkingStrategy` 改为结构化 `auto`/`static`/`other`/`raw` union，补充分块策略解析与序列化回归。
 - [x] 继续收窄 ChatKit 与线程相关模型：`Message.content`、`UserMessageItem.content`、`ThreadItem`、`TextResponseFormatConfiguration` 改为结构化 union + `jsonParseFromValue` 解析并补齐回归测试。
 - [x] 收窄 vector/file-search 相关过滤器模型：新增 `ComparisonFilterValue`/`ComparisonFilterValueItems`/`Filters` 结构化 union，并将 `VectorStoreSearchRequest.filters`、`FileSearchTool.filters`、`FileSearchToolCall.results` 从 `std.json.Value` 收窄；补充对应解析回归测试。

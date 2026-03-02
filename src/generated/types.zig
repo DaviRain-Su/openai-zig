@@ -1733,13 +1733,219 @@ pub const Filters = union(enum) {
         }
     }
 };
-pub const ComputerAction = std.json.Value;
+pub const ComputerAction = union(enum) {
+    click: ClickParam,
+    double_click: DoubleClickAction,
+    drag: Drag,
+    keypress: KeyPressAction,
+    move: Move,
+    screenshot: Screenshot,
+    scroll: Scroll,
+    type_action: Type,
+    wait: Wait,
+    raw: std.json.Value,
+
+    pub fn forClick(value: ClickParam) ComputerAction {
+        return .{ .click = value };
+    }
+
+    pub fn forDoubleClick(value: DoubleClickAction) ComputerAction {
+        return .{ .double_click = value };
+    }
+
+    pub fn forDrag(value: Drag) ComputerAction {
+        return .{ .drag = value };
+    }
+
+    pub fn forKeyPress(value: KeyPressAction) ComputerAction {
+        return .{ .keypress = value };
+    }
+
+    pub fn forMove(value: Move) ComputerAction {
+        return .{ .move = value };
+    }
+
+    pub fn forScreenshot(value: Screenshot) ComputerAction {
+        return .{ .screenshot = value };
+    }
+
+    pub fn forScroll(value: Scroll) ComputerAction {
+        return .{ .scroll = value };
+    }
+
+    pub fn forTypeAction(value: Type) ComputerAction {
+        return .{ .type_action = value };
+    }
+
+    pub fn forWait(value: Wait) ComputerAction {
+        return .{ .wait = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) ComputerAction {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ComputerAction, writer: anytype) !void {
+        switch (self) {
+            .click => |value| {
+                try writer.write(value);
+            },
+            .double_click => |value| {
+                try writer.write(value);
+            },
+            .drag => |value| {
+                try writer.write(value);
+            },
+            .keypress => |value| {
+                try writer.write(value);
+            },
+            .move => |value| {
+                try writer.write(value);
+            },
+            .screenshot => |value| {
+                try writer.write(value);
+            },
+            .scroll => |value| {
+                try writer.write(value);
+            },
+            .type_action => |value| {
+                try writer.write(value);
+            },
+            .wait => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ComputerAction {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !ComputerAction {
+        switch (source) {
+            .object => |root| {
+                const kind = root.get("type") orelse return .{ .raw = source };
+                if (kind != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, kind.string, "click")) {
+                    const parsed = std.json.parseFromValue(
+                        ClickParam,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .click = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "double_click")) {
+                    const parsed = std.json.parseFromValue(
+                        DoubleClickAction,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .double_click = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "drag")) {
+                    const parsed = std.json.parseFromValue(
+                        Drag,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .drag = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "keypress")) {
+                    const parsed = std.json.parseFromValue(
+                        KeyPressAction,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .keypress = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "move")) {
+                    const parsed = std.json.parseFromValue(
+                        Move,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .move = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "screenshot")) {
+                    const parsed = std.json.parseFromValue(
+                        Screenshot,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .screenshot = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "scroll")) {
+                    const parsed = std.json.parseFromValue(
+                        Scroll,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .scroll = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "type")) {
+                    const parsed = std.json.parseFromValue(
+                        Type,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .type_action = parsed.value };
+                }
+
+                if (std.mem.eql(u8, kind.string, "wait")) {
+                    const parsed = std.json.parseFromValue(
+                        Wait,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .wait = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const ComputerCallOutputItemParam = struct {
     id: ?[]const u8,
     call_id: []const u8,
     type: []const u8,
     output: ComputerScreenshotImage,
-    acknowledged_safety_checks: ?std.json.Value,
+    acknowledged_safety_checks: ?[]const ComputerCallSafetyCheckParam,
     status: ?[]const u8,
 };
 pub const ComputerCallSafetyCheckParam = struct {
