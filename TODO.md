@@ -298,3 +298,4 @@
 - [x] 继续收窄（结构化升级）：将 `EvalGraderConfig` 从动态值别名升级为结构化 union（`label_model/multi/python/score_model/string_check/text_similarity/raw`），并将 `GraderMulti.graders` 收敛为 `[]const EvalGraderConfig`（支持递归组合）；新增解析回归测试覆盖 typed 与 raw fallback。
 - [x] 继续收窄（Realtime 结构化）：`RealtimeTruncation` 从动态值改为 `mode/config/raw` union，`RealtimeTurnDetection` 从动态值改为结构体（`type/threshold/prefix_padding_ms/silence_duration_ms`）；新增回归测试覆盖 mode/object/raw 与 session turn_detection 解析。
 - [x] 别名收敛整理：将剩余 `= std.json.Value` 别名统一重定向到 `JsonObject`（保留 `JsonObject` 作为唯一底层动态值别名），减少动态类型入口分散度并保持向后兼容。
+- [x] 继续收窄（Realtime 事件结构化）：`RealtimeClientEvent` 与 `RealtimeServerEvent` 从动态别名升级为结构化 union（含常见事件分支 + `raw` 回退），并新增兼容解析测试覆盖 typed variant 与未知事件 raw fallback。

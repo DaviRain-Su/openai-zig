@@ -7673,7 +7673,136 @@ pub const RealtimeCallReferRequest = struct {
 pub const RealtimeCallRejectRequest = struct {
     status_code: ?i64,
 };
-pub const RealtimeClientEvent = JsonObject;
+pub const RealtimeClientEvent = union(enum) {
+    conversation_item_create: RealtimeClientEventConversationItemCreate,
+    conversation_item_delete: RealtimeClientEventConversationItemDelete,
+    conversation_item_retrieve: RealtimeClientEventConversationItemRetrieve,
+    conversation_item_truncate: RealtimeClientEventConversationItemTruncate,
+    input_audio_buffer_append: RealtimeClientEventInputAudioBufferAppend,
+    input_audio_buffer_clear: RealtimeClientEventInputAudioBufferClear,
+    input_audio_buffer_commit: RealtimeClientEventInputAudioBufferCommit,
+    output_audio_buffer_clear: RealtimeClientEventOutputAudioBufferClear,
+    response_cancel: RealtimeClientEventResponseCancel,
+    response_create: RealtimeClientEventResponseCreate,
+    session_update: RealtimeClientEventSessionUpdate,
+    transcription_session_update: RealtimeClientEventTranscriptionSessionUpdate,
+    raw: JsonObject,
+
+    pub fn forRaw(value: JsonObject) RealtimeClientEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: RealtimeClientEvent, writer: anytype) !void {
+        switch (self) {
+            .conversation_item_create => |value| try writer.write(value),
+            .conversation_item_delete => |value| try writer.write(value),
+            .conversation_item_retrieve => |value| try writer.write(value),
+            .conversation_item_truncate => |value| try writer.write(value),
+            .input_audio_buffer_append => |value| try writer.write(value),
+            .input_audio_buffer_clear => |value| try writer.write(value),
+            .input_audio_buffer_commit => |value| try writer.write(value),
+            .output_audio_buffer_clear => |value| try writer.write(value),
+            .response_cancel => |value| try writer.write(value),
+            .response_create => |value| try writer.write(value),
+            .session_update => |value| try writer.write(value),
+            .transcription_session_update => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeClientEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !RealtimeClientEvent {
+        switch (source) {
+            .object => |root| {
+                const event_type = root.get("type") orelse return .{ .raw = source };
+                if (event_type != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, event_type.string, "conversation.item.create")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventConversationItemCreate, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .conversation_item_create = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "conversation.item.delete")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventConversationItemDelete, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .conversation_item_delete = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "conversation.item.retrieve")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventConversationItemRetrieve, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .conversation_item_retrieve = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "conversation.item.truncate")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventConversationItemTruncate, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .conversation_item_truncate = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "input_audio_buffer.append")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventInputAudioBufferAppend, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .input_audio_buffer_append = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "input_audio_buffer.clear")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventInputAudioBufferClear, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .input_audio_buffer_clear = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "input_audio_buffer.commit")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventInputAudioBufferCommit, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .input_audio_buffer_commit = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "output_audio_buffer.clear")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventOutputAudioBufferClear, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .output_audio_buffer_clear = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "response.cancel")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventResponseCancel, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .response_cancel = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "response.create")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventResponseCreate, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .response_create = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "session.update")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventSessionUpdate, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .session_update = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "transcription_session.update")) {
+                    const parsed = std.json.parseFromValue(RealtimeClientEventTranscriptionSessionUpdate, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .transcription_session_update = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const RealtimeClientEventConversationItemCreate = struct {
     event_id: ?[]const u8,
     type: []const u8,
@@ -8124,7 +8253,152 @@ pub const RealtimeResponseCreateParams = struct {
     prompt: ?Prompt,
     input: ?[]const RealtimeConversationItem,
 };
-pub const RealtimeServerEvent = JsonObject;
+pub const RealtimeServerEvent = union(enum) {
+    conversation_created: RealtimeServerEventConversationCreated,
+    conversation_item_added: RealtimeServerEventConversationItemAdded,
+    conversation_item_created: RealtimeServerEventConversationItemCreated,
+    conversation_item_deleted: RealtimeServerEventConversationItemDeleted,
+    event_error: RealtimeServerEventError,
+    response_created: RealtimeServerEventResponseCreated,
+    response_done: RealtimeServerEventResponseDone,
+    response_output_item_added: RealtimeServerEventResponseOutputItemAdded,
+    response_output_item_done: RealtimeServerEventResponseOutputItemDone,
+    response_text_delta: RealtimeServerEventResponseTextDelta,
+    response_text_done: RealtimeServerEventResponseTextDone,
+    session_created: RealtimeServerEventSessionCreated,
+    session_updated: RealtimeServerEventSessionUpdated,
+    transcription_session_updated: RealtimeServerEventTranscriptionSessionUpdated,
+    raw: JsonObject,
+
+    pub fn forRaw(value: JsonObject) RealtimeServerEvent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: RealtimeServerEvent, writer: anytype) !void {
+        switch (self) {
+            .conversation_created => |value| try writer.write(value),
+            .conversation_item_added => |value| try writer.write(value),
+            .conversation_item_created => |value| try writer.write(value),
+            .conversation_item_deleted => |value| try writer.write(value),
+            .event_error => |value| try writer.write(value),
+            .response_created => |value| try writer.write(value),
+            .response_done => |value| try writer.write(value),
+            .response_output_item_added => |value| try writer.write(value),
+            .response_output_item_done => |value| try writer.write(value),
+            .response_text_delta => |value| try writer.write(value),
+            .response_text_done => |value| try writer.write(value),
+            .session_created => |value| try writer.write(value),
+            .session_updated => |value| try writer.write(value),
+            .transcription_session_updated => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeServerEvent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !RealtimeServerEvent {
+        switch (source) {
+            .object => |root| {
+                const event_type = root.get("type") orelse return .{ .raw = source };
+                if (event_type != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, event_type.string, "conversation.created")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventConversationCreated, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .conversation_created = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "conversation.item.added")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventConversationItemAdded, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .conversation_item_added = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "conversation.item.created")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventConversationItemCreated, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .conversation_item_created = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "conversation.item.deleted")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventConversationItemDeleted, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .conversation_item_deleted = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "error")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventError, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .event_error = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "response.created")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventResponseCreated, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .response_created = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "response.done")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventResponseDone, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .response_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "response.output_item.added")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventResponseOutputItemAdded, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .response_output_item_added = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "response.output_item.done")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventResponseOutputItemDone, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .response_output_item_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "response.text.delta")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventResponseTextDelta, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .response_text_delta = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "response.text.done")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventResponseTextDone, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .response_text_done = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "session.created")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventSessionCreated, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .session_created = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "session.updated")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventSessionUpdated, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .session_updated = parsed.value };
+                }
+
+                if (std.mem.eql(u8, event_type.string, "transcription_session.updated")) {
+                    const parsed = std.json.parseFromValue(RealtimeServerEventTranscriptionSessionUpdated, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .transcription_session_updated = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const RealtimeServerEventConversationCreated = struct {
     event_id: []const u8,
     type: []const u8,

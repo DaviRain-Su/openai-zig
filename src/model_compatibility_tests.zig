@@ -2496,3 +2496,77 @@ test "realtime session parses typed turn detection" {
     try std.testing.expectEqual(@as(?i64, 120), turn_detection.prefix_padding_ms);
     try std.testing.expectEqual(@as(?i64, 250), turn_detection.silence_duration_ms);
 }
+
+test "realtime client event parses typed variant and keeps raw fallback" {
+    const typed_payload =
+        \\{"type":"response.create","response":null}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.RealtimeClientEvent,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .response_create => |value| {
+            try std.testing.expectEqualStrings("response.create", value.type);
+            try std.testing.expect(value.response == null);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"type":"future.client.event","x":1}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.RealtimeClientEvent,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future.client.event", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime server event parses typed variant and keeps raw fallback" {
+    const typed_payload =
+        \\{"event_id":"evt_1","type":"session.updated","session":{"id":"sess_1"}}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.RealtimeServerEvent,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .session_updated => |value| {
+            try std.testing.expectEqualStrings("session.updated", value.type);
+            try std.testing.expectEqualStrings("sess_1", value.session.id.?);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"event_id":"evt_2","type":"future.server.event","foo":true}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.RealtimeServerEvent,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future.server.event", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
