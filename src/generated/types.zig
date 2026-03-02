@@ -8849,12 +8849,7 @@ pub const RealtimeSessionCreateRequest = struct {
     },
     speed: ?f64,
     tracing: ?std.json.Value,
-    turn_detection: ?struct {
-        type: ?[]const u8,
-        threshold: ?f64,
-        prefix_padding_ms: ?i64,
-        silence_duration_ms: ?i64,
-    },
+    turn_detection: ?RealtimeTurnDetection,
     tools: ?[]const struct {
         type: ?[]const u8,
         name: ?[]const u8,
@@ -8910,12 +8905,7 @@ pub const RealtimeSessionCreateResponse = struct {
             noise_reduction: ?struct {
                 type: ?NoiseReductionType,
             },
-            turn_detection: ?struct {
-                type: ?[]const u8,
-                threshold: ?f64,
-                prefix_padding_ms: ?i64,
-                silence_duration_ms: ?i64,
-            },
+            turn_detection: ?RealtimeTurnDetection,
         },
         output: ?struct {
             format: ?RealtimeAudioFormats,
@@ -8924,12 +8914,7 @@ pub const RealtimeSessionCreateResponse = struct {
         },
     },
     tracing: ?std.json.Value,
-    turn_detection: ?struct {
-        type: ?[]const u8,
-        threshold: ?f64,
-        prefix_padding_ms: ?i64,
-        silence_duration_ms: ?i64,
-    },
+    turn_detection: ?RealtimeTurnDetection,
     tools: ?[]const RealtimeFunctionTool,
     tool_choice: ?[]const u8,
     max_output_tokens: ?i64,
@@ -8967,12 +8952,7 @@ pub const RealtimeSessionCreateResponseGA = struct {
     prompt: ?Prompt,
 };
 pub const RealtimeTranscriptionSessionCreateRequest = struct {
-    turn_detection: ?struct {
-        type: ?[]const u8,
-        threshold: ?f64,
-        prefix_padding_ms: ?i64,
-        silence_duration_ms: ?i64,
-    },
+    turn_detection: ?RealtimeTurnDetection,
     input_audio_noise_reduction: ?struct {
         type: ?NoiseReductionType,
     },
@@ -9002,12 +8982,7 @@ pub const RealtimeTranscriptionSessionCreateResponse = struct {
     modalities: ?[]const []const u8,
     input_audio_format: ?[]const u8,
     input_audio_transcription: ?AudioTranscription,
-    turn_detection: ?struct {
-        type: ?[]const u8,
-        threshold: ?f64,
-        prefix_padding_ms: ?i64,
-        silence_duration_ms: ?i64,
-    },
+    turn_detection: ?RealtimeTurnDetection,
 };
 pub const RealtimeTranscriptionSessionCreateResponseGA = struct {
     type: []const u8,
@@ -9022,17 +8997,185 @@ pub const RealtimeTranscriptionSessionCreateResponseGA = struct {
             noise_reduction: ?struct {
                 type: ?NoiseReductionType,
             },
-            turn_detection: ?struct {
-                type: ?[]const u8,
-                threshold: ?f64,
-                prefix_padding_ms: ?i64,
-                silence_duration_ms: ?i64,
-            },
+            turn_detection: ?RealtimeTurnDetection,
         },
     },
 };
-pub const RealtimeTruncation = std.json.Value;
-pub const RealtimeTurnDetection = std.json.Value;
+pub const RealtimeTurnDetectionServerVad = struct {
+    type: ?[]const u8 = null,
+    threshold: ?f64 = null,
+    prefix_padding_ms: ?i64 = null,
+    silence_duration_ms: ?i64 = null,
+    create_response: ?bool = null,
+    interrupt_response: ?bool = null,
+    idle_timeout_ms: ?i64 = null,
+};
+pub const RealtimeTurnDetectionSemanticVad = struct {
+    type: ?[]const u8 = null,
+    eagerness: ?[]const u8 = null,
+    create_response: ?bool = null,
+    interrupt_response: ?bool = null,
+};
+pub const RealtimeTurnDetection = union(enum) {
+    server_vad: RealtimeTurnDetectionServerVad,
+    semantic_vad: RealtimeTurnDetectionSemanticVad,
+    raw: std.json.Value,
+
+    pub fn forServerVad(value: RealtimeTurnDetectionServerVad) RealtimeTurnDetection {
+        return .{ .server_vad = value };
+    }
+
+    pub fn forSemanticVad(value: RealtimeTurnDetectionSemanticVad) RealtimeTurnDetection {
+        return .{ .semantic_vad = value };
+    }
+
+    pub fn forRaw(value: std.json.Value) RealtimeTurnDetection {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: RealtimeTurnDetection, writer: anytype) !void {
+        switch (self) {
+            .server_vad => |value| try writer.write(value),
+            .semantic_vad => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeTurnDetection {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !RealtimeTurnDetection {
+        switch (source) {
+            .object => |root| {
+                const turn_type = root.get("type") orelse return .{ .raw = source };
+                if (turn_type != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, turn_type.string, "server_vad")) {
+                    const parsed = std.json.parseFromValue(
+                        RealtimeTurnDetectionServerVad,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .server_vad = parsed.value };
+                }
+
+                if (std.mem.eql(u8, turn_type.string, "semantic_vad")) {
+                    const parsed = std.json.parseFromValue(
+                        RealtimeTurnDetectionSemanticVad,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .semantic_vad = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
+pub const RealtimeTruncationTokenLimits = struct {
+    post_instructions: ?i64 = null,
+};
+pub const RealtimeTruncation = union(enum) {
+    auto: void,
+    disabled: void,
+    retention_ratio: struct {
+        type: []const u8,
+        retention_ratio: f64,
+        token_limits: ?RealtimeTruncationTokenLimits = null,
+    },
+    raw: std.json.Value,
+
+    pub fn forAuto() RealtimeTruncation {
+        return .auto;
+    }
+
+    pub fn forDisabled() RealtimeTruncation {
+        return .disabled;
+    }
+
+    pub fn forRetentionRatio(
+        retention_ratio: f64,
+        token_limits: ?RealtimeTruncationTokenLimits,
+    ) RealtimeTruncation {
+        return .{
+            .retention_ratio = .{
+                .type = "retention_ratio",
+                .retention_ratio = retention_ratio,
+                .token_limits = token_limits,
+            },
+        };
+    }
+
+    pub fn forRaw(value: std.json.Value) RealtimeTruncation {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: RealtimeTruncation, writer: anytype) !void {
+        switch (self) {
+            .auto => try writer.write("auto"),
+            .disabled => try writer.write("disabled"),
+            .retention_ratio => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeTruncation {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !RealtimeTruncation {
+        switch (source) {
+            .string => |value| {
+                if (std.mem.eql(u8, value, "auto")) return .auto;
+                if (std.mem.eql(u8, value, "disabled")) return .disabled;
+                return .{ .raw = source };
+            },
+            .object => {
+                const parsed = std.json.parseFromValue(
+                    struct {
+                        type: []const u8,
+                        retention_ratio: ?f64 = null,
+                        token_limits: ?RealtimeTruncationTokenLimits = null,
+                    },
+                    allocator,
+                    source,
+                    options,
+                ) catch return .{ .raw = source };
+                defer parsed.deinit();
+
+                if (std.mem.eql(u8, parsed.value.type, "retention_ratio") and parsed.value.retention_ratio != null) {
+                    return .{
+                        .retention_ratio = .{
+                            .type = parsed.value.type,
+                            .retention_ratio = parsed.value.retention_ratio.?,
+                            .token_limits = parsed.value.token_limits,
+                        },
+                    };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const Reasoning = struct {
     effort: ?ReasoningEffort,
     summary: ?[]const u8,

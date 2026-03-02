@@ -286,6 +286,7 @@
 - [x] 继续收窄 generated/types 分块策略模型：`ChunkingStrategyRequestParam`、`ChunkingStrategyResponse`、`TranscriptionChunkingStrategy` 改为结构化 `auto`/`static`/`other`/`raw` union，补充分块策略解析与序列化回归。
 - [x] 继续收窄 ChatKit 与线程相关模型：`Message.content`、`UserMessageItem.content`、`ThreadItem`、`TextResponseFormatConfiguration` 改为结构化 union + `jsonParseFromValue` 解析并补齐回归测试。
 - [x] 收窄 vector/file-search 相关过滤器模型：新增 `ComparisonFilterValue`/`ComparisonFilterValueItems`/`Filters` 结构化 union，并将 `VectorStoreSearchRequest.filters`、`FileSearchTool.filters`、`FileSearchToolCall.results` 从 `std.json.Value` 收窄；补充对应解析回归测试。
+- [x] 收窄实时 Realtime 模型：将 `RealtimeTurnDetection` 与 `RealtimeTruncation` 从 `std.json.Value` 收敛为结构化 union（含 `server_vad` / `semantic_vad` / `auto` / `disabled` / `retention_ratio` / `raw`），并补充解析回归测试。
 
 ### 4.11 流事件模型收窄（继续）
 - [x] 收窄 `MessageStreamEvent`：按 `event` 字段构造结构化子类型（`thread.message.created`、`thread.message.in_progress`、`thread.message.delta`、`thread.message.completed`、`thread.message.incomplete`），并保留 `raw` 回退。

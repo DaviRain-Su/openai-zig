@@ -514,6 +514,92 @@ test "realtime audio format parses typed formats and keeps raw fallback" {
     }
 }
 
+test "realtime truncation and turn detection parse typed variants" {
+    const server_vad_payload =
+        \\{"type":"server_vad","threshold":0.8,"prefix_padding_ms":250,"silence_duration_ms":500,"create_response":true,"interrupt_response":false,"idle_timeout_ms":12000}
+    ;
+    const server_vad = try std.json.parseFromSlice(
+        gen.RealtimeTurnDetection,
+        std.testing.allocator,
+        server_vad_payload,
+        .{},
+    );
+    defer server_vad.deinit();
+    switch (server_vad.value) {
+        .server_vad => |value| {
+            try std.testing.expectEqual(@as(f64, 0.8), value.threshold.?);
+            try std.testing.expect(value.create_response.?);
+            try std.testing.expect(!value.interrupt_response.?);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const semantic_vad_payload =
+        \\{"type":"semantic_vad","eagerness":"high","create_response":false,"interrupt_response":true}
+    ;
+    const semantic_vad = try std.json.parseFromSlice(
+        gen.RealtimeTurnDetection,
+        std.testing.allocator,
+        semantic_vad_payload,
+        .{},
+    );
+    defer semantic_vad.deinit();
+    switch (semantic_vad.value) {
+        .semantic_vad => |value| {
+            try std.testing.expectEqualStrings("high", value.eagerness.?);
+            try std.testing.expect(!value.create_response.?);
+            try std.testing.expect(value.interrupt_response.?);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const unknown_turn_detection_payload =
+        \\{"type":"custom_vad"}
+    ;
+    const unknown_turn_detection = try std.json.parseFromSlice(
+        gen.RealtimeTurnDetection,
+        std.testing.allocator,
+        unknown_turn_detection_payload,
+        .{},
+    );
+    defer unknown_turn_detection.deinit();
+    switch (unknown_turn_detection.value) {
+        .raw => |_| {},
+        else => try std.testing.expect(false),
+    }
+
+    const truncation_auto = try std.json.parseFromSlice(
+        gen.RealtimeTruncation,
+        std.testing.allocator,
+        "\"auto\"",
+        .{},
+    );
+    defer truncation_auto.deinit();
+    switch (truncation_auto.value) {
+        .auto => {},
+        else => try std.testing.expect(false),
+    }
+
+    const truncation_retention_payload =
+        \\{"type":"retention_ratio","retention_ratio":0.75,"token_limits":{"post_instructions":5000}}
+    ;
+    const truncation_retention = try std.json.parseFromSlice(
+        gen.RealtimeTruncation,
+        std.testing.allocator,
+        truncation_retention_payload,
+        .{},
+    );
+    defer truncation_retention.deinit();
+    switch (truncation_retention.value) {
+        .retention_ratio => |value| {
+            try std.testing.expectEqual(@as(f64, 0.75), value.retention_ratio);
+            try std.testing.expect(value.token_limits != null);
+            try std.testing.expectEqual(@as(i64, 5000), value.token_limits.?.post_instructions.?);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
 test "AssistantsApiResponseFormatOption parses json_schema form" {
     const payload =
         \\{"type":"json_schema","json_schema":{"name":"qa","description":"question answer","schema":{"type":"object","properties":{"question":{"type":"string"}},"required":["question"]},"strict":true}}
