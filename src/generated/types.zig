@@ -129,7 +129,7 @@ pub const AssignedRoleDetails = struct {
     updated_at: ?i64,
     created_by: ?[]const u8,
     created_by_user_obj: std.json.Value,
-    metadata: std.json.Value,
+    metadata: Metadata,
 };
 pub const AssistantMessageItem = struct {
     id: []const u8,
@@ -618,7 +618,7 @@ pub const AuditLog = struct {
             permissions_added: ?[]const []const u8,
             permissions_removed: ?[]const []const u8,
             description: ?[]const u8,
-            metadata: ?std.json.Value,
+            metadata: ?Metadata,
         },
     },
     role_deleted: ?struct {
@@ -1236,7 +1236,7 @@ pub const ChatkitConfigurationParam = struct {
 pub const ChatkitWorkflow = struct {
     id: []const u8,
     version: ?[]const u8,
-    state_variables: std.json.Value,
+    state_variables: ResponsePromptVariables,
     tracing: ChatkitWorkflowTracing,
 };
 pub const ChatkitWorkflowTracing = struct {
@@ -1617,7 +1617,7 @@ pub const CompactResource = struct {
 };
 pub const CompactResponseMethodPublicBody = struct {
     model: ModelIdsCompaction,
-    input: ?std.json.Value,
+    input: ?InputParam,
     previous_response_id: ?[]const u8,
     instructions: ?[]const u8,
 };
@@ -1798,7 +1798,7 @@ pub const CompletionUsage = struct {
 };
 pub const CompoundFilter = struct {
     type: []const u8,
-    filters: []const std.json.Value,
+    filters: []const Filters,
 };
 pub const Filters = union(enum) {
     comparison: ComparisonFilter,
@@ -2572,7 +2572,7 @@ pub const ConversationParam_2 = struct {
 pub const ConversationResource = struct {
     id: []const u8,
     object: []const u8,
-    metadata: std.json.Value,
+    metadata: Metadata,
     created_at: i64,
 };
 pub const CostsResult = struct {
@@ -2809,7 +2809,7 @@ pub const CreateEvalLabelModelGrader = struct {
 };
 pub const CreateEvalLogsDataSourceConfig = struct {
     type: []const u8,
-    metadata: ?std.json.Value,
+    metadata: ?Metadata,
 };
 pub const CreateEvalRequest = struct {
     name: ?[]const u8,
@@ -2841,7 +2841,7 @@ pub const CreateEvalRunRequest = struct {
 };
 pub const CreateEvalStoredCompletionsDataSourceConfig = struct {
     type: []const u8,
-    metadata: ?std.json.Value,
+    metadata: ?Metadata,
 };
 pub const CreateFileRequest = struct {
     file: []const u8,
@@ -4223,7 +4223,7 @@ pub const FunctionTool = struct {
     type: []const u8,
     name: []const u8,
     description: ?[]const u8,
-    parameters: std.json.Value,
+    parameters: FunctionParameters,
     strict: bool,
 };
 pub const FunctionToolCall = struct {
@@ -5586,7 +5586,7 @@ pub const MCPListTools = struct {
 pub const MCPListToolsTool = struct {
     name: []const u8,
     description: ?[]const u8,
-    input_schema: std.json.Value,
+    input_schema: FunctionParameters,
     annotations: ?std.json.Value,
 };
 pub const MCPTool = struct {
@@ -8357,7 +8357,7 @@ pub const RealtimeSession = struct {
         type: ?NoiseReductionType,
     },
     speed: ?f64,
-    tracing: ?std.json.Value,
+    tracing: ?WorkflowTracingParam,
     tools: ?[]const RealtimeFunctionTool,
     tool_choice: ?[]const u8,
     temperature: ?f64,
@@ -8380,7 +8380,7 @@ pub const RealtimeSessionCreateRequest = struct {
         model: ?[]const u8,
     },
     speed: ?f64,
-    tracing: ?std.json.Value,
+    tracing: ?WorkflowTracingParam,
     turn_detection: ?struct {
         type: ?[]const u8,
         threshold: ?f64,
@@ -8415,7 +8415,7 @@ pub const RealtimeSessionCreateRequestGA = struct {
         },
     },
     include: ?[]const []const u8,
-    tracing: ?std.json.Value,
+    tracing: ?WorkflowTracingParam,
     tools: ?[]const Tool,
     tool_choice: ?ToolChoiceParam,
     max_output_tokens: ?i64,
@@ -8450,7 +8450,7 @@ pub const RealtimeSessionCreateResponse = struct {
             speed: ?f64,
         },
     },
-    tracing: ?std.json.Value,
+    tracing: ?WorkflowTracingParam,
     turn_detection: ?struct {
         type: ?[]const u8,
         threshold: ?f64,
@@ -8486,7 +8486,7 @@ pub const RealtimeSessionCreateResponseGA = struct {
         },
     },
     include: ?[]const []const u8,
-    tracing: ?std.json.Value,
+    tracing: ?WorkflowTracingParam,
     tools: ?[]const Tool,
     tool_choice: ?ToolChoiceParam,
     max_output_tokens: ?i64,
@@ -12406,7 +12406,7 @@ pub const UserMessageItem = struct {
     type: []const u8,
     content: []const UserMessageItemContent,
     attachments: []const Attachment,
-    inference_options: std.json.Value,
+    inference_options: InferenceOptions,
 };
 pub const UserMessageQuotedText = struct {
     type: []const u8,
@@ -12625,7 +12625,7 @@ pub const WebSearchPreviewTool = struct {
 };
 pub const WebSearchTool = struct {
     type: []const u8,
-    filters: ?std.json.Value,
+    filters: ?Filters,
     user_location: ?WebSearchApproximateLocation,
     search_context_size: ?[]const u8,
 };
@@ -12785,7 +12785,7 @@ pub const WidgetMessageItem = struct {
 pub const WorkflowParam = struct {
     id: []const u8,
     version: ?[]const u8,
-    state_variables: ?std.json.Value,
+    state_variables: ?ResponsePromptVariables,
     tracing: ?WorkflowTracingParam,
 };
 pub const WorkflowTracingParam = struct {
