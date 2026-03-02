@@ -239,6 +239,7 @@
 - [x] 收窄 `CreateMessageRequest`：将 `content` 从裸 `std.json.Value` 改为 `text`/`parts`/`raw` 结构化 union，并新增序列化回归测试。
 - [x] 收窄 `CreateModerationRequest.input`：新增 `text`/`texts`/`raw` 结构化 union，补充序列化回归测试。
 - [x] 收窄 `CreateEmbeddingRequest.input`：新增 `text`/`texts`/`raw` 结构化 union，补充序列化回归测试。
+- [x] 收窄 `AssistantStreamEvent`：改为按 event 分发的 union（thread/run/run_step/message/error）并保留 raw 回退。
 
 ### 4.9 供应商原生能力（DeepSeek）
 - [x] 新增 `GET /user/balance` 的 `balance` 资源能力（`resources.UserBalanceResource`）与客户端入口 `client.balance()/client.user_balance()`。
@@ -258,6 +259,7 @@
 - [x] 本轮继续收窄 generated/types 高频字段：`ChatCompletionModalities`、`ModelIds*`、`ResponseModalities`、`ResponseStreamOptions`、`RunCompletionUsage`、`RunStepCompletionUsage`、`ServiceTier`、`Verbosity`、`VoiceIdsShared`、`WebSearchApproximateLocation` 已改为具体类型；复杂 oneOf 的 `CreateResponse` 保持 `std.json.Value` 兼容。
 - [x] 本轮继续收窄 generated/types：`FunctionShellAction`、`FunctionShellActionParam`、`FunctionShellCallOutput`、`FunctionShellCallOutputItemParam` 的长度/超时字段改为具体整数类型（`i64`），降低动态类型依赖。
 - [x] 本轮继续收窄 generated/types：`CompactResponseMethodPublicBody.previous_response_id`、`CompactionSummaryItemParam.id`、`ApplyPatchToolCall*Param.id`、`ComputerCallOutputItemParam.id`、`FunctionCallOutputItemParam.id`、`FunctionShellCall*Param.id` 改为可选字符串。
+- [x] 本轮继续收窄 generated/types：`CreateModelResponseProperties` 已复用 `ModelResponseProperties`，`PartialImages` 已明确为 `i64`（`?PartialImages` 对应 `integer`）。
 - [x] 本轮继续收窄 generated/types：`CostsResult.project_id`、`ListFineTuningCheckpointPermissionResponse.first_id/last_id`、`ListFineTuningJobCheckpointsResponse.first_id/last_id`、`ListThreads`/`ListThreadItems`/`VideoListResource` 的 `first_id/last_id` 改为具体字符串类型；补齐实时事件 `previous_item_id`、响应 `previous_response_id`（`TokenCountsBody/ResponseProperties`）、`UsageVectorStoresResult.project_id`、`VoiceConsentListResource.first_id/last_id` 为具体可选字符串类型。
 - [x] 本轮继续收窄 generated/types：`BatchRequestOutput.response/_error`、`FineTuningJob._error/fine_tuned_model/finished_at/trained_tokens/validation_file/integrations/estimated_finish`、`GroupListResource.next`、`ProjectGroupListResource.next`、`PublicRoleListResource.next`、`RoleListResource.next`、`UserListResource.next`、`InputFileContent/file_id`、`InputFileContentParam.file_id`、`MCPToolCall._error/approval_request_id`、`MessageObject.assistant_id/run_id/attachments/incomplete_details/completed_at/incomplete_at`、`RunStepObject.last_error/expired_at/cancelled_at/failed_at/completed_at`、`VectorStoreFileContentResponse.next_page`、`VectorStoreSearchResultsPage.next_page`、`VectorStoreFileObject.last_error`、`VectorStoreObject.expires_at/last_active_at`、`VideoListResource.object`、`VideoResource.completed_at/expires_at/prompt/remixed_from_video_id/_error` 已改为具体类型。
 - [x] 继续收窄 generated/types：`Project.archived_at` 改为 `?i64`；将 `Realtime*` 相关的 `modality/modalities/output_modalities` 列表字段改为 `?[]const []const u8`；将多处 `max_output_tokens` 与 `max_response_output_tokens` 明确为 `?i64`（`Realtime*` 请求/响应模型）。
@@ -281,3 +283,9 @@
 - [x] 继续收窄 generated/types 分块策略模型：`ChunkingStrategyRequestParam`、`ChunkingStrategyResponse`、`TranscriptionChunkingStrategy` 改为结构化 `auto`/`static`/`other`/`raw` union，补充分块策略解析与序列化回归。
 - [x] 继续收窄 ChatKit 与线程相关模型：`Message.content`、`UserMessageItem.content`、`ThreadItem`、`TextResponseFormatConfiguration` 改为结构化 union + `jsonParseFromValue` 解析并补齐回归测试。
 - [x] 收窄 vector/file-search 相关过滤器模型：新增 `ComparisonFilterValue`/`ComparisonFilterValueItems`/`Filters` 结构化 union，并将 `VectorStoreSearchRequest.filters`、`FileSearchTool.filters`、`FileSearchToolCall.results` 从 `std.json.Value` 收窄；补充对应解析回归测试。
+
+### 4.11 流事件模型收窄（继续）
+- [x] 收窄 `MessageStreamEvent`：按 `event` 字段构造结构化子类型（`thread.message.created`、`thread.message.in_progress`、`thread.message.delta`、`thread.message.completed`、`thread.message.incomplete`），并保留 `raw` 回退。
+- [x] 收窄 `RunStreamEvent`：按 `thread.run.*` 事件构造结构化子类型（`created/queued/in_progress/requires_action/completed/incomplete/failed/cancelling/cancelled/expired`），并保留 `raw` 回退。
+- [x] 收窄 `RunStepStreamEvent`：按 `thread.run.step.*` 事件构造结构化子类型（`created/in_progress/delta/completed/failed/cancelled/expired`），并保留 `raw` 回退。
+- [x] 收窄 `ThreadStreamEvent`：按 `thread.created` 事件构造结构化子类型，包含 `enabled` 字段并保留 `raw` 回退。

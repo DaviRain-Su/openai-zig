@@ -1512,3 +1512,127 @@ test "list fine tuning job checkpoints response ignores unknown fields" {
     try std.testing.expect(!response.value.has_more);
     try std.testing.expectEqualStrings("cp_abc", response.value.data[0].id);
 }
+
+test "AssistantStreamEvent parses thread.created event into thread branch" {
+    const payload =
+        \\{"event":"thread.created","enabled":true,"data":{"id":"thread_abc","object":"thread","created_at":1700000000,"tool_resources":null,"metadata":{}}}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.AssistantStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{},
+    );
+    defer event.deinit();
+    try std.testing.expectEqualStrings("thread", event.value.thread.created.event);
+    try std.testing.expectEqualStrings("thread_abc", event.value.thread.created.data.id);
+}
+
+test "AssistantStreamEvent parses run.in_progress event into run branch" {
+    const payload =
+        \\{"event":"thread.run.in_progress","data":{"id":"run_abc","object":"thread.run","created_at":1700000000,"thread_id":"thread_abc","assistant_id":"asst_abc","status":"in_progress","required_action":{"type":"submit_tool_outputs","submit_tool_outputs":{"tool_calls":[]}},"last_error":{"code":"","message":""},"expires_at":1700000010,"started_at":1700000001,"cancelled_at":0,"failed_at":0,"completed_at":0,"incomplete_details":{"reason":null},"model":"deepseek-chat","instructions":"run task","tools":[{"type":"code_interpreter","container":{"type":"auto","file_ids":[]}}],"metadata":{},"usage":null,"temperature":1.0,"top_p":1.0,"max_prompt_tokens":1000,"max_completion_tokens":1000,"truncation_strategy":{},"tool_choice":{"type":"auto"},"parallel_tool_calls":true,"response_format":{"type":"text"}}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.AssistantStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{},
+    );
+    defer event.deinit();
+    switch (event.value) {
+        .run => |value| {
+            try std.testing.expectEqualStrings("in_progress", value.in_progress.data.status);
+            try std.testing.expectEqualStrings("run_abc", value.in_progress.data.id);
+        },
+        else => {
+            try std.testing.expect(false);
+        },
+    }
+}
+
+test "AssistantStreamEvent parses run_step.delta event into run_step branch" {
+    const payload =
+        \\{"event":"thread.run.step.delta","data":{"id":"step_abc","object":"thread.run.step","delta":{"step_details":null}}}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.AssistantStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{},
+    );
+    defer event.deinit();
+    switch (event.value) {
+        .run_step => |value| {
+            try std.testing.expectEqualStrings("thread.run.step.delta", value.delta.event);
+            try std.testing.expectEqualStrings("step_abc", value.delta.data.id);
+        },
+        else => {
+            try std.testing.expect(false);
+        },
+    }
+}
+
+test "AssistantStreamEvent parses message.created event into message branch" {
+    const payload =
+        \\{"event":"thread.message.created","data":{"id":"msg_abc","object":"thread.message","created_at":1700000000,"thread_id":"thread_abc","status":"completed","incomplete_details":null,"completed_at":1700000000,"incomplete_at":null,"role":"assistant","content":[{"type":"text","text":{"value":"hello","annotations":[]}}],"assistant_id":null,"run_id":null,"attachments":null,"metadata":{}}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.AssistantStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{},
+    );
+    defer event.deinit();
+    switch (event.value) {
+        .message => |value| {
+            try std.testing.expectEqualStrings("thread.message.created", value.created.event);
+            try std.testing.expectEqualStrings("msg_abc", value.created.data.id);
+        },
+        else => {
+            try std.testing.expect(false);
+        },
+    }
+}
+
+test "AssistantStreamEvent parses error event into err branch" {
+    const payload =
+        \\{"event":"error","data":{"code":"invalid_request_error","message":"bad request","param":null,"type":"invalid_request_error"}}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.AssistantStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{},
+    );
+    defer event.deinit();
+    switch (event.value) {
+        .err => |value| {
+            try std.testing.expectEqualStrings("error", value.event);
+            try std.testing.expectEqualStrings("bad request", value.data.message);
+        },
+        else => {
+            try std.testing.expect(false);
+        },
+    }
+}
+
+test "AssistantStreamEvent falls back to raw for unknown event types" {
+    const payload =
+        \\{"event":"thread.some_new_event","data":{"id":"x"}} 
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.AssistantStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{},
+    );
+    defer event.deinit();
+    switch (event.value) {
+        .raw => |value| {
+            try std.testing.expect(std.mem.eql(u8, value.object.get("event").?.string, "thread.some_new_event"));
+        },
+        else => {
+            try std.testing.expect(false);
+        },
+    }
+}
