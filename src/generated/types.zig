@@ -4122,7 +4122,55 @@ pub const FileUploadParam = struct {
     max_file_size: ?i64,
     max_files: ?i64,
 };
-pub const FineTuneChatCompletionRequestAssistantMessage = JsonObject;
+pub const FineTuneChatCompletionRequestAssistantMessage = union(enum) {
+    message: ChatCompletionRequestAssistantMessage,
+    raw: JsonObject,
+
+    pub fn forMessage(value: ChatCompletionRequestAssistantMessage) FineTuneChatCompletionRequestAssistantMessage {
+        return .{ .message = value };
+    }
+
+    pub fn forRaw(value: JsonObject) FineTuneChatCompletionRequestAssistantMessage {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: FineTuneChatCompletionRequestAssistantMessage, writer: anytype) !void {
+        switch (self) {
+            .message => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !FineTuneChatCompletionRequestAssistantMessage {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !FineTuneChatCompletionRequestAssistantMessage {
+        switch (source) {
+            .object => |root| {
+                const role = root.get("role") orelse return .{ .raw = source };
+                if (role == .string and std.mem.eql(u8, role.string, "assistant")) {
+                    const parsed = std.json.parseFromValue(
+                        ChatCompletionRequestAssistantMessage,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .message = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const FineTuneChatRequestInput = struct {
     messages: ?JsonObjectArray,
     tools: ?[]const ChatCompletionTool,

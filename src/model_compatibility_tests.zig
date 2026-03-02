@@ -2673,3 +2673,47 @@ test "create eval item parses typed eval item and raw fallback" {
         else => try std.testing.expect(false),
     }
 }
+
+test "fine-tune assistant message parses typed assistant payload and raw fallback" {
+    const typed_payload =
+        \\{"role":"assistant","content":"done"}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.FineTuneChatCompletionRequestAssistantMessage,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .message => |message| {
+            try std.testing.expectEqualStrings("assistant", message.role);
+            const content = message.content orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (content) {
+                .text => |text| try std.testing.expectEqualStrings("done", text),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"role":"tool","content":"other"}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.FineTuneChatCompletionRequestAssistantMessage,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("tool", value.object.get("role").?.string),
+        else => try std.testing.expect(false),
+    }
+}
