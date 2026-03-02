@@ -28,7 +28,7 @@ pub fn main() !void {
 
     const request_json = try std.fmt.allocPrint(
         gpa,
-        "{{\"model\":\"{s}\",\"prompt\":\"def fib(a):\",\"suffix\":\"    return fib(a - 1) + fib(a - 2)\",\"max_tokens\":128,\"echo\":false,\"temperature\":0.7,\"stream\":false,\"extra_field\":\"fim-compat\"}}",
+        "{{\"model\":\"{s}\",\"prompt\":\"def fib(a):\",\"suffix\":\"    return fib(a - 1) + fib(a - 2)\",\"max_tokens\":768,\"echo\":false,\"temperature\":0.7,\"stream\":false,\"extra_field\":\"fim-compat\"}}",
         .{conf.model},
     );
     defer gpa.free(request_json);

@@ -11,8 +11,14 @@ pub fn main() !void {
 
     var conf = try config.load(gpa, "config/config.toml");
     defer conf.deinit(gpa);
+
     if (conf.api_key.len == 0) {
         std.debug.print("API key missing; set config/config.toml\n", .{});
+        return;
+    }
+
+    if (!compat.isDeepSeek(conf.base_url)) {
+        std.debug.print("user/balance endpoint is provider-specific (DeepSeek); skipped.\n", .{});
         return;
     }
 
@@ -27,31 +33,27 @@ pub fn main() !void {
     });
     defer client.deinit();
 
-    if (compat.skipIfDeepSeek(conf.base_url, "speech")) return;
-
-    var resp = client.audio().create_speech(gpa, .{
-        .model = "tts-1", // change to a valid TTS model you have access to
-        .input = "Hello from Zig",
-        .instructions = null,
-        .speed = 1.0,
-        .voice = "alloy",
-        .response_format = "mp3",
-        .stream_format = null,
-    }) catch |err| {
+    var response = client.user_balance().get_user_balance(gpa) catch |err| {
         switch (err) {
             errors.Error.NotFoundError => {
-                std.debug.print("speech endpoint unavailable on this provider (HTTP 404).\n", .{});
+                std.debug.print("user/balance endpoint unavailable on this provider (HTTP 404).\n", .{});
                 return;
             },
-            errors.Error.HttpError => {
-                std.debug.print("HTTP transport error (likely invalid key/model)\n", .{});
+            else => {
+                std.debug.print("user/balance request failed: {s}\n", .{@errorName(err)});
                 return;
             },
-            else => return err,
         }
     };
-    defer resp.deinit();
+    defer response.deinit();
 
-    try std.fs.cwd().writeFile(.{ .sub_path = "speech.mp3", .data = resp.data });
-    std.debug.print("Wrote speech.mp3 ({d} bytes)\n", .{resp.data.len});
+    std.debug.print("User balance available: {s}\n", .{if (response.value.is_available) "true" else "false"});
+    for (response.value.balance_infos) |item| {
+        std.debug.print("  - {s}: total={s}, granted={s}, topped_up={s}\n", .{
+            item.currency,
+            item.total_balance,
+            item.granted_balance,
+            item.topped_up_balance,
+        });
+    }
 }

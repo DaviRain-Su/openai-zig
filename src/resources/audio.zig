@@ -32,6 +32,191 @@ pub const ListVoiceConsentsParams = struct {
 
 /// Request body for updating an existing voice consent.
 pub const UpdateVoiceConsentRequest = gen.UpdateVoiceConsentRequest;
+pub const CreateTranscriptionFromPathRequest = struct {
+    file_path: []const u8,
+    filename: ?[]const u8 = null,
+    file_content_type: ?[]const u8 = null,
+    model: []const u8,
+    language: ?[]const u8 = null,
+    prompt: ?[]const u8 = null,
+    response_format: ?gen.AudioResponseFormat = null,
+    temperature: ?f64 = null,
+    include: ?[]const gen.TranscriptionInclude = null,
+    timestamp_granularities: ?[]const []const u8 = null,
+    stream: ?bool = null,
+    chunking_strategy: ?gen.TranscriptionChunkingStrategy = null,
+    known_speaker_names: ?[]const []const u8 = null,
+    known_speaker_references: ?[]const []const u8 = null,
+};
+
+pub const CreateTranslationFromPathRequest = struct {
+    file_path: []const u8,
+    filename: ?[]const u8 = null,
+    file_content_type: ?[]const u8 = null,
+    model: []const u8,
+    prompt: ?[]const u8 = null,
+    response_format: ?gen.AudioResponseFormat = null,
+    temperature: ?f64 = null,
+};
+
+const audio_multipart_boundary = "----openai-zig-audio-0f9e";
+
+fn appendStdJsonValue(
+    allocator: std.mem.Allocator,
+    multipart: *common.MultipartBuilder,
+    name: []const u8,
+    value: std.json.Value,
+) errors.Error!void {
+    switch (value) {
+        .string => |text| try multipart.appendTextField(name, text),
+        .integer => |number| {
+            var buf: [64]u8 = undefined;
+            const text = std.fmt.bufPrint(&buf, "{d}", .{number}) catch return errors.Error.SerializeError;
+            try multipart.appendTextField(name, text);
+        },
+        .float => |number| {
+            var buf: [128]u8 = undefined;
+            const text = std.fmt.bufPrint(&buf, "{d}", .{number}) catch return errors.Error.SerializeError;
+            try multipart.appendTextField(name, text);
+        },
+        .bool => {
+            try multipart.appendTextField(name, if (value.bool) "true" else "false");
+        },
+        else => {
+            var body_writer = std.io.Writer.Allocating.init(allocator);
+            defer body_writer.deinit();
+            var json_stream: std.json.Stringify = .{
+                .writer = &body_writer.writer,
+                .options = .{ .emit_null_optional_fields = false },
+            };
+            json_stream.write(value) catch return errors.Error.SerializeError;
+            try multipart.appendTextField(name, body_writer.written());
+        },
+    }
+}
+
+fn appendJsonValue(
+    allocator: std.mem.Allocator,
+    multipart: *common.MultipartBuilder,
+    name: []const u8,
+    value: anytype,
+) errors.Error!void {
+    var body_writer = std.io.Writer.Allocating.init(allocator);
+    defer body_writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &body_writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    json_stream.write(value) catch return errors.Error.SerializeError;
+    try multipart.appendTextField(name, body_writer.written());
+}
+
+fn buildTranscriptionFromPathPayload(
+    allocator: std.mem.Allocator,
+    req: CreateTranscriptionFromPathRequest,
+) errors.Error!MultipartRequest {
+    var multipart = try common.MultipartBuilder.init(allocator, audio_multipart_boundary);
+    errdefer multipart.deinit();
+
+    try multipart.appendTextField("model", req.model);
+    if (req.language) |language| {
+        try multipart.appendTextField("language", language);
+    }
+    if (req.prompt) |prompt| {
+        try multipart.appendTextField("prompt", prompt);
+    }
+    if (req.response_format) |response_format| {
+        try multipart.appendTextField("response_format", response_format);
+    }
+    if (req.temperature) |temperature| {
+        try appendJsonValue(allocator, &multipart, "temperature", temperature);
+    }
+    if (req.include) |include| {
+        try appendJsonValue(allocator, &multipart, "include", include);
+    }
+    if (req.timestamp_granularities) |timestamps| {
+        try appendJsonValue(allocator, &multipart, "timestamp_granularities", timestamps);
+    }
+    if (req.stream) |stream| {
+        try multipart.appendTextField("stream", if (stream) "true" else "false");
+    }
+    if (req.chunking_strategy) |chunking_strategy| {
+        try appendJsonValue(allocator, &multipart, "chunking_strategy", chunking_strategy);
+    }
+    if (req.known_speaker_names) |names| {
+        try appendJsonValue(allocator, &multipart, "known_speaker_names", names);
+    }
+    if (req.known_speaker_references) |references| {
+        try appendJsonValue(allocator, &multipart, "known_speaker_references", references);
+    }
+
+    const file = std.fs.cwd().openFile(req.file_path, .{}) catch {
+        return errors.Error.SerializeError;
+    };
+    defer file.close();
+
+    const file_size = file.stat() catch {
+        return errors.Error.SerializeError;
+    };
+    const file_len = std.math.cast(usize, file_size.size) orelse return errors.Error.SerializeError;
+    const file_data = file.readToEndAlloc(allocator, file_len) catch {
+        return errors.Error.SerializeError;
+    };
+    defer allocator.free(file_data);
+
+    const filename = req.filename orelse std.fs.path.basename(req.file_path);
+    const content_type = req.file_content_type orelse "application/octet-stream";
+    try multipart.appendFileField("file", filename, content_type, file_data);
+    try multipart.appendFooter();
+
+    return MultipartRequest{
+        .content_type = "multipart/form-data; boundary=" ++ audio_multipart_boundary,
+        .body = try multipart.toOwnedSlice(),
+    };
+}
+
+fn buildTranslationFromPathPayload(
+    allocator: std.mem.Allocator,
+    req: CreateTranslationFromPathRequest,
+) errors.Error!MultipartRequest {
+    var multipart = try common.MultipartBuilder.init(allocator, audio_multipart_boundary);
+    errdefer multipart.deinit();
+
+    try multipart.appendTextField("model", req.model);
+    if (req.prompt) |prompt| {
+        try multipart.appendTextField("prompt", prompt);
+    }
+    if (req.response_format) |response_format| {
+        try multipart.appendTextField("response_format", response_format);
+    }
+    if (req.temperature) |temperature| {
+        try appendJsonValue(allocator, &multipart, "temperature", temperature);
+    }
+
+    const file = std.fs.cwd().openFile(req.file_path, .{}) catch {
+        return errors.Error.SerializeError;
+    };
+    defer file.close();
+
+    const file_size = file.stat() catch {
+        return errors.Error.SerializeError;
+    };
+    const file_len = std.math.cast(usize, file_size.size) orelse return errors.Error.SerializeError;
+    const file_data = file.readToEndAlloc(allocator, file_len) catch {
+        return errors.Error.SerializeError;
+    };
+    defer allocator.free(file_data);
+
+    const filename = req.filename orelse std.fs.path.basename(req.file_path);
+    const content_type = req.file_content_type orelse "application/octet-stream";
+    try multipart.appendFileField("file", filename, content_type, file_data);
+    try multipart.appendFooter();
+
+    return MultipartRequest{
+        .content_type = "multipart/form-data; boundary=" ++ audio_multipart_boundary,
+        .body = try multipart.toOwnedSlice(),
+    };
+}
 
 pub const Resource = struct {
     transport: *transport_mod.Transport,
@@ -188,6 +373,46 @@ pub const Resource = struct {
         return self.create_transcription_with_options(allocator, payload, request_opts);
     }
 
+    /// POST /audio/transcriptions from local file path.
+    pub fn create_transcription_from_path(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateTranscriptionFromPathRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateTranscriptionResponseJson) {
+        return self.create_transcription_from_path_with_options(allocator, req, null);
+    }
+
+    /// POST /audio/transcriptions from local file path.
+    pub fn create_transcription_from_path_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateTranscriptionFromPathRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateTranscriptionResponseJson) {
+        const payload = try buildTranscriptionFromPathPayload(allocator, req);
+        defer allocator.free(payload.body);
+        return self.create_transcription_with_options(allocator, payload, request_opts);
+    }
+
+    /// POST /audio/transcriptions from local file path (compat alias).
+    pub fn transcriptions_from_path(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateTranscriptionFromPathRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateTranscriptionResponseJson) {
+        return self.create_transcription_from_path(allocator, req);
+    }
+
+    /// POST /audio/transcriptions from local file path (compat alias).
+    pub fn transcriptions_from_path_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateTranscriptionFromPathRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateTranscriptionResponseJson) {
+        return self.create_transcription_from_path_with_options(allocator, req, request_opts);
+    }
+
     /// POST /audio/translations (multipart form-data, caller builds payload).
     pub fn create_translation(
         self: *const Resource,
@@ -222,6 +447,46 @@ pub const Resource = struct {
         request_opts: ?transport_mod.Transport.RequestOptions,
     ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
         return self.create_translation_with_options(allocator, payload, request_opts);
+    }
+
+    /// POST /audio/translations from local file path.
+    pub fn create_translation_from_path(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateTranslationFromPathRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
+        return self.create_translation_from_path_with_options(allocator, req, null);
+    }
+
+    /// POST /audio/translations from local file path.
+    pub fn create_translation_from_path_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateTranslationFromPathRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
+        const payload = try buildTranslationFromPathPayload(allocator, req);
+        defer allocator.free(payload.body);
+        return self.create_translation_with_options(allocator, payload, request_opts);
+    }
+
+    /// POST /audio/translations from local file path (compat alias).
+    pub fn translations_from_path(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateTranslationFromPathRequest,
+    ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
+        return self.create_translation_from_path(allocator, req);
+    }
+
+    /// POST /audio/translations from local file path (compat alias).
+    pub fn translations_from_path_with_options(
+        self: *const Resource,
+        allocator: std.mem.Allocator,
+        req: CreateTranslationFromPathRequest,
+        request_opts: ?transport_mod.Transport.RequestOptions,
+    ) errors.Error!std.json.Parsed(gen.CreateTranslationResponseJson) {
+        return self.create_translation_from_path_with_options(allocator, req, request_opts);
     }
 
     /// POST /audio/voice_consents (multipart form-data).
@@ -512,10 +777,10 @@ pub const Resource = struct {
 
 test "create speech request omits null optional fields" {
     const req = CreateSpeechRequest{
-        .model = .{ .string = "tts-1" },
+        .model = "tts-1",
         .input = "Hello from test",
         .instructions = null,
-        .voice = .{ .string = "alloy" },
+        .voice = "alloy",
         .response_format = null,
         .speed = null,
         .stream_format = null,

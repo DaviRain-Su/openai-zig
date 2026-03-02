@@ -4,7 +4,60 @@ const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
 const common = @import("common.zig");
 
-pub const CreateCompletionRequest = gen.CreateCompletionRequest;
+pub const CreateCompletionLogitBiasEntry = struct {
+    token: []const u8,
+    bias: i64,
+};
+
+pub const CreateCompletionLogitBias = union(enum) {
+    entries: []const CreateCompletionLogitBiasEntry,
+    raw: std.json.Value,
+
+    pub fn forEntries(entries: []const CreateCompletionLogitBiasEntry) CreateCompletionLogitBias {
+        return .{ .entries = entries };
+    }
+
+    pub fn forRaw(value: std.json.Value) CreateCompletionLogitBias {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateCompletionLogitBias, writer: anytype) !void {
+        switch (self) {
+            .entries => |value| {
+                try writer.beginObject();
+                for (value) |entry| {
+                    try writer.objectField(entry.token);
+                    try writer.write(entry.bias);
+                }
+                try writer.endObject();
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+};
+
+pub const CreateCompletionRequest = struct {
+    model: []const u8,
+    prompt: []const u8,
+    best_of: ?i64 = null,
+    echo: ?bool = null,
+    frequency_penalty: ?f64 = null,
+    logit_bias: ?CreateCompletionLogitBias = null,
+    logprobs: ?i64 = null,
+    max_tokens: ?i64 = null,
+    n: ?i64 = null,
+    presence_penalty: ?f64 = null,
+    seed: ?i64 = null,
+    stop: ?gen.StopConfiguration = null,
+    stream: ?bool = null,
+    stream_options: ?gen.ChatCompletionStreamOptions = null,
+    suffix: ?[]const u8 = null,
+    temperature: ?f64 = null,
+    top_p: ?f64 = null,
+    user: ?[]const u8 = null,
+};
 pub const CreateCompletionResponse = gen.CreateCompletionResponse;
 pub const CreateCompletionRawRequest = std.json.Value;
 
@@ -426,6 +479,157 @@ test "create completion request includes suffix payload" {
         std.json.Value,
         std.testing.allocator,
         "{\"model\":\"test-model\",\"prompt\":\"prompt-text\",\"suffix\":\"suffix-text\"}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}
+
+test "create completion request supports stop as single value and list" {
+    const req_single = CreateCompletionRequest{
+        .model = "test-model",
+        .prompt = "prompt-text",
+        .stop = .{ .single = "\n" },
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req_single);
+
+    const body_single = writer.written();
+    const parsed_single = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body_single,
+        .{},
+    );
+    defer parsed_single.deinit();
+
+    const expected_single = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"prompt\":\"prompt-text\",\"stop\":\"\\n\"}",
+        .{},
+    );
+    defer expected_single.deinit();
+
+    try std.testing.expect(std.json.eql(parsed_single.value, expected_single.value));
+
+    const req_multiple = CreateCompletionRequest{
+        .model = "test-model",
+        .prompt = "prompt-text",
+        .stop = .{ .multiple = &.{ "\n", " stop" } },
+    };
+
+    var writer_multiple = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer_multiple.deinit();
+    var json_stream_multiple: std.json.Stringify = .{
+        .writer = &writer_multiple.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream_multiple.write(req_multiple);
+
+    const body_multiple = writer_multiple.written();
+    const parsed_multiple = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body_multiple,
+        .{},
+    );
+    defer parsed_multiple.deinit();
+
+    const expected_multiple = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"prompt\":\"prompt-text\",\"stop\":[\"\\n\",\" stop\"]}",
+        .{},
+    );
+    defer expected_multiple.deinit();
+
+    try std.testing.expect(std.json.eql(parsed_multiple.value, expected_multiple.value));
+}
+
+test "create completion request supports logit_bias as typed token map" {
+    const req = CreateCompletionRequest{
+        .model = "test-model",
+        .prompt = "prompt-text",
+        .logit_bias = .{
+            .entries = &.{
+                .{ .token = "123", .bias = -1 },
+                .{ .token = "456", .bias = 2 },
+            },
+        },
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body,
+        .{},
+    );
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"prompt\":\"prompt-text\",\"logit_bias\":{\"123\":-1,\"456\":2}}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}
+
+test "create completion request supports logit_bias raw passthrough" {
+    const logit_bias = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"123\":-3,\"456\":1}",
+        .{},
+    );
+    defer logit_bias.deinit();
+
+    const req = CreateCompletionRequest{
+        .model = "test-model",
+        .prompt = "prompt-text",
+        .logit_bias = .{ .raw = logit_bias.value },
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body,
+        .{},
+    );
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"prompt\":\"prompt-text\",\"logit_bias\":{\"123\":-3,\"456\":1}}",
         .{},
     );
     defer expected.deinit();

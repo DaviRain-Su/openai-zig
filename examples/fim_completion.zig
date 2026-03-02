@@ -26,29 +26,21 @@ pub fn main() !void {
     });
     defer client.deinit();
 
-    const model_json = try std.fmt.allocPrint(gpa, "\"{s}\"", .{conf.model});
-    defer gpa.free(model_json);
-    var model = try std.json.parseFromSlice(std.json.Value, gpa, model_json, .{});
-    defer model.deinit();
-
-    const prompt = "def fib(a):";
     const suffix = "    return fib(a - 1) + fib(a - 2)";
-
-    const prompt_json = try std.json.parseFromSlice(std.json.Value, gpa, "\"def fib(a):\"", .{});
-    defer prompt_json.deinit();
+    const prompt = "def fib(a):";
 
     const response = client.completions().create_completion_with_options(
-        gpa,
+            gpa,
         .{
-            .model = model.value,
-            .prompt = prompt_json.value,
+            .model = conf.model,
+            .prompt = prompt,
             .suffix = suffix,
             .best_of = null,
             .echo = false,
             .frequency_penalty = null,
             .logit_bias = null,
             .logprobs = null,
-            .max_tokens = 128,
+            .max_tokens = 768,
             .n = null,
             .presence_penalty = null,
             .seed = null,
@@ -72,7 +64,11 @@ pub fn main() !void {
     }
 
     const completion = response.value.choices[0].text;
-    std.debug.print("Prompt:\n{s}\n", .{prompt});
+    if (completion.len == 0) {
+        std.debug.print("FIM completion response returned empty text.\n", .{});
+        return;
+    }
+    std.debug.print("Prompt:\ndef fib(a):\n", .{});
     std.debug.print("Suffix:\n{s}\n", .{suffix});
     std.debug.print("Completion:\n{s}\n", .{completion});
 }

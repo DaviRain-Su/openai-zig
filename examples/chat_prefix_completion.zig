@@ -2,18 +2,13 @@ const std = @import("std");
 const sdk = @import("openai_zig");
 const config = @import("config");
 
-fn printContentMaybe(content: ?std.json.Value) void {
+fn printContentMaybe(content: ?[]const u8) void {
     if (content) |value| {
-        switch (value) {
-            .string => |text| {
-                std.debug.print("{s}\n", .{text});
-            },
-            else => {
-                std.debug.print("<non-text completion>\n", .{});
-            },
+        if (value.len > 0) {
+            std.debug.print("{s}\n", .{value});
+        } else {
+            std.debug.print("<empty completion>\n", .{});
         }
-    } else {
-        std.debug.print("<empty completion>\n", .{});
     }
 }
 

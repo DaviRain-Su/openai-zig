@@ -98,6 +98,7 @@ pub fn main() !void {
     printValueOrPlaceholder("reasoning", first[1]);
 
     const content_for_followup = first[0] orelse "I am a helpful assistant.";
+    const followup_extra_body = if (is_deepseek) null else extra_body;
     const follow_messages = [_]sdk.resources.chat.ChatMessage{
         .{ .role = "user", .content = "你是一位诗歌写作助手。", },
         .{
@@ -112,7 +113,7 @@ pub fn main() !void {
         .model = model,
         .messages = &follow_messages,
         .max_tokens = 256,
-        .extra_body = extra_body,
+        .extra_body = followup_extra_body,
     }) catch |err| {
         std.debug.print("create_chat_completion_value followup failed: {s}\n", .{@errorName(err)});
         return;
@@ -121,5 +122,7 @@ pub fn main() !void {
 
     const second = firstContentAndReasoning(followup.value);
     printValueOrPlaceholder("content", second[0]);
-    printValueOrPlaceholder("reasoning", second[1]);
+    if (second[1]) |_| {
+        std.debug.print("reasoning:(omitted)\n", .{});
+    }
 }

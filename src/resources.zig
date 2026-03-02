@@ -31,6 +31,7 @@ const certificates_mod = @import("resources/certificates.zig");
 const evals_mod = @import("resources/evals.zig");
 const projects_mod = @import("resources/projects.zig");
 const vector_stores_mod = @import("resources/vector_stores.zig");
+const user_balance_mod = @import("resources/user_balance.zig");
 
 pub const audio = audio_mod;
 pub const chat = chat_mod;
@@ -65,6 +66,7 @@ pub const certificates = certificates_mod;
 pub const evals = evals_mod;
 pub const projects = projects_mod;
 pub const vector_stores = vector_stores_mod;
+pub const user_balance = user_balance_mod;
 
 pub const AudioResource = audio_mod.Resource;
 pub const ChatResource = chat_mod.Resource;
@@ -99,5 +101,6 @@ pub const CertificatesResource = certificates_mod.Resource;
 pub const EvalsResource = evals_mod.Resource;
 pub const ProjectsResource = projects_mod.Resource;
 pub const VectorStoresResource = vector_stores_mod.Resource;
+pub const UserBalanceResource = user_balance_mod.Resource;
 
 const _signature_tests = @import("resources/signature_tests.zig");

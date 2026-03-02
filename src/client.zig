@@ -240,6 +240,14 @@ pub const Client = struct {
         return self.users();
     }
 
+    pub fn balance(self: *Client) resources.UserBalanceResource {
+        return resources.UserBalanceResource.init(&self.transport);
+    }
+
+    pub fn user_balance(self: *Client) resources.UserBalanceResource {
+        return self.balance();
+    }
+
     pub fn user_role_assignments(self: *Client) resources.UserRoleAssignmentsResource {
         return resources.UserRoleAssignmentsResource.init(&self.transport);
     }
@@ -576,4 +584,20 @@ test "with_options overrides selected transport fields" {
     try std.testing.expectEqualStrings(base_transport.base_url, fallback_transport.base_url);
     try std.testing.expectEqualStrings(base_transport.api_key.?, fallback_transport.api_key.?);
     try std.testing.expectEqual(base_transport.max_retries, fallback_transport.max_retries);
+}
+
+test "balance resource aliases resolve to same transport" {
+    const gpa = std.heap.page_allocator;
+
+    var client = try Client.init(gpa, .{
+        .base_url = "https://api.deepseek.com",
+        .api_key = "demo-key",
+    });
+    defer client.deinit();
+
+    const balance_resource = client.balance();
+    const user_balance_resource = client.user_balance();
+
+    try std.testing.expectEqual(@intFromPtr(&client.transport), @intFromPtr(balance_resource.transport));
+    try std.testing.expectEqual(@intFromPtr(&client.transport), @intFromPtr(user_balance_resource.transport));
 }

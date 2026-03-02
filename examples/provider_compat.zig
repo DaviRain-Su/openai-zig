@@ -33,6 +33,17 @@ pub fn deepSeekBetaBase(allocator: std.mem.Allocator, base_url: []const u8) ![]u
     return std.fmt.allocPrint(allocator, "{s}/beta", .{normalized_base});
 }
 
+pub fn withoutStream(comptime Request: type, request: Request) Request {
+    comptime {
+        if (!@hasField(Request, "stream")) {
+            return request;
+        }
+    }
+    var fallback_request = request;
+    fallback_request.stream = null;
+    return fallback_request;
+}
+
 pub fn skipIfDeepSeek(base_url: []const u8, feature: []const u8) bool {
     if (!isDeepSeek(base_url)) return false;
     std.debug.print("{s} endpoint unavailable on DeepSeek compatibility API (skipped).\n", .{feature});

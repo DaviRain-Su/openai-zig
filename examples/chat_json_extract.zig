@@ -9,11 +9,7 @@ fn firstContentString(val: sdk.generated.CreateChatCompletionResponse) ExampleEr
     const choices = val.choices;
     if (choices.len == 0) return ExampleError.BadResponse;
     const msg = choices[0].message orelse return ExampleError.BadResponse;
-    const content = msg.content orelse return ExampleError.BadResponse;
-    return switch (content) {
-        .string => |s| s,
-        else => ExampleError.BadResponse,
-    };
+    return msg.content orelse return ExampleError.BadResponse;
 }
 
 pub fn main() !void {
@@ -58,15 +54,11 @@ pub fn main() !void {
         .{ .role = "user", .content = user_prompt },
     };
 
-    // response_format: {"type":"json_object"}
-    const resp_fmt_str = "{\"type\":\"json_object\"}";
-    var resp_fmt = try std.json.parseFromSlice(std.json.Value, gpa, resp_fmt_str, .{});
-    defer resp_fmt.deinit();
-
     var resp = client.chat().create_chat_completion(gpa, .{
         .model = conf.model,
         .messages = &messages,
-        .response_format = resp_fmt.value,
+        .response_format = .json_object,
+        .max_tokens = 256,
     }) catch |err| {
         std.debug.print("Request failed: {s}\n", .{@errorName(err)});
         return;

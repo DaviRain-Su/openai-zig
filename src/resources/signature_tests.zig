@@ -9,6 +9,10 @@ const moderations = @import("moderations.zig");
 const batch = @import("batch.zig");
 const responses = @import("responses.zig");
 const images = @import("images.zig");
+const assistants = @import("assistants.zig");
+const vector_stores = @import("vector_stores.zig");
+const fine_tuning = @import("fine_tuning.zig");
+const user_balance = @import("user_balance.zig");
 
 fn assertParamCount(comptime Func: type, comptime expected: comptime_int) void {
     const info = @typeInfo(Func).Fn;
@@ -217,4 +221,81 @@ test "batch resource signature keeps request options" {
 
     assertParamCount(batch.Resource.create_with_options, 4);
     assertLastParamIsOptionalRequestOptions(batch.Resource.create_with_options);
+}
+
+test "assistants resource signature keeps request options" {
+    assertParamCount(assistants.Resource.list_assistants_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(assistants.Resource.list_assistants_with_options);
+
+    assertParamCount(assistants.Resource.create_assistant_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(assistants.Resource.create_assistant_with_options);
+
+    assertParamCount(assistants.Resource.get_assistant_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(assistants.Resource.get_assistant_with_options);
+
+    assertParamCount(assistants.Resource.modify_assistant_with_options, 5);
+    assertLastParamIsOptionalRequestOptions(assistants.Resource.modify_assistant_with_options);
+
+    assertParamCount(assistants.Resource.delete_assistant_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(assistants.Resource.delete_assistant_with_options);
+
+    assertParamCount(assistants.Resource.create_thread_with_options, 5);
+    assertLastParamIsOptionalRequestOptions(assistants.Resource.create_thread_with_options);
+
+    assertParamCount(assistants.Resource.submit_tool_outputs_to_run_with_options, 6);
+    assertLastParamIsOptionalRequestOptions(assistants.Resource.submit_tool_outputs_to_run_with_options);
+}
+
+test "vector stores resource signature keeps request options" {
+    assertParamCount(vector_stores.Resource.list_vector_stores_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(vector_stores.Resource.list_vector_stores_with_options);
+
+    assertParamCount(vector_stores.Resource.create_vector_store_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(vector_stores.Resource.create_vector_store_with_options);
+
+    assertParamCount(vector_stores.Resource.get_vector_store_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(vector_stores.Resource.get_vector_store_with_options);
+
+    assertParamCount(vector_stores.Resource.modify_vector_store_with_options, 5);
+    assertLastParamIsOptionalRequestOptions(vector_stores.Resource.modify_vector_store_with_options);
+
+    assertParamCount(vector_stores.Resource.delete_vector_store_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(vector_stores.Resource.delete_vector_store_with_options);
+
+    assertParamCount(vector_stores.Resource.create_vector_store_file_with_options, 5);
+    assertLastParamIsOptionalRequestOptions(vector_stores.Resource.create_vector_store_file_with_options);
+
+    assertParamCount(vector_stores.Resource.delete_file_with_options, 5);
+    assertLastParamIsOptionalRequestOptions(vector_stores.Resource.delete_file_with_options);
+
+    assertParamCount(vector_stores.Resource.search_with_options, 5);
+    assertLastParamIsOptionalRequestOptions(vector_stores.Resource.search_with_options);
+}
+
+test "fine tuning resource signature keeps request options" {
+    assertParamCount(fine_tuning.Resource.create_job_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(fine_tuning.Resource.create_job_with_options);
+
+    assertParamCount(fine_tuning.Resource.list_jobs_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(fine_tuning.Resource.list_jobs_with_options);
+
+    assertParamCount(fine_tuning.Resource.retrieve_job_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(fine_tuning.Resource.retrieve_job_with_options);
+
+    assertParamCount(fine_tuning.Resource.cancel_job_with_options, 4);
+    assertLastParamIsOptionalRequestOptions(fine_tuning.Resource.cancel_job_with_options);
+
+    assertParamCount(fine_tuning.Resource.list_job_events_with_options, 5);
+    assertLastParamIsOptionalRequestOptions(fine_tuning.Resource.list_job_events_with_options);
+
+    assertParamCount(fine_tuning.Resource.list_job_checkpoints_with_options, 5);
+    assertLastParamIsOptionalRequestOptions(fine_tuning.Resource.list_job_checkpoints_with_options);
+}
+
+test "user balance signature keeps request options" {
+    assertParamCount(user_balance.Resource.get_user_balance_with_options, 3);
+    assertLastParamIsOptionalRequestOptions(user_balance.Resource.get_user_balance_with_options);
+
+    assertParamCount(user_balance.Resource.balance_with_options, 3);
+    assertLastParamIsOptionalRequestOptions(user_balance.Resource.balance_with_options);
 }

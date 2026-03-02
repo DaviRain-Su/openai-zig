@@ -47,6 +47,21 @@ test "moderation response ignores unknown fields" {
     try std.testing.expectEqual(@as(usize, 0), response.value.results.len);
 }
 
+test "moderation response parses bool categories" {
+    const moderation_payload =
+        \\{"id":"mod-2","model":"text-moderation-latest","results":[{"flagged":true,"categories":{"hate":false,"hate_threatening":false,"harassment":false,"harassment_threatening":false,"illicit":false,"illicit_violent":true,"self_harm":false,"self_harm_intent":false,"self_harm_instructions":false,"sexual":false,"sexual_minors":false,"violence":false,"violence_graphic":false},"category_scores":{"hate":0.01,"hate_threatening":0.01,"harassment":0.01,"harassment_threatening":0.01,"illicit":0.01,"illicit_violent":0.7,"self_harm":0.01,"self_harm_intent":0.01,"self_harm_instructions":0.01,"sexual":0.01,"sexual_minors":0.01,"violence":0.01,"violence_graphic":0.01},"category_applied_input_types":{"hate":[],"hate_threatening":[],"harassment":[],"harassment_threatening":[],"illicit":[],"illicit_violent":[],"self_harm":[],"self_harm_intent":[],"self_harm_instructions":[],"sexual":[],"sexual_minors":[],"violence":[],"violence_graphic":[]}}]}
+    ;
+    const response = try std.json.parseFromSlice(
+        gen.CreateModerationResponse,
+        std.testing.allocator,
+        moderation_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer response.deinit();
+    try std.testing.expect(!response.value.results[0].categories.illicit);
+    try std.testing.expect(response.value.results[0].categories.illicit_violent);
+}
+
 test "assistants response ignores unknown fields" {
     const assistants_payload =
         \\{"object":"list","data":[{"id":"asst_123","object":"assistant","created_at":1700000000,"name":"demo","description":"test","model":"deepseek-chat","instructions":"你是助手","tools":[{"type":"text"}],"metadata":{},"tool_resources":null,"unused_field":"ignored"}],"first_id":"asst_123","last_id":"asst_123","has_more":false,"unexpected":"x"}
@@ -64,6 +79,177 @@ test "assistants response ignores unknown fields" {
     try std.testing.expectEqualStrings("asst_123", assistants.value.first_id);
     try std.testing.expectEqualStrings("asst_123", assistants.value.last_id);
     try std.testing.expectEqualStrings("asst_123", assistants.value.data[0].id);
+}
+
+test "assistant response parses typed response_format auto" {
+    const payload =
+        \\{"id":"asst_123","object":"assistant","created_at":1700000000,"name":"demo","description":"test","model":"deepseek-chat","instructions":"你是助手","tools":[{"type":"code_interpreter"}],"tool_resources":{"code_interpreter":{"file_ids":["file_1"]}},"metadata":{},"response_format":"auto"}
+    ;
+    const assistant = try std.json.parseFromSlice(
+        gen.AssistantObject,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer assistant.deinit();
+
+    const response_format = assistant.value.response_format orelse {
+        try std.testing.expect(false);
+        return;
+    };
+
+    switch (response_format) {
+        .auto => {},
+        else => try std.testing.expect(false),
+    }
+}
+
+test "tool parses code_interpreter auto container" {
+    const payload =
+        \\{"type":"code_interpreter","container":{"type":"auto","file_ids":["file_1","file_2"],"memory_limit":"4GB"}}
+    ;
+    const tool = try std.json.parseFromSlice(
+        gen.Tool,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer tool.deinit();
+
+    switch (tool.value) {
+        .code_interpreter => |code_tool| {
+            switch (code_tool.container) {
+                .auto => |container| {
+                    try std.testing.expectEqualStrings("auto", container.type);
+                    try std.testing.expect(container.file_ids != null);
+                    try std.testing.expectEqual(@as(usize, 2), container.file_ids.?.len);
+                    try std.testing.expectEqualStrings("file_1", container.file_ids.?[0]);
+                    try std.testing.expectEqualStrings("file_2", container.file_ids.?[1]);
+                    try std.testing.expect(container.memory_limit != null);
+                    try std.testing.expectEqualStrings("4GB", container.memory_limit.?);
+                },
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "tool keeps code_interpreter unknown container as raw" {
+    const payload =
+        \\{"type":"code_interpreter","container":{"type":"legacy","container_id":"ci_abc"}}
+    ;
+    const tool = try std.json.parseFromSlice(
+        gen.Tool,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer tool.deinit();
+
+    switch (tool.value) {
+        .code_interpreter => |code_tool| {
+            switch (code_tool.container) {
+                .raw => |_| {},
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "AssistantsApiResponseFormatOption parses json_schema form" {
+    const payload =
+        \\{"type":"json_schema","json_schema":{"name":"qa","description":"question answer","schema":{"type":"object","properties":{"question":{"type":"string"}},"required":["question"]},"strict":true}}
+    ;
+    const response_format = try std.json.parseFromSlice(
+        gen.AssistantsApiResponseFormatOption,
+        std.testing.allocator,
+        payload,
+        .{},
+    );
+    defer response_format.deinit();
+
+    switch (response_format.value) {
+        .json_schema => |value| {
+            try std.testing.expectEqualStrings("qa", value.json_schema.name);
+            try std.testing.expectEqualStrings("question answer", value.json_schema.description.?);
+            try std.testing.expect(value.json_schema.strict.?);
+            try std.testing.expect(value.json_schema.schema != null);
+            try std.testing.expect(value.json_schema.schema != null and value.json_schema.schema.?.object.get("type") != null);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create message request content serializes text and parts variants" {
+    const request_text = gen.CreateMessageRequest{
+        .role = "user",
+        .content = .{ .text = "hello world" },
+        .attachments = null,
+        .metadata = null,
+    };
+
+    var text_buf: [256]u8 = undefined;
+    var text_fbs = std.io.fixedBufferStream(&text_buf);
+    const text_writer = text_fbs.writer();
+    try std.json.stringify(request_text, .{ .emit_null_optional_fields = false }, text_writer);
+    const text_json = text_fbs.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, text_json, "\"content\":\"hello world\"") != null);
+
+    const parts = [_]gen.CreateMessageRequestContentPart{
+        .{
+            .text = .{
+                .type = "text",
+                .text = "part one",
+            },
+        },
+    };
+    const request_parts = gen.CreateMessageRequest{
+        .role = "user",
+        .content = .{ .parts = &parts },
+        .attachments = null,
+        .metadata = null,
+    };
+
+    var parts_buf: [256]u8 = undefined;
+    var parts_fbs = std.io.fixedBufferStream(&parts_buf);
+    const parts_writer = parts_fbs.writer();
+    try std.json.stringify(request_parts, .{ .emit_null_optional_fields = false }, parts_writer);
+    const parts_json = parts_fbs.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, parts_json, "\"content\":[") != null);
+    try std.testing.expect(std.mem.indexOf(u8, parts_json, "\"type\":\"text\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, parts_json, "\"text\":\"part one\"") != null);
+}
+
+test "create moderation request input serializes scalar and array forms" {
+    const request_text = gen.CreateModerationRequest{
+        .input = .{ .text = "A short statement." },
+        .model = null,
+    };
+
+    var text_buf: [256]u8 = undefined;
+    var text_fbs = std.io.fixedBufferStream(&text_buf);
+    const text_writer = text_fbs.writer();
+    try std.json.stringify(request_text, .{ .emit_null_optional_fields = false }, text_writer);
+    const text_json = text_fbs.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, text_json, "\"input\":\"A short statement.\"") != null);
+
+    const multi = [_][]const u8{
+        "First text.",
+        "Second text.",
+    };
+    const request_multi = gen.CreateModerationRequest{
+        .input = .{ .texts = &multi },
+        .model = "text-moderation-latest",
+    };
+
+    var multi_buf: [256]u8 = undefined;
+    var multi_fbs = std.io.fixedBufferStream(&multi_buf);
+    const multi_writer = multi_fbs.writer();
+    try std.json.stringify(request_multi, .{ .emit_null_optional_fields = false }, multi_writer);
+    const multi_json = multi_fbs.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, multi_json, "\"input\":[\"First text.\",\"Second text.\"]") != null);
 }
 
 test "thread object ignores unknown fields" {
@@ -153,6 +339,187 @@ test "list vector store files and stores responses ignore unknown fields" {
     try std.testing.expectEqualStrings("vs_abc", stores.value.last_id);
 }
 
+test "comparison filter parses scalar, boolean, and array values" {
+    const scalar_payload =
+        \\{"type":"eq","key":"status","value":"active"}
+    ;
+    const scalar_filter = try std.json.parseFromSlice(
+        gen.ComparisonFilter,
+        std.testing.allocator,
+        scalar_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer scalar_filter.deinit();
+    try std.testing.expectEqualStrings("eq", scalar_filter.value.type);
+    try std.testing.expectEqualStrings("status", scalar_filter.value.key);
+    switch (scalar_filter.value.value) {
+        .string => |value| try std.testing.expectEqualStrings("active", value),
+        else => try std.testing.expect(false),
+    }
+
+    const bool_payload =
+        \\{"type":"eq","key":"featured","value":true}
+    ;
+    const bool_filter = try std.json.parseFromSlice(
+        gen.ComparisonFilter,
+        std.testing.allocator,
+        bool_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer bool_filter.deinit();
+    switch (bool_filter.value.value) {
+        .boolean => |value| try std.testing.expect(value),
+        else => try std.testing.expect(false),
+    }
+
+    const array_payload =
+        \\{"type":"in","key":"tag","value":["vip", "premium", 100]}
+    ;
+    const array_filter = try std.json.parseFromSlice(
+        gen.ComparisonFilter,
+        std.testing.allocator,
+        array_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer array_filter.deinit();
+    switch (array_filter.value.value) {
+        .items => |value| {
+            try std.testing.expectEqual(@as(usize, 3), value.len);
+            switch (value[0]) {
+                .string => |entry| try std.testing.expectEqualStrings("vip", entry),
+                else => try std.testing.expect(false),
+            }
+            switch (value[2]) {
+                .number => |entry| try std.testing.expectEqual(@as(f64, 100), entry),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "filters parses comparison and compound forms" {
+    const comparison_payload =
+        \\{"type":"eq","key":"status","value":"active"}
+    ;
+    const comparison_filter = try std.json.parseFromSlice(
+        gen.Filters,
+        std.testing.allocator,
+        comparison_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer comparison_filter.deinit();
+    switch (comparison_filter.value) {
+        .comparison => |value| {
+            try std.testing.expectEqualStrings("eq", value.type);
+            switch (value.value) {
+                .string => |entry| try std.testing.expectEqualStrings("active", entry),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const compound_payload =
+        \\{"type":"and","filters":[{"type":"eq","key":"status","value":"active"},{"type":"gt","key":"score","value":0.7}]}
+    ;
+    const compound_filter = try std.json.parseFromSlice(
+        gen.Filters,
+        std.testing.allocator,
+        compound_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer compound_filter.deinit();
+    switch (compound_filter.value) {
+        .compound => |value| {
+            try std.testing.expectEqualStrings("and", value.type);
+            try std.testing.expectEqual(@as(usize, 2), value.filters.len);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const unknown_payload =
+        \\{"type":"contains","key":"status","value":"active"}
+    ;
+    const unknown_filter = try std.json.parseFromSlice(
+        gen.Filters,
+        std.testing.allocator,
+        unknown_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer unknown_filter.deinit();
+    switch (unknown_filter.value) {
+        .raw => |_| {},
+        else => try std.testing.expect(false),
+    }
+}
+
+test "vector store request and tools reuse Filters type" {
+    const vector_search_payload =
+        \\{"query":"hello","filters":{"type":"gt","key":"score","value":0.9},"max_num_results":10}
+    ;
+    const request = try std.json.parseFromSlice(
+        gen.VectorStoreSearchRequest,
+        std.testing.allocator,
+        vector_search_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer request.deinit();
+    const filter = request.value.filters orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (filter) {
+        .comparison => |value| {
+            try std.testing.expectEqualStrings("gt", value.type);
+            switch (value.value) {
+                .number => |entry| try std.testing.expectEqual(@as(f64, 0.9), entry),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const file_search_tool_payload =
+        \\{"type":"file_search","vector_store_ids":["vs_abc"],"filters":{"type":"or","filters":[{"type":"eq","key":"region","value":"us"}]}}
+    ;
+    const tool = try std.json.parseFromSlice(
+        gen.FileSearchTool,
+        std.testing.allocator,
+        file_search_tool_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer tool.deinit();
+    const tool_filter = tool.value.filters orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (tool_filter) {
+        .compound => |value| {
+            try std.testing.expectEqualStrings("or", value.type);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const file_search_call_payload =
+        \\{"id":"call_1","type":"file_search_call","status":"completed","queries":["doc"],"results":[{"file_id":"file_abc","text":"snippet","filename":"a.txt","attributes":{"source":"doc"},"score":0.87}]}
+    ;
+    const call = try std.json.parseFromSlice(
+        gen.FileSearchToolCall,
+        std.testing.allocator,
+        file_search_call_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer call.deinit();
+    const results = call.value.results orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expectEqual(@as(usize, 1), results.len);
+    try std.testing.expectEqualStrings("file_abc", results[0].file_id);
+    try std.testing.expectEqualStrings("a.txt", results[0].filename);
+}
+
 test "list runs response ignores unknown fields" {
     const payload =
         \\{"object":"list","data":[{"id":"run_abc","object":"thread.run","created_at":1700000000,"thread_id":"thread_abc","assistant_id":"asst_1","status":"in_progress","required_action":{"type":"none","submit_tool_outputs":{"tool_calls":[]}},"last_error":{"code":"","message":""},"expires_at":1700001000,"started_at":1700000500,"cancelled_at":0,"failed_at":0,"completed_at":0,"incomplete_details":{"reason":null},"model":"deepseek-chat","instructions":"test","tools":[],"metadata":{},"usage":{},"temperature":1.0,"top_p":1.0,"max_prompt_tokens":4096,"max_completion_tokens":4096,"truncation_strategy":{},"tool_choice":{},"parallel_tool_calls":false,"response_format":{},"root_extra":"x"}],"first_id":"run_abc","last_id":"run_abc","has_more":false,"list_extra":"y"}
@@ -211,6 +578,28 @@ test "create completion response ignores unknown fields and tolerates optional u
     try std.testing.expectEqual(@as(i64, 1), response.value.usage.?.prompt_tokens);
 }
 
+test "create completion response parses structured logprobs" {
+    const payload =
+        \\{"id":"cmpl-log","object":"text_completion","created":1700000000,"model":"text-davinci-003","choices":[{"text":"hello","index":0,"logprobs":{"tokens":["hello"],"token_logprobs":[-0.04],"top_logprobs":[[{"token":" hello","logprob":-0.12,"bytes":[32,104,101,108,108,111]}]],"text_offset":[0]},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":2,"total_tokens":3}}
+    ;
+    const response = try std.json.parseFromSlice(
+        gen.CreateCompletionResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer response.deinit();
+
+    try std.testing.expectEqual(@as(usize, 1), response.value.choices.len);
+    const choice = response.value.choices[0];
+    try std.testing.expect(choice.logprobs != null);
+    try std.testing.expectEqualStrings("hello", choice.logprobs.?.tokens.?[0]);
+    try std.testing.expectEqual(@as(usize, 1), choice.logprobs.?.top_logprobs.?.len);
+    const top = choice.logprobs.?.top_logprobs.?[0];
+    try std.testing.expect(top.len > 0);
+    try std.testing.expectEqualStrings(" hello", top[0].token.?);
+}
+
 test "create completion response parses DeepSeek cache usage fields" {
     const payload =
         \\{"id":"cmpl-deepseek","object":"text_completion","created":1700000000,"model":"deepseek-chat","choices":[{"text":"hello","index":0,"logprobs":null,"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":20,"total_tokens":30,"prompt_cache_hit_tokens":25,"prompt_cache_miss_tokens":5}}
@@ -226,6 +615,528 @@ test "create completion response parses DeepSeek cache usage fields" {
     try std.testing.expect(response.value.usage != null);
     try std.testing.expectEqual(@as(i64, 25), response.value.usage.?.prompt_cache_hit_tokens.?);
     try std.testing.expectEqual(@as(i64, 5), response.value.usage.?.prompt_cache_miss_tokens.?);
+}
+
+test "generated create completion request serializes structured logit_bias map" {
+    const biases = [_]gen.CreateCompletionLogitBiasEntry{
+        .{
+            .token = "50256",
+            .bias = -100,
+        },
+    };
+
+    const request = gen.CreateCompletionRequest{
+        .model = "text-davinci-003",
+        .prompt = "hello",
+        .best_of = null,
+        .echo = null,
+        .frequency_penalty = null,
+        .logit_bias = .{ .entries = &biases },
+        .logprobs = null,
+        .max_tokens = null,
+        .n = null,
+        .presence_penalty = null,
+        .seed = null,
+        .stop = null,
+        .stream = null,
+        .stream_options = null,
+        .suffix = null,
+        .temperature = null,
+        .top_p = null,
+        .user = null,
+    };
+
+    var fbs: [256]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&fbs);
+    const writer = stream.writer();
+    try std.json.stringify(request, .{ .emit_null_optional_fields = false }, writer);
+    const json = stream.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, json, "\"logit_bias\":{\"50256\":-100}") != null);
+}
+
+test "generated create completion request serializes raw logit_bias passthrough" {
+    const payload =
+        \\{"token":"value"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        payload,
+        .{},
+    );
+    defer parsed.deinit();
+
+    const request = gen.CreateCompletionRequest{
+        .model = "text-davinci-003",
+        .prompt = "hello",
+        .best_of = null,
+        .echo = null,
+        .frequency_penalty = null,
+        .logit_bias = .{ .raw = parsed.value },
+        .logprobs = null,
+        .max_tokens = null,
+        .n = null,
+        .presence_penalty = null,
+        .seed = null,
+        .stop = null,
+        .stream = null,
+        .stream_options = null,
+        .suffix = null,
+        .temperature = null,
+        .top_p = null,
+        .user = null,
+    };
+
+    var fbs: [256]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&fbs);
+    const writer = stream.writer();
+    try std.json.stringify(request, .{ .emit_null_optional_fields = false }, writer);
+    const json = stream.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, json, "\"logit_bias\":{\"token\":\"value\"}") != null);
+}
+
+test "generated chunking strategy request serializes static variant" {
+    const request = gen.ChunkingStrategyRequestParam{
+        .static = .{
+            .type = "static",
+            .static = .{
+                .max_chunk_size_tokens = 800,
+                .chunk_overlap_tokens = 128,
+            },
+        },
+    };
+
+    var fbs: [256]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&fbs);
+    const writer = stream.writer();
+    try std.json.stringify(request, .{ .emit_null_optional_fields = false }, writer);
+    const json = stream.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, json, "\"type\":\"static\"") != null);
+    try std.testing.expect(std.mem.indexOf(u8, json, "\"static\":{\"max_chunk_size_tokens\":800,\"chunk_overlap_tokens\":128}") != null);
+}
+
+test "generated input/content variants parse text, image, file and audio forms" {
+    const input_text_payload =
+        \\{"type":"text","text":"hello world"}
+    ;
+    const parsed_text = try std.json.parseFromSlice(
+        gen.InputContent,
+        std.testing.allocator,
+        input_text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+    switch (parsed_text.value) {
+        .text => |value| {
+            try std.testing.expectEqualStrings("text", value.type);
+            try std.testing.expectEqualStrings("hello world", value.text);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const input_image_payload =
+        \\{"type":"input_image","image_url":"https://example.com/image.png","detail":"high"}
+    ;
+    const parsed_image = try std.json.parseFromSlice(
+        gen.InputContent,
+        std.testing.allocator,
+        input_image_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_image.deinit();
+    switch (parsed_image.value) {
+        .image => |value| {
+            try std.testing.expectEqualStrings("input_image", value.type);
+            try std.testing.expectEqualStrings("https://example.com/image.png", value.image_url.?);
+            try std.testing.expectEqualStrings("high", value.detail.?);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const input_file_payload =
+        \\{"type":"input_file","file_id":"file-abc","filename":"a.txt"}
+    ;
+    const parsed_file = try std.json.parseFromSlice(
+        gen.InputContent,
+        std.testing.allocator,
+        input_file_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_file.deinit();
+    switch (parsed_file.value) {
+        .file => |value| {
+            try std.testing.expectEqualStrings("input_file", value.type);
+            try std.testing.expectEqualStrings("file-abc", value.file_id.?);
+            try std.testing.expectEqualStrings("a.txt", value.filename.?);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const input_audio_payload =
+        \\{"type":"input_audio","input_audio":{"data":"aGVsbG8=","format":"wav"}}
+    ;
+    const parsed_audio = try std.json.parseFromSlice(
+        gen.InputContent,
+        std.testing.allocator,
+        input_audio_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_audio.deinit();
+    switch (parsed_audio.value) {
+        .audio => |value| {
+            try std.testing.expectEqualStrings("input_audio", value.type);
+            try std.testing.expectEqualStrings("aGVsbG8=", value.input_audio.data);
+            try std.testing.expectEqualStrings("wav", value.input_audio.format);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generated message content parses text variants with structured annotations" {
+    const message_payload =
+        \\{"type":"text","text":{"value":"Hello","annotations":[{"type":"file_citation","text":"Cited","file_citation":{"file_id":"file-abc"},"start_index":0,"end_index":6}]}}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.MessageContent,
+        std.testing.allocator,
+        message_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+    switch (parsed.value) {
+        .text => |value| {
+            try std.testing.expectEqualStrings("text", value.type);
+            try std.testing.expectEqualStrings("Hello", value.text.value);
+            try std.testing.expect(value.text.annotations.len == 1);
+            switch (value.text.annotations[0]) {
+                .file_citation => |ann| {
+                    try std.testing.expectEqualStrings("file-abc", ann.file_citation.file_id);
+                },
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const delta_payload =
+        \\{"index":0,"type":"text","text":{"value":"Hi","annotations":[{"type":"file_path","text":"path","file_path":{"file_id":"file-xyz"},"start_index":0,"end_index":2}]}}
+    ;
+    const parsed_delta = try std.json.parseFromSlice(
+        gen.MessageContentDelta,
+        std.testing.allocator,
+        delta_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_delta.deinit();
+    switch (parsed_delta.value) {
+        .text => |value| {
+            try std.testing.expectEqual(@as(i64, 0), value.index);
+            try std.testing.expectEqualStrings("Hi", value.text.?.value.?);
+            try std.testing.expect(value.text.?.annotations != null);
+            const annos = value.text.?.annotations.?;
+            try std.testing.expectEqual(@as(usize, 1), annos.len);
+            switch (annos[0]) {
+                .file_path => |anno| {
+                    try std.testing.expectEqualStrings("file-xyz", anno.file_path.?.file_id.?);
+                },
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const unknown_payload = \\{"type":"legacy","raw":"x"}
+ ;
+    const parsed_unknown = try std.json.parseFromSlice(
+        gen.MessageContent,
+        std.testing.allocator,
+        unknown_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_unknown.deinit();
+    switch (parsed_unknown.value) {
+        .raw => |value| {
+            try std.testing.expectEqualStrings("legacy", value.object.get("type").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generated thread response format and thread item discriminators parse typed values" {
+    const text_format_payload =
+        \\{"type":"text"}
+    ;
+    const text_format = try std.json.parseFromSlice(
+        gen.TextResponseFormatConfiguration,
+        std.testing.allocator,
+        text_format_payload,
+        .{},
+    );
+    defer text_format.deinit();
+    switch (text_format.value) {
+        .text => |value| {
+            try std.testing.expectEqualStrings("text", value.type);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const json_schema_payload =
+        \\{"type":"json_schema","json_schema":{"description":"A response payload","name":"answer","schema":{"type":"object","properties":{"x":{"type":"string"}}},"strict":true}}
+    ;
+    const json_schema = try std.json.parseFromSlice(
+        gen.TextResponseFormatConfiguration,
+        std.testing.allocator,
+        json_schema_payload,
+        .{},
+    );
+    defer json_schema.deinit();
+    switch (json_schema.value) {
+        .json_schema => |value| {
+            try std.testing.expectEqualStrings("json_schema", value.type);
+            try std.testing.expectEqualStrings("answer", value.name);
+            try std.testing.expect(value.strict orelse false);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const json_object_payload =
+        \\{"type":"json_object"}
+    ;
+    const json_object = try std.json.parseFromSlice(
+        gen.TextResponseFormatConfiguration,
+        std.testing.allocator,
+        json_object_payload,
+        .{},
+    );
+    defer json_object.deinit();
+    switch (json_object.value) {
+        .json_object => |value| {
+            try std.testing.expectEqualStrings("json_object", value.type);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const unknown_format_payload =
+        \\{"type":"legacy","meta":"x"}
+    ;
+    const unknown_format = try std.json.parseFromSlice(
+        gen.TextResponseFormatConfiguration,
+        std.testing.allocator,
+        unknown_format_payload,
+        .{},
+    );
+    defer unknown_format.deinit();
+    switch (unknown_format.value) {
+        .raw => |value| {
+            try std.testing.expectEqualStrings("legacy", value.object.get("type").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const thread_user_payload =
+        \\{"id":"item-user-1","object":"chatkit.thread_item","created_at":1700000000,"thread_id":"thread-1","type":"chatkit.user_message","content":[{"type":"input_text","text":"hello"}],"attachments":[],"inference_options":null}
+    ;
+    const parsed_user_item = try std.json.parseFromSlice(
+        gen.ThreadItem,
+        std.testing.allocator,
+        thread_user_payload,
+        .{},
+    );
+    defer parsed_user_item.deinit();
+    switch (parsed_user_item.value) {
+        .user => |item| {
+            try std.testing.expectEqualStrings("item-user-1", item.id);
+            try std.testing.expectEqualStrings("chatkit.user_message", item.type);
+            try std.testing.expectEqualStrings("input_text", item.content[0].input_text.type);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const thread_assistant_payload =
+        \\{"id":"item-assistant-1","object":"chatkit.thread_item","created_at":1700000001,"thread_id":"thread-1","type":"chatkit.assistant_message","content":[{"type":"output_text","text":"hi","annotations":[]}]}
+    ;
+    const parsed_assistant_item = try std.json.parseFromSlice(
+        gen.ThreadItem,
+        std.testing.allocator,
+        thread_assistant_payload,
+        .{},
+    );
+    defer parsed_assistant_item.deinit();
+    switch (parsed_assistant_item.value) {
+        .assistant => |item| {
+            try std.testing.expectEqualStrings("item-assistant-1", item.id);
+            try std.testing.expectEqualStrings("chatkit.assistant_message", item.type);
+            try std.testing.expectEqualStrings("output_text", item.content[0].type);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const unknown_thread_payload =
+        \\{"type":"chatkit.legacy_item","id":"legacy-1","object":"chatkit.thread_item","thread_id":"thread-1","created_at":1700000002}
+    ;
+    const thread_unknown = try std.json.parseFromSlice(
+        gen.ThreadItem,
+        std.testing.allocator,
+        unknown_thread_payload,
+        .{},
+    );
+    defer thread_unknown.deinit();
+    switch (thread_unknown.value) {
+        .raw => |value| {
+            try std.testing.expectEqualStrings("chatkit.legacy_item", value.object.get("type").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generated user message item content parses input_text and quoted_text variants" {
+    const input_payload =
+        \\{"type":"input_text","text":"quoted"}
+    ;
+    const parsed_input = try std.json.parseFromSlice(
+        gen.UserMessageItemContent,
+        std.testing.allocator,
+        input_payload,
+        .{},
+    );
+    defer parsed_input.deinit();
+    switch (parsed_input.value) {
+        .input_text => |value| {
+            try std.testing.expectEqualStrings("input_text", value.type);
+            try std.testing.expectEqualStrings("quoted", value.text);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const quoted_payload =
+        \\{"type":"quoted_text","text":"reply"}
+    ;
+    const parsed_quoted = try std.json.parseFromSlice(
+        gen.UserMessageItemContent,
+        std.testing.allocator,
+        quoted_payload,
+        .{},
+    );
+    defer parsed_quoted.deinit();
+    switch (parsed_quoted.value) {
+        .quoted_text => |value| {
+            try std.testing.expectEqualStrings("quoted_text", value.type);
+            try std.testing.expectEqualStrings("reply", value.text);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generated output content parses output_text and falls back to raw for unknown type" {
+    const output_text_payload =
+        \\{"type":"output_text","text":"done","annotations":[]}
+    ;
+    const parsed_output = try std.json.parseFromSlice(
+        gen.OutputContent,
+        std.testing.allocator,
+        output_text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_output.deinit();
+    switch (parsed_output.value) {
+        .text => |value| {
+            try std.testing.expectEqualStrings("output_text", value.type);
+            try std.testing.expectEqualStrings("done", value.text);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const output_raw_payload = \\{"type":"unknown_output","data":123}
+    ;
+    const parsed_output_raw = try std.json.parseFromSlice(
+        gen.OutputContent,
+        std.testing.allocator,
+        output_raw_payload,
+        .{},
+    );
+    defer parsed_output_raw.deinit();
+    switch (parsed_output_raw.value) {
+        .raw => |value| {
+            try std.testing.expectEqualStrings("unknown_output", value.object.get("type").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generated message parses typed content blocks" {
+    const message_payload =
+        \\{"type":"assistant","id":"msg-1","status":"completed","role":"assistant","content":[{"type":"text","text":{"value":"Hello","annotations":[]}}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.Message,
+        std.testing.allocator,
+        message_payload,
+        .{},
+    );
+    defer parsed.deinit();
+    try std.testing.expectEqualStrings("assistant", parsed.value.type);
+    try std.testing.expectEqualStrings("msg-1", parsed.value.id);
+    try std.testing.expect(parsed.value.content.len > 0);
+    switch (parsed.value.content[0]) {
+        .text => |content| {
+            try std.testing.expectEqualStrings("text", content.type);
+            try std.testing.expectEqualStrings("Hello", content.text.value.?);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generated chunking strategy parses static, other and raw fallback" {
+    const static_payload =
+        \\{"type":"static","static":{"max_chunk_size_tokens":256,"chunk_overlap_tokens":64}}
+    ;
+    const parsed_static = try std.json.parseFromSlice(
+        gen.ChunkingStrategyRequestParam,
+        std.testing.allocator,
+        static_payload,
+        .{},
+    );
+    defer parsed_static.deinit();
+    switch (parsed_static.value) {
+        .static => |value| {
+            try std.testing.expectEqualStrings("static", value.type);
+            try std.testing.expectEqual(@as(i64, 256), value.static.max_chunk_size_tokens);
+            try std.testing.expectEqual(@as(i64, 64), value.static.chunk_overlap_tokens);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const other_payload =
+        \\{"type":"other","metadata":{"note":"reserved-for-future"}}
+    ;
+    const parsed_other = try std.json.parseFromSlice(
+        gen.ChunkingStrategyResponse,
+        std.testing.allocator,
+        other_payload,
+        .{},
+    );
+    defer parsed_other.deinit();
+    switch (parsed_other.value) {
+        .other => |value| {
+            try std.testing.expectEqualStrings("other", value.type);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload = "[1,2,3]";
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.ChunkingStrategyRequestParam,
+        std.testing.allocator,
+        raw_payload,
+        .{},
+    );
+    defer parsed_raw.deinit();
+    switch (parsed_raw.value) {
+        .raw => |value| {
+            try std.testing.expect(value == .array);
+        },
+        else => try std.testing.expect(false),
+    }
 }
 
 test "create embedding response parses nested embedding objects" {
@@ -245,6 +1156,42 @@ test "create embedding response parses nested embedding objects" {
     try std.testing.expectEqual(@as(i64, 0), response.value.data[0].index);
     try std.testing.expect(response.value.data[0].embedding.len == 3);
     try std.testing.expectEqual(@as(i64, 3), response.value.usage.total_tokens);
+}
+
+test "create embedding request input serializes scalar and array forms" {
+    const request_text = gen.CreateEmbeddingRequest{
+        .input = .{ .text = "Hello, world." },
+        .model = "text-embedding-3-small",
+        .encoding_format = null,
+        .dimensions = null,
+        .user = null,
+    };
+
+    var text_buf: [256]u8 = undefined;
+    var text_fbs = std.io.fixedBufferStream(&text_buf);
+    const text_writer = text_fbs.writer();
+    try std.json.stringify(request_text, .{ .emit_null_optional_fields = false }, text_writer);
+    const text_json = text_fbs.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, text_json, "\"input\":\"Hello, world.\"") != null);
+
+    const texts = [_][]const u8{
+        "first sentence",
+        "second sentence",
+    };
+    const request_multi = gen.CreateEmbeddingRequest{
+        .input = .{ .texts = &texts },
+        .model = "text-embedding-3-small",
+        .encoding_format = null,
+        .dimensions = null,
+        .user = null,
+    };
+
+    var multi_buf: [256]u8 = undefined;
+    var multi_fbs = std.io.fixedBufferStream(&multi_buf);
+    const multi_writer = multi_fbs.writer();
+    try std.json.stringify(request_multi, .{ .emit_null_optional_fields = false }, multi_writer);
+    const multi_json = multi_fbs.getWritten();
+    try std.testing.expect(std.mem.indexOf(u8, multi_json, "\"input\":[\"first sentence\",\"second sentence\"]") != null);
 }
 
 test "images response parses optional fields with unknown extras" {
@@ -286,8 +1233,7 @@ test "create chat completion response ignores unknown fields" {
     try std.testing.expectEqual(@as(?[]const gen.ChatCompletionTokenLogprob, null), choices[0].logprobs);
     const message = choices[0].message orelse return error.TestUnexpectedResult;
     const reasoning = message.reasoning_content orelse return error.TestUnexpectedResult;
-    try std.testing.expect(reasoning == .string);
-    try std.testing.expectEqualStrings("think through details", reasoning.string);
+    try std.testing.expectEqualStrings("think through details", reasoning);
 }
 
 test "model object with missing optional fields still parses" {

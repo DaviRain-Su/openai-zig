@@ -54,6 +54,19 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
   - `/beta` is normalized idempotently (no duplicated `/beta` suffix is added).
 - This behavior applies in all normal request paths and request-with-options calls.
 
+### Provider support matrix (practical)
+
+- Stable under OpenAI/compatible endpoints:
+  - `models`, `chat`, `completions`, `files`, `images`, `embeddings`, `moderations`, `responses`, `audio`, `vector_stores`
+- DeepSeek-compatible routes with SDK auto-adjustment:
+  - `/completions*` automatically switches to `/beta` when base URL contains DeepSeek
+  - `/chat/completions` switches to `/beta` when last message has `prefix: true`
+- DeepSeek-specific endpoints/examples:
+  - `user_balance` (`/user/balance`) supported via explicit example (`user_balance`)
+- Provider mismatch handling in SDK/examples:
+  - Unsupported endpoints generally return SDK errors (e.g. `NotFoundError` / `HttpError`) and examples print skip logs instead of aborting the whole run.
+  - Stream fallback examples include non-stream fallback and `/DeepSeek` guards to reduce truncated output risk.
+
 Examples:
 
 - `https://api.deepseek.com/v1 + /completions` -> `https://api.deepseek.com/beta`
@@ -104,7 +117,9 @@ bash scripts/check-op-coverage.sh     # verify operation coverage against genera
 - `examples/chat_list.zig` — list chat completion objects
 - `examples/chat_multiturn.zig` — multi-turn chat continuation
 - `examples/chat_prefix_completion.zig` — chat prefix completion (`prefix=true`) sample
+- `examples/chat_tool_calls.zig` — chat tool call sample with `tools` + `tool_choice` request + response parsing
 - `examples/chat_json_extract.zig` — function-like structured chat output demo
+- `examples/chat_json_mode.zig` — strict JSON-mode chat completion demo (`json_object` / `json_schema`)
 - `examples/files_list.zig` — list files
 - `examples/assistants_list.zig` — assistants list with fallback handling
 - `examples/embeddings_and_moderations.zig` — embeddings + moderations call path
@@ -117,7 +132,10 @@ bash scripts/check-op-coverage.sh     # verify operation coverage against genera
 - `examples/batch_basic.zig` — batch list/detail sample
 - `examples/files_list_paged.zig` — manual pagination helper
 - `examples/files_list_auto_paged.zig` — auto pagination helper
+- `examples/audio_transcription.zig` — transcribe local audio file with file-path helper
+- `examples/audio_translation.zig` — translate local audio file with file-path helper
 - `examples/audio_speech.zig` — speech synthesis
+- `examples/user_balance.zig` — query DeepSeek account balance via `/user/balance` with provider compatibility handling
 - `examples/vector_stores_list.zig` — list vector stores
 - `examples/images_generation.zig` — images generation baseline sample
 - `examples/error_handling_and_options.zig` — per-request options and clone behavior

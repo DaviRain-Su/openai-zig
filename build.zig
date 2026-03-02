@@ -179,7 +179,9 @@ pub fn build(b: *std.Build) void {
             .{ .name = "chat_multiturn", .path = "examples/chat_multiturn.zig" },
             .{ .name = "chat_prefix_completion", .path = "examples/chat_prefix_completion.zig" },
             .{ .name = "chat_thinking_mode", .path = "examples/chat_thinking_mode.zig" },
+            .{ .name = "chat_tool_calls", .path = "examples/chat_tool_calls.zig" },
             .{ .name = "chat_json_extract", .path = "examples/chat_json_extract.zig" },
+            .{ .name = "chat_json_mode", .path = "examples/chat_json_mode.zig" },
             .{ .name = "assistants_list", .path = "examples/assistants_list.zig" },
             .{ .name = "files_list", .path = "examples/files_list.zig" },
             .{ .name = "images_generation", .path = "examples/images_generation.zig" },
@@ -190,6 +192,8 @@ pub fn build(b: *std.Build) void {
             .{ .name = "fim_completion", .path = "examples/fim_completion.zig" },
             .{ .name = "fim_completion_stream", .path = "examples/fim_completion_stream.zig" },
             .{ .name = "fim_completion_raw", .path = "examples/fim_completion_raw.zig" },
+            .{ .name = "audio_transcription", .path = "examples/audio_transcription.zig" },
+            .{ .name = "audio_translation", .path = "examples/audio_translation.zig" },
             .{ .name = "audio_speech", .path = "examples/audio_speech.zig" },
             .{ .name = "responses_basic", .path = "examples/responses_basic.zig" },
             .{ .name = "batch_basic", .path = "examples/batch_basic.zig" },
@@ -197,6 +201,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "files_list_auto_paged", .path = "examples/files_list_auto_paged.zig" },
             .{ .name = "vector_stores_list", .path = "examples/vector_stores_list.zig" },
             .{ .name = "error_handling_and_options", .path = "examples/error_handling_and_options.zig" },
+            .{ .name = "user_balance", .path = "examples/user_balance.zig" },
         };
         const run_examples = b.step("run-examples", "Run all examples");
         inline for (examples) |ex| {

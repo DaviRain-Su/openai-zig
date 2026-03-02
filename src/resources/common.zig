@@ -650,15 +650,15 @@ pub const MultipartBuilder = struct {
         name: []const u8,
         value: []const u8,
     ) errors.Error!void {
-        const writer = self.out.writer();
-        try writer.writeAll("--");
-        try writer.writeAll(self.boundary);
-        try writer.writeAll("\r\n");
-        try writer.writeAll("Content-Disposition: form-data; name=\"");
-        try writer.writeAll(name);
-        try writer.writeAll("\"\r\n\r\n");
-        try writer.writeAll(value);
-        try writer.writeAll("\r\n");
+        const writer = self.out.writer(self.allocator);
+        writer.writeAll("--") catch return errors.Error.SerializeError;
+        writer.writeAll(self.boundary) catch return errors.Error.SerializeError;
+        writer.writeAll("\r\n") catch return errors.Error.SerializeError;
+        writer.writeAll("Content-Disposition: form-data; name=\"") catch return errors.Error.SerializeError;
+        writer.writeAll(name) catch return errors.Error.SerializeError;
+        writer.writeAll("\"\r\n\r\n") catch return errors.Error.SerializeError;
+        writer.writeAll(value) catch return errors.Error.SerializeError;
+        writer.writeAll("\r\n") catch return errors.Error.SerializeError;
     }
 
     pub fn appendJsonField(
@@ -667,18 +667,18 @@ pub const MultipartBuilder = struct {
         value: []const u8,
         content_type: []const u8,
     ) errors.Error!void {
-        const writer = self.out.writer();
-        try writer.writeAll("--");
-        try writer.writeAll(self.boundary);
-        try writer.writeAll("\r\n");
-        try writer.writeAll("Content-Disposition: form-data; name=\"");
-        try writer.writeAll(name);
-        try writer.writeAll("\"\r\n");
-        try writer.writeAll("Content-Type: ");
-        try writer.writeAll(content_type);
-        try writer.writeAll("\r\n\r\n");
-        try writer.writeAll(value);
-        try writer.writeAll("\r\n");
+        const writer = self.out.writer(self.allocator);
+        writer.writeAll("--") catch return errors.Error.SerializeError;
+        writer.writeAll(self.boundary) catch return errors.Error.SerializeError;
+        writer.writeAll("\r\n") catch return errors.Error.SerializeError;
+        writer.writeAll("Content-Disposition: form-data; name=\"") catch return errors.Error.SerializeError;
+        writer.writeAll(name) catch return errors.Error.SerializeError;
+        writer.writeAll("\"\r\n") catch return errors.Error.SerializeError;
+        writer.writeAll("Content-Type: ") catch return errors.Error.SerializeError;
+        writer.writeAll(content_type) catch return errors.Error.SerializeError;
+        writer.writeAll("\r\n\r\n") catch return errors.Error.SerializeError;
+        writer.writeAll(value) catch return errors.Error.SerializeError;
+        writer.writeAll("\r\n") catch return errors.Error.SerializeError;
     }
 
     pub fn appendFileField(
@@ -688,30 +688,32 @@ pub const MultipartBuilder = struct {
         content_type: []const u8,
         data: []const u8,
     ) errors.Error!void {
-        const writer = self.out.writer();
-        try writer.writeAll("--");
-        try writer.writeAll(self.boundary);
-        try writer.writeAll("\r\n");
-        try writer.writeAll("Content-Disposition: form-data; name=\"");
-        try writer.writeAll(name);
-        try writer.writeAll("\"; filename=\"");
-        try writer.writeAll(filename);
-        try writer.writeAll("\"\r\n");
-        try writer.writeAll("Content-Type: ");
-        try writer.writeAll(content_type);
-        try writer.writeAll("\r\n\r\n");
-        try writer.writeAll(data);
-        try writer.writeAll("\r\n");
+        const writer = self.out.writer(self.allocator);
+        writer.writeAll("--") catch return errors.Error.SerializeError;
+        writer.writeAll(self.boundary) catch return errors.Error.SerializeError;
+        writer.writeAll("\r\n") catch return errors.Error.SerializeError;
+        writer.writeAll("Content-Disposition: form-data; name=\"") catch return errors.Error.SerializeError;
+        writer.writeAll(name) catch return errors.Error.SerializeError;
+        writer.writeAll("\"; filename=\"") catch return errors.Error.SerializeError;
+        writer.writeAll(filename) catch return errors.Error.SerializeError;
+        writer.writeAll("\"\r\n") catch return errors.Error.SerializeError;
+        writer.writeAll("Content-Type: ") catch return errors.Error.SerializeError;
+        writer.writeAll(content_type) catch return errors.Error.SerializeError;
+        writer.writeAll("\r\n\r\n") catch return errors.Error.SerializeError;
+        writer.writeAll(data) catch return errors.Error.SerializeError;
+        writer.writeAll("\r\n") catch return errors.Error.SerializeError;
     }
 
     pub fn appendFooter(self: *@This()) errors.Error!void {
-        try self.out.appendSlice("--");
-        try self.out.appendSlice(self.boundary);
-        try self.out.appendSlice("--\r\n");
+        self.out.appendSlice(self.allocator, "--") catch return errors.Error.SerializeError;
+        self.out.appendSlice(self.allocator, self.boundary) catch return errors.Error.SerializeError;
+        self.out.appendSlice(self.allocator, "--\r\n") catch return errors.Error.SerializeError;
     }
 
     pub fn toOwnedSlice(self: *@This()) errors.Error![]u8 {
-        return try self.out.toOwnedSlice();
+        return self.out.toOwnedSlice(self.allocator) catch {
+            return errors.Error.SerializeError;
+        };
     }
 };
 

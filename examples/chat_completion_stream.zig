@@ -26,7 +26,7 @@ fn onChunk(
         }
         if (choice.finish_reason) |finish| {
             state.saw_finish_reason = true;
-            if (finish != .null) state.stream_done = true;
+            state.stream_done = finish.len > 0;
         }
     }
 }
@@ -63,7 +63,7 @@ fn emitIncrementalText(
         const max_len = @min(last.len, chunk.len);
         var overlap: usize = max_len;
         while (overlap > 0) : (overlap -= 1) {
-            if (std.mem.eql(u8, last[last.len - overlap..], chunk[0..overlap])) {
+            if (std.mem.eql(u8, last[last.len - overlap ..], chunk[0..overlap])) {
                 break :blk chunk[overlap..];
             }
         }
@@ -115,7 +115,7 @@ fn emitIncrementalReasoning(
         const max_len = @min(last.len, chunk.len);
         var overlap: usize = max_len;
         while (overlap > 0) : (overlap -= 1) {
-            if (std.mem.eql(u8, last[last.len - overlap..], chunk[0..overlap])) {
+            if (std.mem.eql(u8, last[last.len - overlap ..], chunk[0..overlap])) {
                 break :blk chunk[overlap..];
             }
         }
@@ -139,38 +139,17 @@ fn emitIncrementalReasoning(
 }
 
 fn dumpTextValue(
-    value: std.json.Value,
+    text: []const u8,
     state: *StreamState,
     choice_index: usize,
     is_reasoning: bool,
 ) errors.Error!void {
-    if (value == .null) return;
+    if (text.len == 0) return;
 
-    switch (value) {
-        .string => |text| {
-            if (is_reasoning) {
-                try emitIncrementalReasoning(state, choice_index, text);
-            } else {
-                try emitIncrementalText(state, choice_index, text);
-            }
-        },
-        .object => |object| {
-            if (object.get("text")) |text| {
-                try dumpTextValue(text, state, choice_index, is_reasoning);
-            } else if (object.get("input_text")) |input| {
-                try dumpTextValue(input, state, choice_index, is_reasoning);
-            } else if (object.get("content")) |content| {
-                try dumpTextValue(content, state, choice_index, is_reasoning);
-            } else if (object.get("delta")) |delta| {
-                try dumpTextValue(delta, state, choice_index, is_reasoning);
-            }
-        },
-        .array => |items| {
-            for (items.items) |item| {
-                try dumpTextValue(item, state, choice_index, is_reasoning);
-            }
-        },
-        else => {},
+    if (is_reasoning) {
+        try emitIncrementalReasoning(state, choice_index, text);
+    } else {
+        try emitIncrementalText(state, choice_index, text);
     }
 }
 
@@ -178,22 +157,14 @@ fn firstChoiceText(response: gen.CreateChatCompletionResponse) ?[]const u8 {
     if (response.choices.len == 0) return null;
     const message = response.choices[0].message orelse return null;
     const content = message.content orelse return null;
-
-    return switch (content) {
-        .string => |text| text,
-        else => null,
-    };
+    return content;
 }
 
 fn firstChoiceReasoning(response: gen.CreateChatCompletionResponse) ?[]const u8 {
     if (response.choices.len == 0) return null;
     const message = response.choices[0].message orelse return null;
     const reasoning = message.reasoning_content orelse return null;
-
-    return switch (reasoning) {
-        .string => |text| text,
-        else => null,
-    };
+    return reasoning;
 }
 
 const StreamState = struct {
@@ -227,19 +198,23 @@ const StreamState = struct {
 
     fn looksIncomplete(self: *StreamState) bool {
         if (self.output.items.len == 0) return true;
-        if (self.output.items.len < 64) return false;
 
         const trimmed = std.mem.trimRight(u8, self.output.items, " \t\r\n");
         if (trimmed.len == 0) return true;
+        const normalized = trimCompletionTrailingNoise(trimmed);
+        if (normalized.len == 0) return true;
 
-        return !hasCompleteEnding(trimmed);
+        return !hasCompleteEnding(normalized);
     }
 };
 
 fn hasCompleteEnding(text: []const u8) bool {
     if (text.len == 0) return false;
 
-    const last = text[text.len - 1];
+    const normalized = trimCompletionTrailingNoise(text);
+    if (normalized.len == 0) return false;
+
+    const last = normalized[normalized.len - 1];
     if (last == '.' or
         last == '!' or
         last == '?' or
@@ -273,6 +248,40 @@ fn hasCompleteEnding(text: []const u8) bool {
     return false;
 }
 
+fn trimCompletionTrailingNoise(text: []const u8) []const u8 {
+    const trailing_noise = [_][]const u8{
+        "✨",
+        "😊",
+        "🙂",
+        "🎉",
+        "🌟",
+        "🚀",
+        "🙏",
+        "🫶",
+        "🔥",
+        "💡",
+    };
+
+    var trimmed = std.mem.trimRight(u8, text, " \t\r\n");
+    var did_trim = true;
+    while (did_trim) {
+        did_trim = false;
+
+        for (trailing_noise) |noise| {
+            if (trimmed.len >= noise.len and
+                std.mem.eql(u8, trimmed[trimmed.len - noise.len ..], noise))
+            {
+                trimmed = trimmed[0 .. trimmed.len - noise.len];
+                did_trim = true;
+                break;
+            }
+        }
+        if (!did_trim) break;
+        trimmed = std.mem.trimRight(u8, trimmed, " \t\r\n");
+    }
+    return trimmed;
+}
+
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa_impl.deinit();
@@ -304,9 +313,30 @@ pub fn main() !void {
         .model = conf.model,
         .messages = &messages,
         .max_tokens = 256,
+        .stream = true,
     };
 
     std.debug.print("Assistant stream:\n", .{});
+    if (compat.isDeepSeek(conf.base_url)) {
+        const fallback_request = compat.withoutStream(@TypeOf(request), request);
+        const response = client.chat().create_chat_completion(gpa, fallback_request) catch {
+            std.debug.print("Fallback chat completion failed.\n", .{});
+            std.debug.print("\n", .{});
+            return;
+        };
+        defer response.deinit();
+        if (firstChoiceText(response.value)) |content| {
+            std.debug.print("{s}\n", .{content});
+        } else {
+            std.debug.print("Fallback chat completion returned non-text content.\n", .{});
+        }
+        if (firstChoiceReasoning(response.value)) |reasoning| {
+            std.debug.print("Reasoning:\n{s}\n", .{reasoning});
+        }
+        std.debug.print("\n", .{});
+        return;
+    }
+
     var stream_state = StreamState{
         .allocator = gpa,
         .choice_last_texts = .{},
@@ -327,32 +357,7 @@ pub fn main() !void {
     ) catch |err| {
         std.debug.print("Chat stream request failed: {s}\n", .{@errorName(err)});
         std.debug.print("Falling back to non-stream chat completion...\n", .{});
-        const fallback_request = sdk.resources.chat.CreateChatCompletionRequest{
-            .model = request.model,
-            .messages = request.messages,
-            .max_tokens = request.max_tokens,
-            .temperature = null,
-            .max_completion_tokens = null,
-            .n = null,
-            .top_p = null,
-            .stop = null,
-            .presence_penalty = null,
-            .frequency_penalty = null,
-            .user = null,
-            .stream_options = null,
-            .tools = null,
-            .tool_choice = null,
-            .parallel_tool_calls = null,
-            .reasoning_effort = null,
-            .service_tier = null,
-            .metadata = null,
-            .logprobs = null,
-            .top_logprobs = null,
-            .thinking = null,
-            .response_format = null,
-            .stream = null,
-            .seed = null,
-        };
+        const fallback_request = compat.withoutStream(@TypeOf(request), request);
         const response = client.chat().create_chat_completion(gpa, fallback_request) catch {
             std.debug.print("Fallback chat completion failed.\n", .{});
             std.debug.print("\n", .{});
@@ -371,13 +376,9 @@ pub fn main() !void {
         return;
     };
 
-    const is_deepseek = compat.isDeepSeek(conf.base_url);
+    const stream_unfinished = !stream_state.stream_done or !stream_state.saw_finish_reason;
     const fallback_needed = stream_state.output.items.len == 0 or
-        (if (is_deepseek)
-            stream_state.looksIncomplete()
-        else
-            (stream_state.event_count > 0 and
-                (!stream_state.stream_done or !stream_state.saw_finish_reason)));
+        (stream_state.event_count > 0 and stream_unfinished and stream_state.looksIncomplete());
 
     if (fallback_needed) {
         std.debug.print("\n", .{});
@@ -386,32 +387,7 @@ pub fn main() !void {
         } else {
             std.debug.print("Stream response incomplete, fallback to non-stream call:\n", .{});
         }
-        const fallback_request = sdk.resources.chat.CreateChatCompletionRequest{
-            .model = request.model,
-            .messages = request.messages,
-            .max_tokens = request.max_tokens,
-            .temperature = null,
-            .max_completion_tokens = null,
-            .n = null,
-            .top_p = null,
-            .stop = null,
-            .presence_penalty = null,
-            .frequency_penalty = null,
-            .user = null,
-            .stream_options = null,
-            .tools = null,
-            .tool_choice = null,
-            .parallel_tool_calls = null,
-            .reasoning_effort = null,
-            .service_tier = null,
-            .metadata = null,
-            .logprobs = null,
-            .top_logprobs = null,
-            .thinking = null,
-            .response_format = null,
-            .stream = null,
-            .seed = null,
-        };
+        const fallback_request = compat.withoutStream(@TypeOf(request), request);
         const response = client.chat().create_chat_completion(gpa, fallback_request) catch {
             std.debug.print("Fallback chat completion failed.\n", .{});
             std.debug.print("\n", .{});

@@ -2,10 +2,6 @@ const std = @import("std");
 const sdk = @import("openai_zig");
 const config = @import("config");
 
-fn firstText(value: std.json.Value) ?[]const u8 {
-    return if (value != .string) null else value.string;
-}
-
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa_impl.deinit();
@@ -48,15 +44,11 @@ pub fn main() !void {
 
     for (response.value.choices) |choice| {
         if (choice.message) |message| {
-            const content = firstText(message.content orelse {
+            const content = message.content orelse {
                 std.debug.print("Response message has no string content.\n", .{});
                 return;
-            });
-            if (content) |text| {
-                std.debug.print("Chat completion raw:\n{s}\n", .{text});
-            } else {
-                std.debug.print("Response message content is non-string JSON.\n", .{});
-            }
+            };
+            std.debug.print("Chat completion raw:\n{s}\n", .{content});
         }
     }
 }

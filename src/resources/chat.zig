@@ -4,17 +4,271 @@ const transport_mod = @import("../transport/http.zig");
 const gen = @import("../generated/types.zig");
 const common = @import("common.zig");
 
+pub const ChatTool = gen.ChatCompletionTool;
+pub const ChatFunction = gen.FunctionObject;
+pub const ChatNamedToolChoice = gen.ChatCompletionNamedToolChoice;
+
+pub const ChatLogitBiasEntry = struct {
+    token: []const u8,
+    bias: i64,
+};
+
+pub const ChatLogitBias = union(enum) {
+    entries: []const ChatLogitBiasEntry,
+    raw: std.json.Value,
+
+    pub fn forEntries(entries: []const ChatLogitBiasEntry) ChatLogitBias {
+        return .{ .entries = entries };
+    }
+
+    pub fn forRaw(value: std.json.Value) ChatLogitBias {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ChatLogitBias, writer: anytype) !void {
+        switch (self) {
+            .entries => |value| {
+                try writer.beginObject();
+                for (value) |entry| {
+                    try writer.objectField(entry.token);
+                    try writer.write(entry.bias);
+                }
+                try writer.endObject();
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+};
+
+pub const ChatFunctionCall = union(enum) {
+    none: void,
+    auto: void,
+    named: []const u8,
+    raw: std.json.Value,
+
+    pub fn forNone() ChatFunctionCall {
+        return .none;
+    }
+
+    pub fn forAuto() ChatFunctionCall {
+        return .auto;
+    }
+
+    pub fn forName(name: []const u8) ChatFunctionCall {
+        return .{ .named = name };
+    }
+
+    pub fn forRaw(value: std.json.Value) ChatFunctionCall {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ChatFunctionCall, writer: anytype) !void {
+        switch (self) {
+            .none => {
+                try writer.write("none");
+            },
+            .auto => {
+                try writer.write("auto");
+            },
+            .named => |value| {
+                try writer.beginObject();
+                try writer.objectField("type");
+                try writer.write("function");
+                try writer.objectField("function");
+                try writer.beginObject();
+                try writer.objectField("name");
+                try writer.write(value);
+                try writer.endObject();
+                try writer.endObject();
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+};
+
+pub const ChatToolChoice = union(enum) {
+    none: void,
+    auto: void,
+    required: void,
+    named: ChatNamedToolChoice,
+    raw: std.json.Value,
+
+    pub fn forNone() ChatToolChoice {
+        return .none;
+    }
+
+    pub fn forAuto() ChatToolChoice {
+        return .auto;
+    }
+
+    pub fn forRequired() ChatToolChoice {
+        return .required;
+    }
+
+    pub fn forFunction(name: []const u8) ChatToolChoice {
+        return .{
+            .named = .{
+                .type = "function",
+                .function = .{
+                    .name = name,
+                },
+            },
+        };
+    }
+
+    pub fn forRaw(value: std.json.Value) ChatToolChoice {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ChatToolChoice, writer: anytype) !void {
+        switch (self) {
+            .none => {
+                try writer.write("none");
+            },
+            .auto => {
+                try writer.write("auto");
+            },
+            .required => {
+                try writer.write("required");
+            },
+            .named => |value| {
+                try writer.write(value);
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+};
+
+pub const ChatTools = []const ChatTool;
+
+pub const ChatToolsBuilder = struct {
+    pub fn function(
+        name: []const u8,
+        description: ?[]const u8,
+        parameters: std.json.Value,
+    ) ChatTool {
+        return .{
+            .type = "function",
+            .function = .{
+                .name = name,
+                .description = description,
+                .parameters = parameters,
+                .strict = null,
+            },
+        };
+    }
+
+    pub fn functionStrict(
+        name: []const u8,
+        description: ?[]const u8,
+        parameters: std.json.Value,
+        strict: bool,
+    ) ChatTool {
+        return .{
+            .type = "function",
+            .function = .{
+                .name = name,
+                .description = description,
+                .parameters = parameters,
+                .strict = .{ .bool = strict },
+            },
+        };
+    }
+};
+
+pub const ChatResponseFormatSchema = struct {
+    name: ?[]const u8 = null,
+    description: ?[]const u8 = null,
+    schema: std.json.Value,
+    strict: ?bool = null,
+};
+
+pub const ResponseFormat = union(enum) {
+    text: void,
+    json_object: void,
+    json_schema: ChatResponseFormatSchema,
+    raw: std.json.Value,
+
+    pub fn forText() ResponseFormat {
+        return .text;
+    }
+
+    pub fn forJsonObject() ResponseFormat {
+        return .json_object;
+    }
+
+    pub fn forJsonSchema(schema: std.json.Value, options: ChatResponseFormatSchema) ResponseFormat {
+        var payload = options;
+        payload.schema = schema;
+        return .{ .json_schema = payload };
+    }
+
+    pub fn forRaw(value: std.json.Value) ResponseFormat {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: ResponseFormat, writer: anytype) !void {
+        switch (self) {
+            .text => {
+                try writer.beginObject();
+                try writer.objectField("type");
+                try writer.write("text");
+                try writer.endObject();
+            },
+            .json_object => {
+                try writer.beginObject();
+                try writer.objectField("type");
+                try writer.write("json_object");
+                try writer.endObject();
+            },
+            .json_schema => |value| {
+                try writer.beginObject();
+                try writer.objectField("type");
+                try writer.write("json_schema");
+
+                try writer.objectField("json_schema");
+                try writer.beginObject();
+                if (value.name) |name| {
+                    try writer.objectField("name");
+                    try writer.write(name);
+                }
+                if (value.description) |description| {
+                    try writer.objectField("description");
+                    try writer.write(description);
+                }
+                try writer.objectField("schema");
+                try writer.write(value.schema);
+                if (value.strict) |strict| {
+                    try writer.objectField("strict");
+                    try writer.write(strict);
+                }
+                try writer.endObject();
+                try writer.endObject();
+            },
+            .raw => |value| {
+                try writer.write(value);
+            },
+        }
+    }
+};
+
 /// Flexible request shape for POST /chat/completions.
 pub const ChatMessage = struct {
     role: []const u8,
     content: ?[]const u8 = null,
     content_json: ?std.json.Value = null,
     name: ?[]const u8 = null,
-    reasoning_content: ?std.json.Value = null,
-    function_call: ?std.json.Value = null,
-    tool_calls: ?std.json.Value = null,
+    reasoning_content: ?[]const u8 = null,
+    function_call: ?gen.ChatCompletionRequestFunctionCall = null,
+    tool_calls: ?gen.ChatCompletionMessageToolCalls = null,
     tool_call_id: ?[]const u8 = null,
-    audio: ?std.json.Value = null,
+    audio: ?gen.ChatCompletionRequestAssistantMessageAudio = null,
     prefix: ?bool = null,
 
     pub fn jsonStringify(self: ChatMessage, writer: anytype) !void {
@@ -83,31 +337,31 @@ pub const CreateChatCompletionRequest = struct {
     seed: ?u64 = null,
     max_completion_tokens: ?u32 = null,
     n: ?u32 = null,
-    logit_bias: ?std.json.Value = null,
-    functions: ?std.json.Value = null,
-    function_call: ?std.json.Value = null,
+    logit_bias: ?ChatLogitBias = null,
+    functions: ?[]const gen.ChatCompletionFunctions = null,
+    function_call: ?ChatFunctionCall = null,
     top_p: ?f64 = null,
     temperature: ?f64 = null,
-    stop: ?std.json.Value = null,
+    stop: ?gen.StopConfiguration = null,
     presence_penalty: ?f64 = null,
     frequency_penalty: ?f64 = null,
     user: ?[]const u8 = null,
-    stream_options: ?std.json.Value = null,
-    tools: ?std.json.Value = null,
-    tool_choice: ?std.json.Value = null,
+    stream_options: ?gen.ChatCompletionStreamOptions = null,
+    tools: ?ChatTools = null,
+    tool_choice: ?ChatToolChoice = null,
     parallel_tool_calls: ?bool = null,
-    reasoning_effort: ?std.json.Value = null,
+    reasoning_effort: ?gen.ReasoningEffort = null,
     service_tier: ?[]const u8 = null,
     metadata: ?std.json.Value = null,
     logprobs: ?bool = null,
     top_logprobs: ?u32 = null,
     thinking: ?std.json.Value = null,
-    modalities: ?std.json.Value = null,
+    modalities: ?gen.ChatCompletionModalities = null,
     audio: ?std.json.Value = null,
     store: ?bool = null,
     prediction: ?std.json.Value = null,
     stream: ?bool = null,
-    response_format: ?std.json.Value = null,
+    response_format: ?ResponseFormat = null,
     extra_body: ?std.json.Value = null,
 
     pub fn jsonStringify(self: CreateChatCompletionRequest, writer: anytype) !void {
@@ -256,21 +510,25 @@ pub const CreateChatCompletionRequest = struct {
 pub const CreateChatCompletionRawRequest = std.json.Value;
 
 const StreamResponseDelta = struct {
-    content: ?std.json.Value = null,
-    reasoning_content: ?std.json.Value = null,
-    function_call: ?std.json.Value = null,
-    tool_call_id: ?[]const u8 = null,
-    tool_calls: ?std.json.Value = null,
+    content: ?[]const u8 = null,
+    reasoning_content: ?[]const u8 = null,
+    function_call: ?gen.ChatCompletionRequestFunctionCall = null,
+    tool_calls: ?[]const gen.ChatCompletionMessageToolCallChunk = null,
     role: ?[]const u8 = null,
-    audio: ?std.json.Value = null,
-    refusal: ?std.json.Value = null,
+    refusal: ?[]const u8 = null,
+    audio: ?gen.ChatCompletionResponseMessageAudio = null,
+};
+
+const StreamResponseLogprobs = struct {
+    content: ?[]const gen.ChatCompletionTokenLogprob = null,
+    refusal: ?[]const gen.ChatCompletionTokenLogprob = null,
 };
 
 const StreamResponseChoice = struct {
     delta: StreamResponseDelta = .{},
-    finish_reason: ?std.json.Value = null,
+    finish_reason: ?[]const u8 = null,
     index: i64 = 0,
-    logprobs: ?std.json.Value = null,
+    logprobs: ?StreamResponseLogprobs = null,
 };
 
 pub const CreateChatCompletionStreamResponse = struct {
@@ -278,10 +536,10 @@ pub const CreateChatCompletionStreamResponse = struct {
     choices: []const StreamResponseChoice = &.{},
     created: ?i64 = null,
     model: ?[]const u8 = null,
-    service_tier: ?std.json.Value = null,
+    service_tier: ?gen.ServiceTier = null,
     system_fingerprint: ?[]const u8 = null,
     object: ?[]const u8 = null,
-    usage: ?std.json.Value = null,
+    usage: ?gen.CompletionUsage = null,
 };
 
 pub const StreamEventHandler = *const fn (
@@ -864,6 +1122,191 @@ test "create chat request supports prefix continuation flag" {
     try std.testing.expect(std.json.eql(parsed.value, expected.value));
 }
 
+test "create chat request supports tool declarations and tool_choice" {
+    const tool_schema = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"]}",
+        .{},
+    );
+    defer tool_schema.deinit();
+
+    const tools = [_]ChatTool{
+        .{
+            .type = "function",
+            .function = .{
+                .name = "get_weather",
+                .description = "Get weather by city",
+                .parameters = tool_schema.value,
+                .strict = null,
+            },
+        },
+    };
+
+    const req = CreateChatCompletionRequest{
+        .model = "test-model",
+        .messages = &[_]ChatMessage{
+            .{ .role = "user", .content = "What's the weather in Beijing?" },
+        },
+        .stream = null,
+        .tools = &tools,
+        .tool_choice = .forFunction("get_weather"),
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, body, .{});
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"What's the weather in Beijing?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather\",\"description\":\"Get weather by city\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"]}}}],\"tool_choice\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather\"}}}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}
+
+test "create chat request supports strict tool definition and tool choice modes" {
+    const tool_schema = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"]}",
+        .{},
+    );
+    defer tool_schema.deinit();
+
+    const tools = [_]ChatTool{
+        ChatToolsBuilder.functionStrict(
+            "get_weather_strict",
+            "Get weather and require strict output",
+            tool_schema.value,
+            true,
+        ),
+    };
+
+    const request_none = CreateChatCompletionRequest{
+        .model = "test-model",
+        .messages = &[_]ChatMessage{
+            .{ .role = "user", .content = "Weather?" },
+        },
+        .tools = &tools,
+        .tool_choice = .forRequired(),
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(request_none);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, body, .{});
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"Weather?\"}],\"tools\":[{\"type\":\"function\",\"function\":{\"name\":\"get_weather_strict\",\"description\":\"Get weather and require strict output\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}},\"required\":[\"city\"]},\"strict\":true}}],\"tool_choice\":\"required\"}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}
+
+test "create chat request supports json_object response_format" {
+    const req = CreateChatCompletionRequest{
+        .model = "test-model",
+        .messages = &[_]ChatMessage{
+            .{ .role = "user", .content = "hi" },
+        },
+        .stream = null,
+        .response_format = .json_object,
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, body, .{});
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"response_format\":{\"type\":\"json_object\"}}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}
+
+test "create chat request supports json_schema response_format" {
+    const schema = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"type\":\"object\",\"properties\":{\"question\":{\"type\":\"string\"},\"answer\":{\"type\":\"string\"}},\"required\":[\"question\",\"answer\"]}",
+        .{},
+    );
+    defer schema.deinit();
+
+    const req = CreateChatCompletionRequest{
+        .model = "test-model",
+        .messages = &[_]ChatMessage{
+            .{ .role = "user", .content = "hi" },
+        },
+        .stream = null,
+        .response_format = ResponseFormat{
+            .json_schema = .{
+                .name = "qa",
+                .description = "question/answer pair",
+                .schema = schema.value,
+                .strict = true,
+            },
+        },
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(std.json.Value, std.testing.allocator, body, .{});
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"response_format\":{\"type\":\"json_schema\",\"json_schema\":{\"name\":\"qa\",\"description\":\"question/answer pair\",\"schema\":{\"type\":\"object\",\"properties\":{\"question\":{\"type\":\"string\"},\"answer\":{\"type\":\"string\"}},\"required\":[\"question\",\"answer\"]},\"strict\":true}}}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}
+
 test "create chat request supports complex message content via content_json" {
     const raw_content = try std.json.parseFromSlice(
         std.json.Value,
@@ -940,13 +1383,13 @@ test "create chat raw request keeps custom fields" {
 }
 
 test "create chat request supports compatibility extensions (function calling + store/modalities/audio)" {
-    const functions = try std.json.parseFromSlice(
+    const function_parameters = try std.json.parseFromSlice(
         std.json.Value,
         std.testing.allocator,
-        "[{\"name\":\"get_weather\",\"description\":\"Get weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}}}}]",
+        "{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}}}",
         .{},
     );
-    defer functions.deinit();
+    defer function_parameters.deinit();
 
     const function_call = try std.json.parseFromSlice(
         std.json.Value,
@@ -969,10 +1412,16 @@ test "create chat request supports compatibility extensions (function calling + 
         .messages = &[_]ChatMessage{
             .{ .role = "user", .content = "Hello" },
         },
-        .functions = functions.value,
-        .function_call = function_call.value,
-        .logit_bias = logit_bias.value,
-        .modalities = .{ .string = "text" },
+        .functions = &[_]gen.ChatCompletionFunctions{
+            .{
+                .name = "get_weather",
+                .description = "Get weather",
+                .parameters = function_parameters.value,
+            },
+        },
+        .function_call = .{ .raw = function_call.value },
+        .logit_bias = .{ .raw = logit_bias.value },
+        .modalities = &.{"text"},
         .audio = .{ .null = {} },
         .store = true,
         .prediction = .{ .null = {} },
@@ -998,12 +1447,123 @@ test "create chat request supports compatibility extensions (function calling + 
     const expected = try std.json.parseFromSlice(
         std.json.Value,
         std.testing.allocator,
-        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}],\"functions\":[{\"name\":\"get_weather\",\"description\":\"Get weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}}}}],\"function_call\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather\"}},\"logit_bias\":{\"token\":-1},\"modalities\":\"text\",\"audio\":null,\"store\":true,\"prediction\":null}",
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}],\"functions\":[{\"name\":\"get_weather\",\"description\":\"Get weather\",\"parameters\":{\"type\":\"object\",\"properties\":{\"city\":{\"type\":\"string\"}}}}],\"function_call\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather\"}},\"logit_bias\":{\"token\":-1},\"modalities\":[\"text\"],\"audio\":null,\"store\":true,\"prediction\":null}",
         .{},
     );
     defer expected.deinit();
 
     try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}
+
+test "create chat request supports typed function_call and logit_bias" {
+    const request = CreateChatCompletionRequest{
+        .model = "test-model",
+        .messages = &[_]ChatMessage{
+            .{ .role = "user", .content = "Hello" },
+        },
+        .function_call = .forName("get_weather"),
+        .logit_bias = .forEntries(&[_]ChatLogitBiasEntry{
+            .{ .token = "123", .bias = -1 },
+            .{ .token = "456", .bias = 2 },
+        }),
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(request);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body,
+        .{},
+    );
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}],\"function_call\":{\"type\":\"function\",\"function\":{\"name\":\"get_weather\"}},\"logit_bias\":{\"123\":-1,\"456\":2}}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}
+
+test "create chat request supports structured stop field" {
+    const request_single = CreateChatCompletionRequest{
+        .model = "test-model",
+        .messages = &[_]ChatMessage{
+            .{ .role = "user", .content = "Hello" },
+        },
+        .stop = .{ .single = "done" },
+        .stream = null,
+    };
+
+    var writer_single = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer_single.deinit();
+    var stream_single: std.json.Stringify = .{
+        .writer = &writer_single.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try stream_single.write(request_single);
+    const body_single = writer_single.written();
+    const parsed_single = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body_single,
+        .{},
+    );
+    defer parsed_single.deinit();
+
+    const expected_single = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}],\"stop\":\"done\"}",
+        .{},
+    );
+    defer expected_single.deinit();
+    try std.testing.expect(std.json.eql(parsed_single.value, expected_single.value));
+
+    const request_multi = CreateChatCompletionRequest{
+        .model = "test-model",
+        .messages = &[_]ChatMessage{
+            .{ .role = "user", .content = "Hello" },
+        },
+        .stop = .{ .multiple = &.{ "done", "exit" } },
+        .stream = null,
+    };
+
+    var writer_multi = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer_multi.deinit();
+    var stream_multi: std.json.Stringify = .{
+        .writer = &writer_multi.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try stream_multi.write(request_multi);
+    const body_multi = writer_multi.written();
+    const parsed_multi = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body_multi,
+        .{},
+    );
+    defer parsed_multi.deinit();
+
+    const expected_multi = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"test-model\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}],\"stop\":[\"done\",\"exit\"]}",
+        .{},
+    );
+    defer expected_multi.deinit();
+    try std.testing.expect(std.json.eql(parsed_multi.value, expected_multi.value));
 }
 
 test "create chat request flattens extra_body object fields" {

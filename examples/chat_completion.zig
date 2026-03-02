@@ -6,10 +6,7 @@ const gen = sdk.generated;
 fn firstContentString(val: gen.CreateChatCompletionResponse) ?[]const u8 {
     if (val.choices.len == 0) return null;
     const msg = val.choices[0].message orelse return null;
-    return switch (msg.content orelse return null) {
-        .string => |text| text,
-        else => null,
-    };
+    return msg.content orelse null;
 }
 
 pub fn main() !void {

@@ -40,7 +40,7 @@ const StreamState = struct {
         const max_len = @min(prev.len, chunk.len);
         var overlap = max_len;
         while (overlap > 0) : (overlap -= 1) {
-            if (std.mem.eql(u8, prev[prev.len - overlap..], chunk[0..overlap])) {
+            if (std.mem.eql(u8, prev[prev.len - overlap ..], chunk[0..overlap])) {
                 return chunk[overlap..];
             }
         }
@@ -136,19 +136,78 @@ const StreamState = struct {
 
     fn looksIncomplete(self: *StreamState) bool {
         if (self.output.items.len == 0) return true;
-        if (self.char_count < 64) return false;
 
         const trimmed = std.mem.trimRight(u8, self.output.items, " \t\r\n");
         if (trimmed.len == 0) return true;
+        const normalized = trimCompletionTrailingNoise(trimmed);
+        if (normalized.len == 0) return true;
 
-        return !hasCompleteEnding(trimmed);
+        return !hasCompleteEnding(normalized);
     }
 };
+
+fn stripInstructionPrefix(text: []const u8) []const u8 {
+    var trimmed = std.mem.trimLeft(u8, text, " \t\r\n");
+    if (trimmed.len == 0) return "";
+
+    if (trimmed.len > 0 and trimmed[0] == '.') {
+        trimmed = std.mem.trimLeft(u8, trimmed[1..], " \t\r\n");
+    }
+    if (std.mem.startsWith(u8, trimmed, "The poem should") or
+        std.mem.startsWith(u8, trimmed, "The poem must") or
+        std.mem.startsWith(u8, trimmed, "A poem should") or
+        std.mem.startsWith(u8, trimmed, "A poem must") or
+        std.mem.startsWith(u8, trimmed, "Write a"))
+    {
+        if (std.mem.indexOf(u8, trimmed, "\n")) |idx| {
+            return std.mem.trimLeft(u8, trimmed[idx + 1 ..], " \t\r\n");
+        }
+        return "";
+    }
+    return trimmed;
+}
+
+fn trimCompletionTrailingNoise(text: []const u8) []const u8 {
+    const trailing_noise = [_][]const u8{
+        "✨",
+        "😊",
+        "🙂",
+        "🎉",
+        "🌟",
+        "🚀",
+        "🙏",
+        "🫶",
+        "🔥",
+        "💡",
+    };
+
+    var trimmed = std.mem.trimRight(u8, text, " \t\r\n");
+    var did_trim = true;
+    while (did_trim) {
+        did_trim = false;
+
+        for (trailing_noise) |noise| {
+            if (trimmed.len >= noise.len and
+                std.mem.eql(u8, trimmed[trimmed.len - noise.len ..], noise))
+            {
+                trimmed = trimmed[0 .. trimmed.len - noise.len];
+                did_trim = true;
+                break;
+            }
+        }
+        if (!did_trim) break;
+        trimmed = std.mem.trimRight(u8, trimmed, " \t\r\n");
+    }
+    return trimmed;
+}
 
 fn hasCompleteEnding(text: []const u8) bool {
     if (text.len == 0) return false;
 
-    const last = text[text.len - 1];
+    const normalized = trimCompletionTrailingNoise(text);
+    if (normalized.len == 0) return false;
+
+    const last = normalized[normalized.len - 1];
     if (last == '.' or
         last == '!' or
         last == '?' or
@@ -350,17 +409,11 @@ pub fn main() !void {
     });
     defer client.deinit();
 
-    const model_json = try std.fmt.allocPrint(gpa, "\"{s}\"", .{conf.model});
-    defer gpa.free(model_json);
-    var model = try std.json.parseFromSlice(std.json.Value, gpa, model_json, .{});
-    defer model.deinit();
-
-    var prompt = try std.json.parseFromSlice(std.json.Value, gpa, "\"Write a short poem about a river\"", .{});
-    defer prompt.deinit();
+    const prompt = "Write a complete 4-line poem about a river. Output only the poem, no explanation, and do not output any instructions.";
 
     const completion_request = sdk.resources.completions.CreateCompletionRequest{
-        .model = model.value,
-        .prompt = prompt.value,
+        .model = conf.model,
+        .prompt = prompt,
         .best_of = null,
         .echo = false,
         .frequency_penalty = null,
@@ -380,6 +433,34 @@ pub fn main() !void {
     };
 
     std.debug.print("Completion stream:\n", .{});
+    if (compat.isDeepSeek(conf.base_url)) {
+        const non_stream = compat.withoutStream(@TypeOf(completion_request), completion_request);
+        const response = client.completions().create_completion_with_options(
+            gpa,
+            non_stream,
+            null,
+        ) catch |err| {
+            std.debug.print("Completion non-stream request failed: {s}\n", .{@errorName(err)});
+            std.debug.print("\n", .{});
+            return;
+        };
+        defer response.deinit();
+
+        if (response.value.choices.len == 0) {
+            std.debug.print("Completion non-stream response has no choices.\n", .{});
+            std.debug.print("\n", .{});
+            return;
+        }
+        const text = response.value.choices[0].text;
+        if (text.len == 0) {
+            std.debug.print("Completion non-stream response has empty text.\n", .{});
+            std.debug.print("\n", .{});
+            return;
+        }
+        std.debug.print("{s}\n\n", .{stripInstructionPrefix(text)});
+        return;
+    }
+
     var stream_state = StreamState{
         .allocator = gpa,
         .choice_last_texts = .{},
@@ -402,25 +483,18 @@ pub fn main() !void {
         return;
     };
 
-    const is_deepseek = compat.isDeepSeek(conf.base_url);
+    const stream_unfinished = !stream_state.stream_done or !stream_state.saw_finish_reason;
     const fallback_needed = stream_state.output.items.len == 0 or
-        (stream_state.event_count > 0 and
-            (if (is_deepseek)
-                (!stream_state.stream_done or !stream_state.saw_finish_reason or stream_state.looksIncomplete())
-            else
-                (!stream_state.stream_done or !stream_state.saw_finish_reason)));
-    const should_fallback = fallback_needed;
+        (stream_state.event_count > 0 and stream_unfinished and stream_state.looksIncomplete());
 
-    if (should_fallback) {
+    if (fallback_needed) {
         std.debug.print("\n", .{});
-        if (fallback_needed and is_deepseek and stream_state.looksIncomplete())
-        {
+        if (fallback_needed and stream_state.looksIncomplete()) {
             std.debug.print("Completion stream output appears truncated, fallback to non-stream request.\n", .{});
         } else {
             std.debug.print("Completion stream incomplete, fallback to non-stream request.\n", .{});
         }
-        var non_stream = completion_request;
-        non_stream.stream = null;
+        const non_stream = compat.withoutStream(@TypeOf(completion_request), completion_request);
         const response = client.completions().create_completion_with_options(
             gpa,
             non_stream,
@@ -441,7 +515,7 @@ pub fn main() !void {
             std.debug.print("Completion stream fallback returned empty text.\n", .{});
             return;
         }
-        std.debug.print("{s}\n", .{text});
+        std.debug.print("{s}\n", .{stripInstructionPrefix(text)});
         if (stream_state.reasoning_output.items.len > 0) {
             std.debug.print("Reasoning:\n{s}\n", .{stream_state.reasoning_output.items});
         }
@@ -450,7 +524,7 @@ pub fn main() !void {
     }
 
     if (stream_state.output.items.len > 0) {
-        std.debug.print("{s}\n", .{stream_state.output.items});
+        std.debug.print("{s}\n", .{stripInstructionPrefix(stream_state.output.items)});
     } else {
         std.debug.print("Stream response returned no textual output.\n", .{});
     }

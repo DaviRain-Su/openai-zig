@@ -58,19 +58,13 @@ pub fn main() !void {
     std.debug.print("Choice index: {d}\n", .{first_choice.index});
 
     if (message.content) |content| {
-        switch (content) {
-            .string => |text| std.debug.print("Content:\n{s}\n", .{text}),
-            else => std.debug.print("Content: <non-text payload>\n", .{}),
-        }
+        std.debug.print("Content:\n{s}\n", .{content});
     } else {
         std.debug.print("Content: <null>\n", .{});
     }
 
     if (message.refusal) |refusal| {
-        switch (refusal) {
-            .string => |value| std.debug.print("Refusal:\n{s}\n", .{value}),
-            else => std.debug.print("Refusal: <non-text payload>\n", .{}),
-        }
+        std.debug.print("Refusal:\n{s}\n", .{refusal});
     }
 
     const prefix_messages = [_]sdk.resources.chat.ChatMessage{
@@ -100,10 +94,7 @@ pub fn main() !void {
     };
 
     if (prefixed_message.content) |content| {
-        switch (content) {
-            .string => |text| std.debug.print("Content:\n{s}\n", .{text}),
-            else => std.debug.print("Content: <non-text payload>\n", .{}),
-        }
+        std.debug.print("Content:\n{s}\n", .{content});
     } else {
         std.debug.print("Content: <null>\n", .{});
     }
