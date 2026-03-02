@@ -7,6 +7,52 @@ pub const EvalTestingCriterion = JsonObject;
 pub const EvalSchema = JsonObject;
 pub const EvalSample = JsonObject;
 pub const EvalDatasourceItem = JsonObject;
+pub const GenericContent = union(enum) {
+    text: []const u8,
+    items: JsonObjectArray,
+    raw: JsonObject,
+
+    pub fn forText(value: []const u8) GenericContent {
+        return .{ .text = value };
+    }
+
+    pub fn forItems(value: JsonObjectArray) GenericContent {
+        return .{ .items = value };
+    }
+
+    pub fn forRaw(value: JsonObject) GenericContent {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: GenericContent, writer: anytype) !void {
+        switch (self) {
+            .text => |value| try writer.write(value),
+            .items => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !GenericContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !GenericContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue(JsonObjectArray, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .items = parsed.value };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const EvalGraderConfig = union(enum) {
     label_model: GraderLabelModel,
     multi: GraderMulti,
@@ -121,7 +167,6 @@ pub const EvalGraderConfig = union(enum) {
     }
 };
 pub const ToolOutputPayload = JsonObject;
-pub const GenericContent = JsonObject;
 pub const RealtimeObfuscation = JsonObject;
 
 pub const ActiveStatus = struct {
@@ -2373,7 +2418,7 @@ pub const ContainerResource = struct {
     },
     memory_limit: ?[]const u8,
 };
-pub const Content = JsonObject;
+pub const Content = GenericContent;
 pub const Conversation = ConversationResource;
 pub const Conversation_2 = struct {
     id: []const u8,

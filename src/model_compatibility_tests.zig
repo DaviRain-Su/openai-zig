@@ -2802,3 +2802,57 @@ test "chat completion request message parses typed role variants and raw fallbac
         else => try std.testing.expect(false),
     }
 }
+
+test "generic content parses text and array variants" {
+    const text_payload = "\"hello-content\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.GenericContent,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("hello-content", value),
+        else => try std.testing.expect(false),
+    }
+
+    const array_payload =
+        \\[{"a":1},{"b":"x"}]
+    ;
+    const parsed_array = try std.json.parseFromSlice(
+        gen.GenericContent,
+        std.testing.allocator,
+        array_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_array.deinit();
+
+    switch (parsed_array.value) {
+        .items => |items| {
+            try std.testing.expectEqual(@as(usize, 2), items.len);
+            try std.testing.expectEqual(@as(i64, 1), items[0].object.get("a").?.integer);
+            try std.testing.expectEqualStrings("x", items[1].object.get("b").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generic content keeps raw fallback for object payload" {
+    const payload =
+        \\{"k":"v"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.GenericContent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .raw => |value| try std.testing.expectEqualStrings("v", value.object.get("k").?.string),
+        else => try std.testing.expect(false),
+    }
+}

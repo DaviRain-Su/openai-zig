@@ -304,3 +304,4 @@
 - [x] 继续收窄（Fine-tune assistant message）：`FineTuneChatCompletionRequestAssistantMessage` 从 alias 升级为 `message/raw` union，`role=assistant` 时解析为 `ChatCompletionRequestAssistantMessage`，其余保持 raw fallback；补充兼容测试覆盖 typed 与 raw 分支。
 - [x] 继续收窄（chat completion request）：`CreateChatCompletionRequest` 从 alias 升级为 `object/raw` union（`CreateChatCompletionRequestObject`），按 `messages` 字段识别 typed 解析并保留 raw fallback；新增回归测试覆盖 typed 与 raw。
 - [x] 继续收窄（chat request message 解析）：为 `ChatCompletionRequestMessage` 增加 `jsonParse/jsonParseFromValue`（按 `role` 分派 `developer/system/user/assistant/tool/function`），并将 `CreateChatCompletionRequestObject.messages` 从 `JsonObjectArray` 收窄为 `[]const ChatCompletionRequestMessage`；补充 typed+raw 回归测试。
+- [x] 继续收窄（generic/content 层）：`GenericContent` 从 alias 升级为 `text/items/raw` union，`Content` 改为 `GenericContent`；补充解析回归测试（text、array、object->raw fallback）。
