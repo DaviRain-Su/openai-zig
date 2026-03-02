@@ -222,7 +222,14 @@ test "create responses parser supports both structured and raw variants" {
     defer request_object.deinit();
     switch (request_object.value) {
         .object => |value| {
-            try std.testing.expectEqualStrings("tell me a joke", value.input.?.string);
+            const input = value.input orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (input) {
+                .text => |text| try std.testing.expectEqualStrings("tell me a joke", text),
+                else => try std.testing.expect(false),
+            }
         },
         .raw => {
             try std.testing.expect(false);
@@ -1097,8 +1104,9 @@ test "generated message content parses text variants with structured annotations
         else => try std.testing.expect(false),
     }
 
-    const unknown_payload = \\{"type":"legacy","raw":"x"}
- ;
+    const unknown_payload = 
+        \\{"type":"legacy","raw":"x"}
+    ;
     const parsed_unknown = try std.json.parseFromSlice(
         gen.MessageContent,
         std.testing.allocator,
@@ -1298,7 +1306,8 @@ test "generated output content parses output_text and falls back to raw for unkn
         else => try std.testing.expect(false),
     }
 
-    const output_raw_payload = \\{"type":"unknown_output","data":123}
+    const output_raw_payload = 
+        \\{"type":"unknown_output","data":123}
     ;
     const parsed_output_raw = try std.json.parseFromSlice(
         gen.OutputContent,
@@ -2182,4 +2191,122 @@ test "Response keeps response output raw fallback on invalid shape" {
         },
         .raw => try std.testing.expect(false),
     }
+}
+
+test "create response object parses narrowed typed request fields" {
+    const payload =
+        \\{"input":"tell me another joke","model":"deepseek-chat","tools":[{"type":"function","function":{"name":"noop","parameters":{"type":"object"}}}],"tool_choice":{"type":"function","name":"noop"},"parallel_tool_calls":true,"response_format":{"type":"json_object"},"conversation":"conv_123"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.CreateResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .object => |value| {
+            const input = value.input orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (input) {
+                .text => |text| try std.testing.expectEqualStrings("tell me another joke", text),
+                else => try std.testing.expect(false),
+            }
+
+            try std.testing.expect(value.tools != null);
+            try std.testing.expectEqual(@as(usize, 1), value.tools.?.len);
+            switch (value.tools.?[0]) {
+                .raw => |raw| {
+                    try std.testing.expectEqualStrings("function", raw.object.get("type").?.string);
+                },
+                else => try std.testing.expect(false),
+            }
+
+            try std.testing.expect(value.tool_choice != null);
+            switch (value.tool_choice.?) {
+                .raw => |raw| {
+                    try std.testing.expectEqualStrings("function", raw.object.get("type").?.string);
+                },
+                else => try std.testing.expect(false),
+            }
+
+            try std.testing.expect(value.parallel_tool_calls != null and value.parallel_tool_calls.?);
+
+            const response_format = value.response_format orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (response_format) {
+                .json_object => |format| try std.testing.expectEqualStrings("json_object", format.type),
+                else => try std.testing.expect(false),
+            }
+
+            const conversation = value.conversation orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (conversation) {
+                .id => |id| try std.testing.expectEqualStrings("conv_123", id),
+                else => try std.testing.expect(false),
+            }
+        },
+        .raw => try std.testing.expect(false),
+    }
+}
+
+test "token counts body parses narrowed fields" {
+    const payload =
+        \\{"model":"gpt-4o-mini","input":"count this","text":{"format":{"type":"text"},"verbosity":"low"},"reasoning":{"effort":"medium","summary":"auto"},"conversation":{"id":"conv_456"},"parallel_tool_calls":true}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.TokenCountsBody,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const input = parsed.value.input orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (input) {
+        .text => |text| try std.testing.expectEqualStrings("count this", text),
+        else => try std.testing.expect(false),
+    }
+
+    const text = parsed.value.text orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    const format = text.format orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (format) {
+        .text => |value| try std.testing.expectEqualStrings("text", value.type),
+        else => try std.testing.expect(false),
+    }
+    try std.testing.expectEqualStrings("low", text.verbosity.?);
+
+    const reasoning = parsed.value.reasoning orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expectEqualStrings("medium", reasoning.effort.?);
+    try std.testing.expectEqualStrings("auto", reasoning.summary.?);
+
+    const conversation = parsed.value.conversation orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (conversation) {
+        .conversation => |value| try std.testing.expectEqualStrings("conv_456", value.id),
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expect(parsed.value.parallel_tool_calls != null and parsed.value.parallel_tool_calls.?);
 }

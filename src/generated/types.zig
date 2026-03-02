@@ -2776,14 +2776,14 @@ pub const CreateEmbeddingResponse = struct {
 };
 pub const CreateEvalCompletionsRunDataSource = struct {
     type: []const u8,
-    input_messages: ?std.json.Value,
+    input_messages: ?InputParam,
     sampling_params: ?struct {
         reasoning_effort: ?ReasoningEffort,
         temperature: ?f64,
         max_completion_tokens: ?i64,
         top_p: ?f64,
         seed: ?i64,
-        response_format: ?std.json.Value,
+        response_format: ?TextResponseFormatConfiguration,
         tools: ?[]const ChatCompletionTool,
     },
     model: ?[]const u8,
@@ -2819,7 +2819,7 @@ pub const CreateEvalRequest = struct {
 };
 pub const CreateEvalResponsesRunDataSource = struct {
     type: []const u8,
-    input_messages: ?std.json.Value,
+    input_messages: ?InputParam,
     sampling_params: ?struct {
         reasoning_effort: ?ReasoningEffort,
         temperature: ?f64,
@@ -3059,19 +3059,19 @@ pub const CreateModerationResponse = struct {
     },
 };
 pub const CreateResponseObject = struct {
-    input: ?std.json.Value = null,
+    input: ?InputParam = null,
     model: ?[]const u8 = null,
     instructions: ?[]const u8 = null,
-    tools: ?[]const std.json.Value = null,
-    tool_choice: ?std.json.Value = null,
-    parallel_tool_calls: ?bool = null,
+    tools: ?[]const Tool = null,
+    tool_choice: ?ToolChoiceParam = null,
+    parallel_tool_calls: ?ParallelToolCalls = null,
     temperature: ?f64 = null,
     top_p: ?f64 = null,
     max_output_tokens: ?i64 = null,
     stream: ?bool = null,
-    response_format: ?std.json.Value = null,
+    response_format: ?TextResponseFormatConfiguration = null,
     previous_response_id: ?[]const u8 = null,
-    conversation: ?std.json.Value = null,
+    conversation: ?ConversationParam = null,
     metadata: ?Metadata = null,
 };
 
@@ -11839,16 +11839,16 @@ pub const ToggleCertificatesRequest = struct {
 };
 pub const TokenCountsBody = struct {
     model: ?[]const u8,
-    input: ?std.json.Value,
+    input: ?InputParam,
     previous_response_id: ?[]const u8,
     tools: ?[]const Tool,
-    text: ?std.json.Value,
-    reasoning: ?std.json.Value,
+    text: ?ResponseTextParam,
+    reasoning: ?Reasoning,
     truncation: ?TruncationEnum,
     instructions: ?[]const u8,
-    conversation: ?std.json.Value,
+    conversation: ?ConversationParam,
     tool_choice: ?ToolChoiceParam,
-    parallel_tool_calls: ?std.json.Value,
+    parallel_tool_calls: ?ParallelToolCalls,
 };
 pub const TokenCountsResource = struct {
     object: []const u8,

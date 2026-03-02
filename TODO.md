@@ -291,3 +291,4 @@
 - [x] 收窄 `RunStreamEvent`：按 `thread.run.*` 事件构造结构化子类型（`created/queued/in_progress/requires_action/completed/incomplete/failed/cancelling/cancelled/expired`），并保留 `raw` 回退。
 - [x] 收窄 `RunStepStreamEvent`：按 `thread.run.step.*` 事件构造结构化子类型（`created/in_progress/delta/completed/failed/cancelled/expired`），并保留 `raw` 回退。
 - [x] 收窄 `ThreadStreamEvent`：按 `thread.created` 事件构造结构化子类型，包含 `enabled` 字段并保留 `raw` 回退。
+- [x] 继续收窄 `generated/types.zig` 高频 `std.json.Value` 字段（本批）：`CreateResponseObject.input/tools/tool_choice/parallel_tool_calls/response_format/conversation`、`TokenCountsBody.input/text/reasoning/conversation/parallel_tool_calls`、`CreateEval*RunDataSource.input_messages/response_format`；并新增兼容回归测试覆盖这些字段解析。
