@@ -404,3 +404,34 @@ pub const Resource = struct {
         );
     }
 };
+
+test "count input tokens request omits null optional fields" {
+    const req: CountInputTokensRequest = .{};
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body,
+        .{},
+    );
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}

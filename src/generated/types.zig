@@ -2866,7 +2866,16 @@ pub const Move = struct {
     y: i64,
 };
 pub const NoiseReductionType = []const u8;
-pub const OpenAIFile = std.json.Value;
+pub const OpenAIFile = struct {
+    id: []const u8 = "",
+    object: []const u8 = "",
+    bytes: ?i64 = null,
+    created_at: ?i64 = null,
+    filename: []const u8 = "",
+    purpose: []const u8 = "",
+    status: []const u8 = "",
+    status_details: ?std.json.Value = null,
+};
 pub const OrderEnum = []const u8;
 pub const OtherChunkingStrategyResponseParam = struct {
     type: []const u8,

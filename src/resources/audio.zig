@@ -509,3 +509,42 @@ pub const Resource = struct {
         return self.create_voice_with_options(allocator, payload, request_opts);
     }
 };
+
+test "create speech request omits null optional fields" {
+    const req = CreateSpeechRequest{
+        .model = .{ .string = "tts-1" },
+        .input = "Hello from test",
+        .instructions = null,
+        .voice = .{ .string = "alloy" },
+        .response_format = null,
+        .speed = null,
+        .stream_format = null,
+    };
+
+    var writer = std.io.Writer.Allocating.init(std.testing.allocator);
+    defer writer.deinit();
+    var json_stream: std.json.Stringify = .{
+        .writer = &writer.writer,
+        .options = .{ .emit_null_optional_fields = false },
+    };
+    try json_stream.write(req);
+
+    const body = writer.written();
+    const parsed = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        body,
+        .{},
+    );
+    defer parsed.deinit();
+
+    const expected = try std.json.parseFromSlice(
+        std.json.Value,
+        std.testing.allocator,
+        "{\"model\":\"tts-1\",\"input\":\"Hello from test\",\"voice\":\"alloy\"}",
+        .{},
+    );
+    defer expected.deinit();
+
+    try std.testing.expect(std.json.eql(parsed.value, expected.value));
+}

@@ -1,43 +1,6 @@
 const std = @import("std");
 const sdk = @import("openai_zig");
-const errors = sdk.errors;
 const config = @import("config");
-
-fn onChunk(
-    _: ?*anyopaque,
-    event: std.json.Parsed(std.json.Value),
-) errors.Error!void {
-    const root = switch (event.value) {
-        .object => |obj| obj,
-        else => return,
-    };
-
-    const choices = root.get("choices") orelse return;
-    switch (choices) {
-        .array => |items| {
-        for (items.items) |choice| {
-            const choice_obj = switch (choice) {
-                .object => |obj| obj,
-                else => continue,
-            };
-            const text_field = blk: {
-                if (choice_obj.get("text")) |text| break :blk text;
-                if (choice_obj.get("delta")) |delta| {
-                    if (delta == .object) {
-                        break :blk delta.object.get("content") orelse continue;
-                    }
-                    continue;
-                }
-                continue;
-            };
-            if (text_field == .string) {
-                std.debug.print("{s}", .{text_field.string});
-            }
-        }
-        },
-        else => return,
-    }
-}
 
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
@@ -71,8 +34,7 @@ pub fn main() !void {
     var prompt = try std.json.parseFromSlice(std.json.Value, gpa, "\"write a short poem about a river\"", .{});
     defer prompt.deinit();
 
-    std.debug.print("Completion stream:\n", .{});
-    client.completions().create_completion_stream_with_options(
+    const response = try client.completions().create_completion_with_options(
         gpa,
         .{
             .model = model.value,
@@ -82,23 +44,26 @@ pub fn main() !void {
             .frequency_penalty = null,
             .logit_bias = null,
             .logprobs = null,
-            .max_tokens = 24,
+            .max_tokens = 64,
             .n = null,
             .presence_penalty = null,
             .seed = null,
             .stop = null,
+            .stream = null,
             .stream_options = null,
             .suffix = null,
             .temperature = null,
             .top_p = null,
             .user = null,
-            .stream = true,
         },
-        onChunk,
         null,
-        null,
-    ) catch |err| {
-        std.debug.print("Completion stream request failed: {s}\n", .{@errorName(err)});
-    };
-    std.debug.print("\n", .{});
+    );
+    defer response.deinit();
+
+    if (response.value.choices.len == 0) {
+        std.debug.print("Completion response has no choices.\n", .{});
+        return;
+    }
+    const text = response.value.choices[0].text;
+    std.debug.print("Completion:\n{s}\n", .{text});
 }

@@ -2,6 +2,7 @@ const std = @import("std");
 const sdk = @import("openai_zig");
 const errors = sdk.errors;
 const config = @import("config");
+const compat = @import("provider_compat.zig");
 
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
@@ -26,6 +27,8 @@ pub fn main() !void {
         .retry_base_delay_ms = conf.retry_base_delay_ms,
     });
     defer client.deinit();
+
+    if (compat.skipIfDeepSeek(conf.base_url, "embeddings")) return;
 
     const emb = client.embeddings().create(gpa, .{
         .input = .{ .string = "Hello from OpenAI Zig SDK." },
@@ -53,6 +56,8 @@ pub fn main() !void {
     var emb_stream: std.json.Stringify = .{ .writer = &emb_out.writer, .options = .{ .emit_null_optional_fields = false } };
     try emb_stream.write(emb.value);
     std.debug.print("Embeddings response:\n{s}\n", .{emb_out.written()});
+
+    if (compat.skipIfDeepSeek(conf.base_url, "moderations")) return;
 
     const mod = client.moderations().create(gpa, .{
         .input = .{ .string = "You are a helpful assistant." },

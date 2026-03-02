@@ -2,6 +2,7 @@ const std = @import("std");
 const sdk = @import("openai_zig");
 const errors = sdk.errors;
 const config = @import("config");
+const compat = @import("provider_compat.zig");
 
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
@@ -26,6 +27,8 @@ pub fn main() !void {
         .retry_base_delay_ms = conf.retry_base_delay_ms,
     });
     defer client.deinit();
+
+    if (compat.skipIfDeepSeek(conf.base_url, "batch")) return;
 
     const batch_resource = client.batch();
 

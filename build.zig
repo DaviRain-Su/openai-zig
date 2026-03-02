@@ -39,6 +39,11 @@ pub fn build(b: *std.Build) void {
             .{ .name = "toml", .module = toml_mod },
         },
     });
+    const provider_compat_mod = b.createModule(.{
+        .root_source_file = b.path("examples/provider_compat.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
@@ -178,6 +183,7 @@ pub fn build(b: *std.Build) void {
             .{ .name = "embeddings_and_moderations", .path = "examples/embeddings_and_moderations.zig" },
             .{ .name = "chat_list", .path = "examples/chat_list.zig" },
             .{ .name = "completions_stream", .path = "examples/completions_stream.zig" },
+            .{ .name = "completions_basic", .path = "examples/completions_basic.zig" },
             .{ .name = "audio_speech", .path = "examples/audio_speech.zig" },
             .{ .name = "responses_basic", .path = "examples/responses_basic.zig" },
             .{ .name = "batch_basic", .path = "examples/batch_basic.zig" },
@@ -198,6 +204,7 @@ pub fn build(b: *std.Build) void {
                         .{ .name = "openai_zig", .module = mod },
                         .{ .name = "toml", .module = toml_mod },
                         .{ .name = "config", .module = config_mod },
+                        .{ .name = "provider_compat", .module = provider_compat_mod },
                     },
                 }),
             });

@@ -45,6 +45,28 @@ This repo hosts an in-progress Zig SDK generated from `spec/openapi.documented.y
   - `DEEPSEEK_TIMEOUT_MS`, `DEEPSEEK_MAX_RETRIES`, `DEEPSEEK_RETRY_BASE_DELAY_MS`
 - `OPENAI_*` keys are checked before `DEEPSEEK_*` keys for each field.
 
+### DeepSeek `/beta` compatibility notes
+
+- Some DeepSeek endpoints (for example legacy `/completions` in some accounts) require the `/beta` base path.
+- The transport automatically switches DeepSeek requests for `/completions` to `.../beta` when `base_url` contains `api.deepseek.com`.
+- You can also force it explicitly per request with `RequestOptions.base_url`:
+
+```zig
+const opts: sdk.transport.Transport.RequestOptions = .{
+    .base_url = "https://api.deepseek.com/beta",
+};
+
+try client.completions().create_completion_with_options(
+    allocator,
+    .{
+        .model = "deepseek-chat",
+        .prompt = "hello",
+        .stream = true,
+    },
+    opts,
+);
+```
+
 ### Client init / with_options behavior
 
 - `initClient` / `init` creates a new client with fully isolated transport state; option values are copied into owned transport buffers.
@@ -72,6 +94,7 @@ bash scripts/check-op-coverage.sh     # verify operation coverage against genera
 - `examples/assistants_list.zig` — assistants list with fallback handling
 - `examples/embeddings_and_moderations.zig` — embeddings + moderations call path
 - `examples/completions_stream.zig` — completions stream wrapper
+- `examples/completions_basic.zig` — completions call (legacy completion endpoint) with DeepSeek `/beta` compatibility
 - `examples/responses_basic.zig` — responses API baseline sample
 - `examples/batch_basic.zig` — batch list/detail sample
 - `examples/files_list_paged.zig` — manual pagination helper

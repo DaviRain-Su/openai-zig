@@ -2,6 +2,7 @@ const std = @import("std");
 const sdk = @import("openai_zig");
 const config = @import("config");
 const errors = sdk.errors;
+const compat = @import("provider_compat.zig");
 
 pub fn main() !void {
     var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
@@ -25,6 +26,8 @@ pub fn main() !void {
         .retry_base_delay_ms = conf.retry_base_delay_ms,
     });
     defer client.deinit();
+
+    if (compat.skipIfDeepSeek(conf.base_url, "files")) return;
 
     var page = sdk.resources.files.ListFilesParams{
         .limit = 2,

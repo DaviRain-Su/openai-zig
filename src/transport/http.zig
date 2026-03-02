@@ -247,7 +247,10 @@ pub const Transport = struct {
         defer arena.deinit();
         const alloc = arena.allocator();
 
-        const url = try buildUrl(alloc, active_opts.base_url, path);
+        const request_base_url = resolveRequestBaseUrl(alloc, active_opts.base_url, path) catch {
+            return errors.Error.HttpError;
+        };
+        const url = try buildUrl(alloc, request_base_url, path);
         const uri = try std.Uri.parse(url);
 
         var attempt: u8 = 0;
@@ -356,7 +359,7 @@ pub const Transport = struct {
             const retry_after_ms = parseRetryAfterSeconds(&response.head);
             const request_id = extractHeaderValue(&response.head, "x-request-id");
 
-            const response_bytes = readResponseBody(self.allocator, alloc, &response) catch |err| {
+            const response_bytes = readResponseBody(self.allocator, &response) catch |err| {
                 if (!isRetryableFetchError(err) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                     return err;
                 }
@@ -399,7 +402,10 @@ pub const Transport = struct {
         defer arena.deinit();
         const alloc = arena.allocator();
 
-        const url = buildUrl(alloc, active_opts.base_url, path) catch {
+        const request_base_url = resolveRequestBaseUrl(alloc, active_opts.base_url, path) catch {
+            return errors.Error.HttpError;
+        };
+        const url = buildUrl(alloc, request_base_url, path) catch {
             return errors.Error.HttpError;
         };
         const uri = std.Uri.parse(url) catch {
@@ -534,13 +540,8 @@ pub const Transport = struct {
             const retry_after_ms = parseRetryAfterSeconds(&response.head);
             const request_id = extractHeaderValue(&response.head, "x-request-id");
 
-            var error_capture = std.ArrayList(u8).initCapacity(alloc, 0) catch {
-                return errors.Error.HttpError;
-            };
-            defer error_capture.deinit(alloc);
-
             if (status < 200 or status >= 300) {
-                const response_body = readResponseBody(self.allocator, alloc, &response) catch {
+                const response_body = readResponseBody(self.allocator, &response) catch {
                     if (!isRetryableStatus(status) or attempt == active_opts.max_retries or !isRetryableMethod(method)) {
                         return errors.Error.HttpError;
                     }
@@ -564,7 +565,6 @@ pub const Transport = struct {
                 .handler = on_chunk,
                 .user_ctx = chunk_ctx,
                 .allocator = alloc,
-                .capture = &error_capture,
             };
 
             const Writer = std.io.GenericWriter(
@@ -598,11 +598,9 @@ pub const Transport = struct {
         handler: StreamChunk,
         user_ctx: ?*anyopaque,
         allocator: std.mem.Allocator,
-        capture: *std.ArrayList(u8),
         err: ?errors.Error = null,
 
         pub fn writeChunk(context: *StreamWriterContext, chunk: []const u8) errors.Error!usize {
-            context.capture.appendSlice(context.allocator, chunk) catch {};
             context.handler(context.user_ctx, chunk) catch |callback_err| {
                 context.err = callback_err;
                 return callback_err;
@@ -632,6 +630,47 @@ fn buildUrl(allocator: std.mem.Allocator, base_url: []const u8, path: []const u8
     }
 
     return std.fmt.allocPrint(allocator, "{s}/{s}", .{ trimmed_base, cleaned_path });
+}
+
+fn isDeepSeekProvider(base_url: []const u8) bool {
+    return std.mem.indexOf(u8, base_url, "api.deepseek.com") != null;
+}
+
+fn isBetaRequiredPath(path: []const u8) bool {
+    const normalized = if (path.len > 0 and path[0] == '/') path[1..] else path;
+    return std.mem.eql(u8, path, "/completions") or
+        std.mem.startsWith(u8, path, "/completions/") or
+        std.mem.startsWith(u8, path, "/completions?") or
+        std.mem.eql(u8, normalized, "completions");
+}
+
+fn deepSeekBetaBase(allocator: std.mem.Allocator, base_url: []const u8) ![]u8 {
+    const trimmed_base = std.mem.trimRight(u8, base_url, "/");
+
+    if (std.mem.endsWith(u8, trimmed_base, "/beta")) {
+        return allocator.dupe(u8, trimmed_base);
+    }
+
+    if (std.mem.endsWith(u8, trimmed_base, "/v1")) {
+        if (trimmed_base.len <= 3) {
+            return allocator.dupe(u8, "https://api.deepseek.com/beta");
+        }
+        const host_base = trimmed_base[0 .. trimmed_base.len - 3];
+        return std.fmt.allocPrint(allocator, "{s}/beta", .{host_base});
+    }
+
+    return std.fmt.allocPrint(allocator, "{s}/beta", .{trimmed_base});
+}
+
+fn resolveRequestBaseUrl(
+    allocator: std.mem.Allocator,
+    base_url: []const u8,
+    path: []const u8,
+) ![]u8 {
+    if (!isBetaRequiredPath(path) or !isDeepSeekProvider(base_url)) {
+        return allocator.dupe(u8, base_url);
+    }
+    return deepSeekBetaBase(allocator, base_url);
 }
 
 fn parseProxy(allocator: std.mem.Allocator, raw_proxy_url: []const u8) !?*std.http.Client.Proxy {
@@ -716,17 +755,12 @@ fn readResponseBodyToSink(
 
 fn readResponseBody(
     persistent_allocator: std.mem.Allocator,
-    scratch_allocator: std.mem.Allocator,
     response: *std.http.Client.Response,
 ) ![]u8 {
-    var body_writer = std.io.Writer.Allocating.init(scratch_allocator);
+    var body_writer = std.io.Writer.Allocating.init(persistent_allocator);
     defer body_writer.deinit();
-
-    try readResponseBodyToSink(response, scratch_allocator, &body_writer.writer);
-    const data = body_writer.written();
-    const owned = try persistent_allocator.alloc(u8, data.len);
-    @memcpy(owned, data);
-    return owned;
+    try readResponseBodyToSink(response, persistent_allocator, &body_writer.writer);
+    return try body_writer.toOwnedSlice();
 }
 
 fn parseRetryAfterSeconds(head: *const std.http.Client.Response.Head) ?u64 {
@@ -924,4 +958,20 @@ test "resolveRequestOptions uses transport defaults and per-request override" {
     try std.testing.expectEqualStrings("k-override", override_opts.api_key.?);
     try std.testing.expectEqualStrings("org-default", override_opts.organization.?);
     try std.testing.expectEqualStrings("proj-default", override_opts.project.?);
+}
+
+test "deepseek completions requests are routed to /beta" {
+    const completion_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/completions");
+    defer std.testing.allocator.free(completion_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/beta", completion_url);
+
+    const chat_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/chat/completions");
+    defer std.testing.allocator.free(chat_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", chat_url);
+}
+
+test "non-deepseek base URLs keep original host" {
+    const base_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.openai.com/v1", "/completions");
+    defer std.testing.allocator.free(base_url);
+    try std.testing.expectEqualStrings("https://api.openai.com/v1", base_url);
 }

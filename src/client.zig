@@ -516,6 +516,11 @@ pub const Client = struct {
         }, null, transport_opts);
         self.transport.allocator.free(resp.body);
     }
+
+    /// Backward-compatible snake_case name for `pingWithOptions`.
+    pub fn ping_with_options(self: *Client, request_opts: ?RequestOptions) !void {
+        return self.pingWithOptions(request_opts);
+    }
 };
 
 test "with_options overrides selected transport fields" {

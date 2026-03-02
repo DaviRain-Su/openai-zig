@@ -2,6 +2,7 @@ const std = @import("std");
 const sdk = @import("openai_zig");
 const config = @import("config");
 const errors = sdk.errors;
+const compat = @import("provider_compat.zig");
 
 const ListFilePageStats = struct {
     pages: usize = 0,
@@ -53,6 +54,8 @@ pub fn main() !void {
         .retry_base_delay_ms = conf.retry_base_delay_ms,
     });
     defer client.deinit();
+
+    if (compat.skipIfDeepSeek(conf.base_url, "files")) return;
 
     const files_resource = client.files();
     var fetcher = FilesListFetcher{ .files = &files_resource };
