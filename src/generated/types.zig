@@ -2286,7 +2286,7 @@ pub const ContainerResource = struct {
     },
     memory_limit: ?[]const u8,
 };
-pub const Content = std.json.Value;
+pub const Content = JsonObject;
 pub const Conversation = ConversationResource;
 pub const Conversation_2 = struct {
     id: []const u8,
@@ -2721,7 +2721,7 @@ pub const CreateAssistantRequest = struct {
     top_p: ?f64,
     response_format: ?AssistantsApiResponseFormatOption,
 };
-pub const CreateChatCompletionRequest = std.json.Value;
+pub const CreateChatCompletionRequest = JsonObject;
 pub const CreateChatCompletionResponse = struct {
     id: []const u8 = "",
     choices: []const ChatCompletionChoice = &.{},
@@ -2918,7 +2918,7 @@ pub const CreateEvalCustomDataSourceConfig = struct {
     item_schema: EvalSchema,
     include_sample_schema: ?bool,
 };
-pub const CreateEvalItem = std.json.Value;
+pub const CreateEvalItem = JsonObject;
 pub const CreateEvalJsonlRunDataSource = struct {
     type: []const u8,
     source: std.json.Value,
@@ -3775,9 +3775,9 @@ pub const EvalItem = struct {
     content: EvalItemContent,
     type: ?[]const u8,
 };
-pub const EvalItemContent = std.json.Value;
+pub const EvalItemContent = JsonObject;
 pub const EvalItemContentArray = []const EvalItemContentItem;
-pub const EvalItemContentItem = std.json.Value;
+pub const EvalItemContentItem = JsonObject;
 pub const EvalItemContentOutputText = struct {
     type: []const u8,
     text: []const u8,
@@ -3983,7 +3983,7 @@ pub const FileUploadParam = struct {
     max_file_size: ?i64,
     max_files: ?i64,
 };
-pub const FineTuneChatCompletionRequestAssistantMessage = std.json.Value;
+pub const FineTuneChatCompletionRequestAssistantMessage = JsonObject;
 pub const FineTuneChatRequestInput = struct {
     messages: ?JsonObjectArray,
     tools: ?[]const ChatCompletionTool,
@@ -4199,7 +4199,7 @@ pub const FunctionObject = struct {
     parameters: ?FunctionParameters,
     strict: ?bool,
 };
-pub const FunctionParameters = std.json.Value;
+pub const FunctionParameters = JsonObject;
 pub const FunctionShellAction = struct {
     commands: []const []const u8,
     timeout_ms: i64,
@@ -6404,7 +6404,7 @@ pub const MessageStreamEvent = union(enum) {
         }
     }
 };
-pub const Metadata = std.json.Value;
+pub const Metadata = JsonObject;
 pub const Model = struct {
     id: []const u8 = "",
     object: []const u8 = "",
@@ -7673,7 +7673,7 @@ pub const RealtimeCallReferRequest = struct {
 pub const RealtimeCallRejectRequest = struct {
     status_code: ?i64,
 };
-pub const RealtimeClientEvent = std.json.Value;
+pub const RealtimeClientEvent = JsonObject;
 pub const RealtimeClientEventConversationItemCreate = struct {
     event_id: ?[]const u8,
     type: []const u8,
@@ -8124,7 +8124,7 @@ pub const RealtimeResponseCreateParams = struct {
     prompt: ?Prompt,
     input: ?[]const RealtimeConversationItem,
 };
-pub const RealtimeServerEvent = std.json.Value;
+pub const RealtimeServerEvent = JsonObject;
 pub const RealtimeServerEventConversationCreated = struct {
     event_id: []const u8,
     type: []const u8,
@@ -9091,7 +9091,7 @@ pub const ResponseFormatJsonSchema = struct {
         strict: ?bool,
     },
 };
-pub const ResponseFormatJsonSchemaSchema = std.json.Value;
+pub const ResponseFormatJsonSchemaSchema = JsonObject;
 pub const ResponseFormatText = struct {
     type: []const u8,
 };
@@ -9245,7 +9245,7 @@ pub const ResponseOutputTextAnnotationAddedEvent = struct {
     sequence_number: i64,
     annotation: Annotation,
 };
-pub const ResponsePromptVariables = std.json.Value;
+pub const ResponsePromptVariables = JsonObject;
 pub const ResponseProperties = struct {
     previous_response_id: ?[]const u8,
     model: ?ModelIdsResponses,
@@ -12610,7 +12610,7 @@ pub const VectorStoreExpirationAfter = struct {
     anchor: []const u8,
     days: i64,
 };
-pub const VectorStoreFileAttributes = std.json.Value;
+pub const VectorStoreFileAttributes = JsonObject;
 pub const VectorStoreFileBatchObject = struct {
     id: []const u8,
     object: []const u8,
