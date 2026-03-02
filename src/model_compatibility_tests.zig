@@ -2717,3 +2717,41 @@ test "fine-tune assistant message parses typed assistant payload and raw fallbac
         else => try std.testing.expect(false),
     }
 }
+
+test "create chat completion request parses typed object and raw fallback" {
+    const typed_payload =
+        \\{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.CreateChatCompletionRequest,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .object => |value| {
+            try std.testing.expectEqualStrings("gpt-4o-mini", value.model.?);
+            try std.testing.expectEqual(@as(usize, 1), value.messages.?.len);
+            try std.testing.expectEqualStrings("user", value.messages.?[0].object.get("role").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"foo":"bar"}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.CreateChatCompletionRequest,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
+    }
+}

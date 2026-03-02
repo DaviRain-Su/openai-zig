@@ -302,3 +302,4 @@
 - [x] 继续收窄（Eval 内容结构化）：`EvalItemContent` 与 `EvalItemContentItem` 从动态别名升级为结构化 union（`text/items/raw` 与 `output_text/input_image/raw`），并补充兼容测试验证 typed 解析与未知类型 raw fallback。
 - [x] 继续收窄（Eval 请求项结构化）：`CreateEvalItem` 从动态别名升级为 `item/raw` union，并通过 `role + content` 识别结构化 `EvalItem`；新增回归测试验证 typed 解析与 raw fallback。
 - [x] 继续收窄（Fine-tune assistant message）：`FineTuneChatCompletionRequestAssistantMessage` 从 alias 升级为 `message/raw` union，`role=assistant` 时解析为 `ChatCompletionRequestAssistantMessage`，其余保持 raw fallback；补充兼容测试覆盖 typed 与 raw 分支。
+- [x] 继续收窄（chat completion request）：`CreateChatCompletionRequest` 从 alias 升级为 `object/raw` union（`CreateChatCompletionRequestObject`），按 `messages` 字段识别 typed 解析并保留 raw fallback；新增回归测试覆盖 typed 与 raw。

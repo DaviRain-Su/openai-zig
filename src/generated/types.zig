@@ -2721,7 +2721,58 @@ pub const CreateAssistantRequest = struct {
     top_p: ?f64,
     response_format: ?AssistantsApiResponseFormatOption,
 };
-pub const CreateChatCompletionRequest = JsonObject;
+pub const CreateChatCompletionRequestObject = struct {
+    model: ?[]const u8 = null,
+    messages: ?JsonObjectArray = null,
+};
+pub const CreateChatCompletionRequest = union(enum) {
+    object: CreateChatCompletionRequestObject,
+    raw: JsonObject,
+
+    pub fn forObject(value: CreateChatCompletionRequestObject) CreateChatCompletionRequest {
+        return .{ .object = value };
+    }
+
+    pub fn forRaw(value: JsonObject) CreateChatCompletionRequest {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: CreateChatCompletionRequest, writer: anytype) !void {
+        switch (self) {
+            .object => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateChatCompletionRequest {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !CreateChatCompletionRequest {
+        switch (source) {
+            .object => |root| {
+                if (root.get("messages") != null) {
+                    const parsed = std.json.parseFromValue(
+                        CreateChatCompletionRequestObject,
+                        allocator,
+                        source,
+                        options,
+                    ) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .object = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const CreateChatCompletionResponse = struct {
     id: []const u8 = "",
     choices: []const ChatCompletionChoice = &.{},
