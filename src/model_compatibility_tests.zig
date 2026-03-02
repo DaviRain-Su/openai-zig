@@ -1104,7 +1104,7 @@ test "generated message content parses text variants with structured annotations
         else => try std.testing.expect(false),
     }
 
-    const unknown_payload = 
+    const unknown_payload =
         \\{"type":"legacy","raw":"x"}
     ;
     const parsed_unknown = try std.json.parseFromSlice(
@@ -1306,7 +1306,7 @@ test "generated output content parses output_text and falls back to raw for unkn
         else => try std.testing.expect(false),
     }
 
-    const output_raw_payload = 
+    const output_raw_payload =
         \\{"type":"unknown_output","data":123}
     ;
     const parsed_output_raw = try std.json.parseFromSlice(
@@ -2309,4 +2309,61 @@ test "token counts body parses narrowed fields" {
     }
 
     try std.testing.expect(parsed.value.parallel_tool_calls != null and parsed.value.parallel_tool_calls.?);
+}
+
+test "realtime create client secret response parses typed session" {
+    const payload =
+        \\{"value":"secret_123","expires_at":1700000000,"session":{"id":"sess_123","object":"realtime.session","model":"gpt-4o-realtime-preview","input_audio_transcription":{"model":"gpt-4o-transcribe"},"prompt":{"id":"pmpt_1"},"include":["item.input_audio_transcription.logprobs"]}}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.RealtimeCreateClientSecretResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqualStrings("secret_123", parsed.value.value);
+    try std.testing.expectEqualStrings("sess_123", parsed.value.session.id.?);
+    try std.testing.expectEqualStrings("gpt-4o-transcribe", parsed.value.session.input_audio_transcription.?.model.?);
+    try std.testing.expectEqual(@as(usize, 1), parsed.value.session.include.?.len);
+
+    const prompt = parsed.value.session.prompt orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (prompt) {
+        .template => |value| try std.testing.expectEqualStrings("pmpt_1", value.id),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime response create params parses typed tools and conversation" {
+    const payload =
+        \\{"conversation":"conv_realtime_1","tools":[{"type":"function","function":{"name":"lookup_weather","parameters":{"type":"object"}}}],"max_output_tokens":256}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.RealtimeResponseCreateParams,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const conversation = parsed.value.conversation orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (conversation) {
+        .id => |id| try std.testing.expectEqualStrings("conv_realtime_1", id),
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expect(parsed.value.tools != null);
+    try std.testing.expectEqual(@as(usize, 1), parsed.value.tools.?.len);
+    switch (parsed.value.tools.?[0]) {
+        .raw => |raw| try std.testing.expectEqualStrings("function", raw.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+    try std.testing.expectEqual(@as(?i64, 256), parsed.value.max_output_tokens);
 }

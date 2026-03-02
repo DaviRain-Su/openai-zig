@@ -292,3 +292,4 @@
 - [x] 收窄 `RunStepStreamEvent`：按 `thread.run.step.*` 事件构造结构化子类型（`created/in_progress/delta/completed/failed/cancelled/expired`），并保留 `raw` 回退。
 - [x] 收窄 `ThreadStreamEvent`：按 `thread.created` 事件构造结构化子类型，包含 `enabled` 字段并保留 `raw` 回退。
 - [x] 继续收窄 `generated/types.zig` 高频 `std.json.Value` 字段（本批）：`CreateResponseObject.input/tools/tool_choice/parallel_tool_calls/response_format/conversation`、`TokenCountsBody.input/text/reasoning/conversation/parallel_tool_calls`、`CreateEval*RunDataSource.input_messages/response_format`；并新增兼容回归测试覆盖这些字段解析。
+- [x] 继续收窄 `generated/types.zig` 高频字段（Realtime + tool choice 本批）：`Realtime*session`（call/client_secret/server_event）改为 `RealtimeSession`，`RealtimeResponseCreateParams` / `RealtimeSessionCreate*GA` 的 `tools` 改为结构化类型，`conversation` 改为 `ConversationParam`，并将 `RealtimeSession.input_audio_transcription/prompt/include` 改为具体类型；补充兼容解析测试。

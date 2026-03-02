@@ -814,7 +814,7 @@ pub const Certificate = struct {
 };
 pub const ChatCompletionAllowedTools = struct {
     mode: []const u8,
-    tools: []const std.json.Value,
+    tools: []const ToolChoiceTypes,
 };
 pub const ChatCompletionAllowedToolsChoice = struct {
     type: []const u8,
@@ -7231,16 +7231,11 @@ pub const RealtimeBetaResponseCreateParams = struct {
     instructions: ?[]const u8,
     voice: ?VoiceIdsShared,
     output_audio_format: ?[]const u8,
-    tools: ?[]const struct {
-        type: ?[]const u8,
-        name: ?[]const u8,
-        description: ?[]const u8,
-        parameters: ?std.json.Value,
-    },
+    tools: ?[]const RealtimeFunctionTool,
     tool_choice: ?ToolChoiceParam,
     temperature: ?f64,
     max_output_tokens: ?i64,
-    conversation: ?std.json.Value,
+    conversation: ?ConversationParam,
     metadata: ?Metadata,
     prompt: ?Prompt,
     input: ?[]const RealtimeConversationItem,
@@ -7546,7 +7541,7 @@ pub const RealtimeBetaServerEventTranscriptionSessionUpdated = struct {
 };
 pub const RealtimeCallCreateRequest = struct {
     sdp: []const u8,
-    session: ?std.json.Value,
+    session: ?RealtimeSession,
 };
 pub const RealtimeCallReferRequest = struct {
     target_uri: []const u8,
@@ -7608,7 +7603,7 @@ pub const RealtimeClientEventResponseCreate = struct {
 pub const RealtimeClientEventSessionUpdate = struct {
     event_id: ?[]const u8,
     type: []const u8,
-    session: std.json.Value,
+    session: RealtimeSession,
 };
 pub const RealtimeClientEventTranscriptionSessionUpdate = struct {
     event_id: ?[]const u8,
@@ -7887,18 +7882,18 @@ pub const RealtimeCreateClientSecretRequest = struct {
         anchor: ?[]const u8,
         seconds: ?i64,
     },
-    session: ?std.json.Value,
+    session: ?RealtimeSession,
 };
 pub const RealtimeCreateClientSecretResponse = struct {
     value: []const u8,
     expires_at: i64,
-    session: std.json.Value,
+    session: RealtimeSession,
 };
 pub const RealtimeFunctionTool = struct {
     type: ?[]const u8,
     name: ?[]const u8,
     description: ?[]const u8,
-    parameters: ?std.json.Value,
+    parameters: ?FunctionParameters,
 };
 pub const RealtimeMCPApprovalRequest = struct {
     type: []const u8,
@@ -7997,10 +7992,10 @@ pub const RealtimeResponseCreateParams = struct {
             voice: ?VoiceIdsShared,
         },
     },
-    tools: ?[]const std.json.Value,
+    tools: ?[]const Tool,
     tool_choice: ?ToolChoiceParam,
     max_output_tokens: ?i64,
-    conversation: ?std.json.Value,
+    conversation: ?ConversationParam,
     metadata: ?Metadata,
     prompt: ?Prompt,
     input: ?[]const RealtimeConversationItem,
@@ -8335,12 +8330,12 @@ pub const RealtimeServerEventResponseTextDone = struct {
 pub const RealtimeServerEventSessionCreated = struct {
     event_id: []const u8,
     type: []const u8,
-    session: std.json.Value,
+    session: RealtimeSession,
 };
 pub const RealtimeServerEventSessionUpdated = struct {
     event_id: []const u8,
     type: []const u8,
-    session: std.json.Value,
+    session: RealtimeSession,
 };
 pub const RealtimeServerEventTranscriptionSessionUpdated = struct {
     event_id: []const u8,
@@ -8356,7 +8351,7 @@ pub const RealtimeSession = struct {
     voice: ?VoiceIdsShared,
     input_audio_format: ?[]const u8,
     output_audio_format: ?[]const u8,
-    input_audio_transcription: ?std.json.Value,
+    input_audio_transcription: ?AudioTranscription,
     turn_detection: ?RealtimeTurnDetection,
     input_audio_noise_reduction: ?struct {
         type: ?NoiseReductionType,
@@ -8368,8 +8363,8 @@ pub const RealtimeSession = struct {
     temperature: ?f64,
     max_response_output_tokens: ?i64,
     expires_at: ?i64,
-    prompt: ?std.json.Value,
-    include: ?std.json.Value,
+    prompt: ?Prompt,
+    include: ?[]const []const u8,
 };
 pub const RealtimeSessionCreateRequest = struct {
     client_secret: struct {
@@ -8392,12 +8387,7 @@ pub const RealtimeSessionCreateRequest = struct {
         prefix_padding_ms: ?i64,
         silence_duration_ms: ?i64,
     },
-    tools: ?[]const struct {
-        type: ?[]const u8,
-        name: ?[]const u8,
-        description: ?[]const u8,
-        parameters: ?std.json.Value,
-    },
+    tools: ?[]const RealtimeFunctionTool,
     tool_choice: ?[]const u8,
     temperature: ?f64,
     max_response_output_tokens: ?i64,
@@ -8426,7 +8416,7 @@ pub const RealtimeSessionCreateRequestGA = struct {
     },
     include: ?[]const []const u8,
     tracing: ?std.json.Value,
-    tools: ?[]const std.json.Value,
+    tools: ?[]const Tool,
     tool_choice: ?ToolChoiceParam,
     max_output_tokens: ?i64,
     truncation: ?RealtimeTruncation,
@@ -8497,7 +8487,7 @@ pub const RealtimeSessionCreateResponseGA = struct {
     },
     include: ?[]const []const u8,
     tracing: ?std.json.Value,
-    tools: ?[]const std.json.Value,
+    tools: ?[]const Tool,
     tool_choice: ?ToolChoiceParam,
     max_output_tokens: ?i64,
     truncation: ?RealtimeTruncation,
@@ -11939,7 +11929,7 @@ pub const ToolChoice = struct {
 pub const ToolChoiceAllowed = struct {
     type: []const u8,
     mode: []const u8,
-    tools: []const std.json.Value,
+    tools: []const ToolChoiceTypes,
 };
 pub const ToolChoiceCustom = struct {
     type: []const u8,
