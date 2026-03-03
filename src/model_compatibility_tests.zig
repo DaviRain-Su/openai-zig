@@ -4276,3 +4276,42 @@ test "deepseek user balance response follows compatibility contract" {
     try std.testing.expectEqualStrings("CNY", cny.currency);
     try std.testing.expectEqualStrings("66.000", cny.total_balance);
 }
+
+test "deepseek responses parse status/output/usage contract" {
+    const payload =
+        "{\"id\":\"resp_7\",\"object\":\"response\",\"created_at\":1710000000,\"status\":\"completed\",\"model\":\"deepseek-reasoner\",\"output\":[{\"type\":\"reasoning\",\"id\":\"rsn_1\",\"summary\":[{\"type\":\"summary\",\"text\":\"prefetch\"}],\"content\":[{\"type\":\"text\",\"text\":\"reasoned about task\"}],\"status\":\"done\"}],\"usage\":{\"input_tokens\":12,\"input_tokens_details\":{\"cached_tokens\":3},\"output_tokens\":34,\"output_tokens_details\":{\"reasoning_tokens\":19},\"total_tokens\":46}}";
+    const response = try std.json.parseFromSlice(
+        gen.Response,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer response.deinit();
+
+    const obj = response.value.object orelse return error.TestUnexpectedResult;
+    try std.testing.expect(obj.usage != null);
+    try std.testing.expectEqualStrings("completed", obj.status orelse "");
+    const usage = obj.usage.?;
+    try std.testing.expectEqual(@as(i64, 12), usage.input_tokens);
+    try std.testing.expectEqual(@as(i64, 46), usage.total_tokens);
+    try std.testing.expectEqual(@as(i64, 19), usage.output_tokens_details.reasoning_tokens);
+    try std.testing.expectEqual(@as(i64, 3), usage.input_tokens_details.cached_tokens);
+
+    const output = obj.output orelse return error.TestUnexpectedResult;
+    switch (output) {
+        .items => |items| {
+            try std.testing.expectEqual(@as(usize, 1), items.len);
+            switch (items[0]) {
+                .reasoning => |r| {
+                    try std.testing.expectEqualStrings("rsn_1", r.id);
+                    try std.testing.expectEqualStrings("done", r.status orelse "");
+                    try std.testing.expectEqual(@as(usize, 1), r.summary.len);
+                    try std.testing.expectEqualStrings("summary", r.summary[0].type);
+                    try std.testing.expectEqualStrings("prefetch", r.summary[0].text);
+                },
+                else => return error.TestUnexpectedResult,
+            }
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}

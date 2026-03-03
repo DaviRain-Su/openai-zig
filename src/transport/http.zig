@@ -1107,6 +1107,10 @@ test "deepseek completions requests are routed to /beta" {
     const user_balance_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/user/balance", null);
     defer std.testing.allocator.free(user_balance_url);
     try std.testing.expectEqualStrings("https://api.deepseek.com/v1", user_balance_url);
+
+    const responses_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/responses", null);
+    defer std.testing.allocator.free(responses_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", responses_url);
 }
 
 test "non-deepseek base URLs keep original host" {
