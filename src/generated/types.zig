@@ -212,7 +212,7 @@ pub const AssistantStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !AssistantStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -369,7 +369,7 @@ pub const AssistantsApiResponseFormatOption = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !AssistantsApiResponseFormatOption {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -934,7 +934,7 @@ pub const ChatCompletionRequestAssistantMessageContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestAssistantMessageContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -974,7 +974,7 @@ pub const ChatCompletionRequestAssistantMessageContentPart = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestAssistantMessageContentPart {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1031,7 +1031,7 @@ pub const ChatCompletionRequestDeveloperMessageContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestDeveloperMessageContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1092,7 +1092,7 @@ pub const ChatCompletionRequestMessage = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestMessage {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1203,7 +1203,7 @@ pub const ChatCompletionRequestSystemMessageContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestSystemMessageContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1249,7 +1249,7 @@ pub const ChatCompletionRequestToolMessageContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestToolMessageContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1295,7 +1295,7 @@ pub const ChatCompletionRequestUserMessageContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestUserMessageContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1343,7 +1343,7 @@ pub const ChatCompletionRequestUserMessageContentPart = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestUserMessageContentPart {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1547,7 +1547,7 @@ pub const ChunkingStrategyRequestParam = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChunkingStrategyRequestParam {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1649,7 +1649,7 @@ pub const ChunkingStrategyResponse = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChunkingStrategyResponse {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1763,7 +1763,7 @@ pub const CodeInterpreterToolContainer = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !CodeInterpreterToolContainer {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -1933,7 +1933,7 @@ pub const ComparisonFilterValueItems = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !ComparisonFilterValueItems {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -2008,7 +2008,7 @@ pub const ComparisonFilterValue = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !ComparisonFilterValue {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -2084,7 +2084,7 @@ pub const Filters = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !Filters {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -2211,7 +2211,7 @@ pub const ComputerAction = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ComputerAction {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -2493,7 +2493,7 @@ pub const ConversationItem = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ConversationItem {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -2798,7 +2798,7 @@ pub const ConversationParam = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ConversationParam {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -2937,7 +2937,7 @@ pub const CreateCompletionLogitBias = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateCompletionLogitBias {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3061,7 +3061,7 @@ pub const CreateEmbeddingRequestInput = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateEmbeddingRequestInput {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3141,7 +3141,7 @@ pub const CreateEvalDataSourceConfig = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !CreateEvalDataSourceConfig {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3230,7 +3230,7 @@ pub const CreateEvalItem = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !CreateEvalItem {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3331,7 +3331,7 @@ pub const CreateEvalTestingCriteria = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !CreateEvalTestingCriteria {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3536,7 +3536,7 @@ pub const CreateMessageRequestContentPart = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateMessageRequestContentPart {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3592,7 +3592,7 @@ pub const CreateMessageRequestContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateMessageRequestContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3660,7 +3660,7 @@ pub const CreateModerationRequestInput = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateModerationRequestInput {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3773,7 +3773,7 @@ pub const CreateResponse = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateResponse {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -3871,7 +3871,7 @@ pub const CreateSpeechResponseStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateSpeechResponseStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -4020,7 +4020,7 @@ pub const CreateTranscriptionResponseStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateTranscriptionResponseStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -4361,7 +4361,7 @@ pub const EvalItemContent = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !EvalItemContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -4449,7 +4449,7 @@ pub const EvalItemContentItem = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !EvalItemContentItem {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -4740,7 +4740,7 @@ pub const FineTuneChatCompletionRequestAssistantMessage = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !FineTuneChatCompletionRequestAssistantMessage {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -4925,7 +4925,7 @@ pub const FunctionAndCustomToolCallOutput = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !FunctionAndCustomToolCallOutput {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         defer parsed.deinit();
         return try jsonParseFromValue(allocator, parsed.value, options);
     }
@@ -4998,7 +4998,7 @@ pub const FunctionParameters = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !FunctionParameters {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(parsed);
     }
 
@@ -5099,7 +5099,7 @@ pub const FunctionShellCallOutputOutcome = union(enum) {
         source: anytype,
         options: std.json.ParseOptions,
     ) !FunctionShellCallOutputOutcome {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         defer parsed.deinit();
         return try jsonParseFromValue(allocator, parsed.value, options);
     }
@@ -5335,7 +5335,7 @@ pub const ImageEditStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ImageEditStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -5434,7 +5434,7 @@ pub const ImageGenStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ImageGenStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -5585,7 +5585,7 @@ pub const InputContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !InputContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -5722,7 +5722,7 @@ pub const InputParam = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !InputParam {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -5865,7 +5865,7 @@ pub const Item = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Item {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -6084,7 +6084,7 @@ pub const InputItem = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !InputItem {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -6181,7 +6181,7 @@ pub const ItemResource = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ItemResource {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -6595,7 +6595,7 @@ pub const MessageTextAnnotation = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !MessageTextAnnotation {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -6669,7 +6669,7 @@ pub const MessageTextAnnotationDelta = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !MessageTextAnnotationDelta {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -6759,7 +6759,7 @@ pub const MessageContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !MessageContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -6871,7 +6871,7 @@ pub const MessageContentDelta = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !MessageContentDelta {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -7138,7 +7138,7 @@ pub const MessageStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !MessageStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -7361,7 +7361,7 @@ pub const OutputContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !OutputContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -7547,7 +7547,7 @@ pub const OutputItem = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !OutputItem {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -7897,7 +7897,7 @@ pub const Prompt = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Prompt {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -8014,7 +8014,7 @@ pub const RealtimeAudioFormats = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeAudioFormats {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -8590,7 +8590,7 @@ pub const RealtimeConversationItem = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeConversationItem {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -9512,7 +9512,7 @@ pub const RealtimeTurnDetection = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeTurnDetection {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -9602,7 +9602,7 @@ pub const RealtimeTruncation = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RealtimeTruncation {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -9700,7 +9700,7 @@ pub const ResponseOutput = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ResponseOutput {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         defer parsed.deinit();
         return try jsonParseFromValue(allocator, parsed.value, options);
     }
@@ -9776,7 +9776,7 @@ pub const Response = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Response {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -9926,7 +9926,7 @@ pub const ResponseError = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ResponseError {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -10931,7 +10931,7 @@ pub const ResponseStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ResponseStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -12076,7 +12076,7 @@ pub const RunStepStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RunStepStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -12309,7 +12309,7 @@ pub const RunStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RunStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -12509,7 +12509,7 @@ pub const StopConfiguration = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !StopConfiguration {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return try jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -12632,7 +12632,7 @@ pub const TextResponseFormatConfiguration = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !TextResponseFormatConfiguration {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -12756,7 +12756,7 @@ pub const ThreadItem = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ThreadItem {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -12900,7 +12900,7 @@ pub const ThreadStreamEvent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ThreadStreamEvent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
@@ -13463,7 +13463,7 @@ pub const UserMessageItemContent = union(enum) {
     }
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !UserMessageItemContent {
-        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        const parsed = try JsonObject.jsonParse(allocator, source, options);
         return jsonParseFromValue(allocator, parsed, options);
     }
 
