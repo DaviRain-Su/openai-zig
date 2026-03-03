@@ -19,6 +19,7 @@ Environment overrides are also supported (priority: env vars override TOML):
 Build/run tips:
 - `zig build -Dexamples=true run-examples` will auto-skip execution when both `OPENAI_API_KEY` and `DEEPSEEK_API_KEY` are missing.
 - Add `-Drun_examples_without_key=true` to force running examples without API keys.
+- Add `-Dexamples_filter=chat_completion,models_list` to run only selected examples.
 
 - `models_list.zig` — list models.
 - `chat_completion.zig` — create a chat completion.

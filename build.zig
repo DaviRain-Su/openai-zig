@@ -1,5 +1,17 @@
 const std = @import("std");
 
+fn shouldRunExample(filter_csv: []const u8, example_name: []const u8) bool {
+    if (filter_csv.len == 0) return true;
+
+    var it = std.mem.splitScalar(u8, filter_csv, ',');
+    while (it.next()) |raw| {
+        const token = std.mem.trim(u8, raw, " \t\r\n");
+        if (token.len == 0) continue;
+        if (std.mem.eql(u8, token, example_name)) return true;
+    }
+    return false;
+}
+
 // Although this function looks imperative, it does not perform the build
 // directly and instead it mutates the build graph (`b`) that will be then
 // executed by an external runner. The functions in `std.Build` implement a DSL
@@ -175,6 +187,7 @@ pub fn build(b: *std.Build) void {
         const has_deepseek_key = std.process.hasEnvVarConstant("DEEPSEEK_API_KEY");
         const has_any_api_key = has_openai_key or has_deepseek_key;
         const run_examples_without_key = b.option(bool, "run_examples_without_key", "Run examples even when API keys are missing") orelse false;
+        const examples_filter_csv = b.option([]const u8, "examples_filter", "Comma-separated example names to run (e.g. chat_completion,models_list)") orelse "";
         const examples = [_]struct { name: []const u8, path: []const u8 }{
             .{ .name = "models_list", .path = "examples/models_list.zig" },
             .{ .name = "chat_completion", .path = "examples/chat_completion.zig" },
@@ -217,7 +230,11 @@ pub fn build(b: *std.Build) void {
             run_examples.dependOn(&warn_missing_key.step);
         }
 
-        inline for (examples) |ex| {
+        var selected_example_count: usize = 0;
+        for (examples) |ex| {
+            if (!shouldRunExample(examples_filter_csv, ex.name)) continue;
+            selected_example_count += 1;
+
             const exe_example = b.addExecutable(.{
                 .name = ex.name,
                 .root_module = b.createModule(.{
@@ -233,8 +250,8 @@ pub fn build(b: *std.Build) void {
                 }),
             });
 
-            const run_step_name = std.fmt.comptimePrint("run-{s}", .{ex.name});
-            const run_step_desc = std.fmt.comptimePrint("Run example {s}", .{ex.name});
+            const run_step_name = b.fmt("run-{s}", .{ex.name});
+            const run_step_desc = b.fmt("Run example {s}", .{ex.name});
             const per_example_step = b.step(run_step_name, run_step_desc);
 
             if (has_any_api_key or run_examples_without_key) {
@@ -243,6 +260,16 @@ pub fn build(b: *std.Build) void {
                 per_example_step.dependOn(&run_ex.step);
             }
         }
+
+        if (selected_example_count == 0 and examples_filter_csv.len != 0) {
+            const warn_empty_filter = b.addSystemCommand(&[_][]const u8{
+                "sh",
+                "-c",
+                "echo 'No examples matched -Dexamples_filter. Use names like chat_completion,models_list.'",
+            });
+            run_examples.dependOn(&warn_empty_filter.step);
+        }
+
         run_step.dependOn(run_examples);
     }
 

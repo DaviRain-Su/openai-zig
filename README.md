@@ -106,12 +106,14 @@ zig build          # compile
 zig build run      # run the demo (models list + chat completion)
 zig build -Dexamples=true run-examples  # build + run example binaries (auto-skip when no API key)
 zig build -Dexamples=true -Drun_examples_without_key=true run-examples  # force-run examples without API key
+zig build -Dexamples=true -Dexamples_filter=chat_completion,models_list run-examples  # run selected examples only
 bash scripts/check-op-coverage.sh     # verify operation coverage against generated/ir.json
 ```
 
 `run-examples` key behavior:
 - If neither `OPENAI_API_KEY` nor `DEEPSEEK_API_KEY` is set, `run-examples` now skips gracefully with a single warning line.
 - Use `-Drun_examples_without_key=true` to force running all example binaries even without API keys.
+- Use `-Dexamples_filter=name1,name2` to run only specific examples by name.
 
 ## Examples
 - `examples/models_list.zig` — list available models
