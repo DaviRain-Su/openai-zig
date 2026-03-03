@@ -132,14 +132,14 @@ pub const EvalSample = EvalItemContent;
 pub const EvalDatasourceItem = CreateEvalItem;
 pub const GenericContent = union(enum) {
     text: []const u8,
-    items: JsonObjectArray,
+    items: []const GenericContent,
     raw: JsonObject,
 
     pub fn forText(value: []const u8) GenericContent {
         return .{ .text = value };
     }
 
-    pub fn forItems(value: JsonObjectArray) GenericContent {
+    pub fn forItems(value: []const GenericContent) GenericContent {
         return .{ .items = value };
     }
 
@@ -168,7 +168,7 @@ pub const GenericContent = union(enum) {
         switch (source) {
             .string => return .{ .text = source.string },
             .array => {
-                const parsed = std.json.parseFromValue(JsonObjectArray, allocator, source, options) catch return .{ .raw = source };
+                const parsed = std.json.parseFromValue([]const GenericContent, allocator, source, options) catch return .{ .raw = source };
                 defer parsed.deinit();
                 return .{ .items = parsed.value };
             },

@@ -2832,8 +2832,14 @@ test "generic content parses text and array variants" {
     switch (parsed_array.value) {
         .items => |items| {
             try std.testing.expectEqual(@as(usize, 2), items.len);
-            try std.testing.expectEqual(@as(i64, 1), items[0].object.get("a").?.integer);
-            try std.testing.expectEqualStrings("x", items[1].object.get("b").?.string);
+            switch (items[0]) {
+                .raw => |value| try std.testing.expectEqual(@as(i64, 1), value.object.get("a").?.integer),
+                else => try std.testing.expect(false),
+            }
+            switch (items[1]) {
+                .raw => |value| try std.testing.expectEqualStrings("x", value.object.get("b").?.string),
+                else => try std.testing.expect(false),
+            }
         },
         else => try std.testing.expect(false),
     }
