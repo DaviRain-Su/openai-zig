@@ -4629,3 +4629,116 @@ test "deepseek response stream output_text.done preserves final text" {
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream created event carries response payload" {
+    const payload =
+        \\{"type":"response.created","response":{"id":"resp_created_1","object":"response","status":"in_progress","model":"deepseek-reasoner","created_at":1710000100,"usage":{"input_tokens":12,"input_tokens_details":{"cached_tokens":2},"output_tokens":4,"output_tokens_details":{"reasoning_tokens":0},"total_tokens":16}},"sequence_number":24}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .created => |evt| {
+            try std.testing.expectEqual(@as(i64, 24), evt.sequence_number);
+            const response = evt.response.object;
+            try std.testing.expectEqualStrings("resp_created_1", response.id orelse "");
+            try std.testing.expectEqualStrings("in_progress", response.status orelse "");
+            try std.testing.expectEqual(@as(i64, 16), response.usage.?.total_tokens);
+            try std.testing.expectEqual(@as(i64, 2), response.usage.?.input_tokens_details.cached_tokens);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream queued event parses nested response status" {
+    const payload =
+        \\{"type":"response.queued","response":{"id":"resp_queued_1","object":"response","status":"queued","model":"deepseek-reasoner","created_at":1710000110},"sequence_number":25}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .queued => |evt| {
+            try std.testing.expectEqual(@as(i64, 25), evt.sequence_number);
+            try std.testing.expectEqualStrings("resp_queued_1", evt.response.object.id orelse "");
+            try std.testing.expectEqualStrings("queued", evt.response.object.status orelse "");
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream reasoning summary text done" {
+    const payload =
+        \\{"type":"response.reasoning_summary_text.done","item_id":"msg_5","output_index":6,"summary_index":0,"text":"reasoning summary","sequence_number":26}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .reasoning_summary_text_done => |evt| {
+            try std.testing.expectEqualStrings("msg_5", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 6), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.summary_index);
+            try std.testing.expectEqualStrings("reasoning summary", evt.text);
+            try std.testing.expectEqual(@as(i64, 26), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream reasoning text done and delta" {
+    const delta_payload =
+        \\{"type":"response.reasoning_text.delta","item_id":"msg_6","output_index":7,"content_index":0,"delta":"calc","sequence_number":27}
+    ;
+    const delta_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        delta_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer delta_event.deinit();
+
+    switch (delta_event.value) {
+        .reasoning_text_delta => |evt| {
+            try std.testing.expectEqualStrings("msg_6", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 27), evt.sequence_number);
+            try std.testing.expectEqualStrings("calc", evt.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const done_payload =
+        \\{"type":"response.reasoning_text.done","item_id":"msg_6","output_index":7,"content_index":0,"text":"calculation complete","sequence_number":28}
+    ;
+    const done_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        done_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer done_event.deinit();
+
+    switch (done_event.value) {
+        .reasoning_text_done => |evt| {
+            try std.testing.expectEqualStrings("msg_6", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 28), evt.sequence_number);
+            try std.testing.expectEqualStrings("calculation complete", evt.text);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
