@@ -218,7 +218,7 @@ pub const AssistantStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !AssistantStreamEvent {
         switch (source) {
@@ -375,7 +375,7 @@ pub const AssistantsApiResponseFormatOption = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !AssistantsApiResponseFormatOption {
         _ = allocator;
@@ -940,7 +940,7 @@ pub const ChatCompletionRequestAssistantMessageContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChatCompletionRequestAssistantMessageContent {
         switch (source) {
@@ -980,7 +980,7 @@ pub const ChatCompletionRequestAssistantMessageContentPart = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChatCompletionRequestAssistantMessageContentPart {
         switch (source) {
@@ -1037,7 +1037,7 @@ pub const ChatCompletionRequestDeveloperMessageContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChatCompletionRequestDeveloperMessageContent {
         switch (source) {
@@ -1098,7 +1098,7 @@ pub const ChatCompletionRequestMessage = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChatCompletionRequestMessage {
         switch (source) {
@@ -1209,7 +1209,7 @@ pub const ChatCompletionRequestSystemMessageContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChatCompletionRequestSystemMessageContent {
         switch (source) {
@@ -1255,7 +1255,7 @@ pub const ChatCompletionRequestToolMessageContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChatCompletionRequestToolMessageContent {
         switch (source) {
@@ -1301,7 +1301,7 @@ pub const ChatCompletionRequestUserMessageContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChatCompletionRequestUserMessageContent {
         switch (source) {
@@ -1349,7 +1349,7 @@ pub const ChatCompletionRequestUserMessageContentPart = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChatCompletionRequestUserMessageContentPart {
         switch (source) {
@@ -1553,7 +1553,7 @@ pub const ChunkingStrategyRequestParam = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChunkingStrategyRequestParam {
         _ = allocator;
@@ -1655,7 +1655,7 @@ pub const ChunkingStrategyResponse = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ChunkingStrategyResponse {
         _ = allocator;
@@ -1769,7 +1769,7 @@ pub const CodeInterpreterToolContainer = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CodeInterpreterToolContainer {
         switch (source) {
@@ -1848,7 +1848,7 @@ pub const CodeInterpreterOutput = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CodeInterpreterOutput {
         _ = allocator;
@@ -1939,7 +1939,7 @@ pub const ComparisonFilterValueItems = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ComparisonFilterValueItems {
         _ = options;
@@ -2014,7 +2014,7 @@ pub const ComparisonFilterValue = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ComparisonFilterValue {
         switch (source) {
@@ -2090,7 +2090,7 @@ pub const Filters = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !Filters {
         switch (source) {
@@ -2217,7 +2217,7 @@ pub const ComputerAction = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ComputerAction {
         switch (source) {
@@ -2499,7 +2499,7 @@ pub const ConversationItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ConversationItem {
         switch (source) {
@@ -2804,7 +2804,7 @@ pub const ConversationParam = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ConversationParam {
         switch (source) {
@@ -2943,7 +2943,7 @@ pub const CreateCompletionLogitBias = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateCompletionLogitBias {
         _ = options;
@@ -3067,7 +3067,7 @@ pub const CreateEmbeddingRequestInput = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateEmbeddingRequestInput {
         switch (source) {
@@ -3147,7 +3147,7 @@ pub const CreateEvalDataSourceConfig = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateEvalDataSourceConfig {
         if (source != .object) return .{ .raw = source };
@@ -3236,7 +3236,7 @@ pub const CreateEvalItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateEvalItem {
         if (source != .object) return .{ .raw = source };
@@ -3337,7 +3337,7 @@ pub const CreateEvalTestingCriteria = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateEvalTestingCriteria {
         if (source != .object) return .{ .raw = source };
@@ -3542,7 +3542,7 @@ pub const CreateMessageRequestContentPart = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateMessageRequestContentPart {
         switch (source) {
@@ -3598,7 +3598,7 @@ pub const CreateMessageRequestContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateMessageRequestContent {
         switch (source) {
@@ -3666,7 +3666,7 @@ pub const CreateModerationRequestInput = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateModerationRequestInput {
         switch (source) {
@@ -3779,7 +3779,7 @@ pub const CreateResponse = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateResponse {
         const parsed = std.json.parseFromValue(
@@ -3877,7 +3877,7 @@ pub const CreateSpeechResponseStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateSpeechResponseStreamEvent {
         switch (source) {
@@ -4026,7 +4026,7 @@ pub const CreateTranscriptionResponseStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !CreateTranscriptionResponseStreamEvent {
         switch (source) {
@@ -4367,7 +4367,7 @@ pub const EvalItemContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !EvalItemContent {
         switch (source) {
@@ -4455,7 +4455,7 @@ pub const EvalItemContentItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !EvalItemContentItem {
         if (source == .string) {
@@ -4746,7 +4746,7 @@ pub const FineTuneChatCompletionRequestAssistantMessage = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !FineTuneChatCompletionRequestAssistantMessage {
         if (source != .object) return .{ .raw = source };
@@ -4932,7 +4932,7 @@ pub const FunctionAndCustomToolCallOutput = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !FunctionAndCustomToolCallOutput {
         if (source != .object) return .{ .raw = source };
@@ -5106,7 +5106,7 @@ pub const FunctionShellCallOutputOutcome = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !FunctionShellCallOutputOutcome {
         if (source != .object) return .{ .raw = source };
@@ -5341,7 +5341,7 @@ pub const ImageEditStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ImageEditStreamEvent {
         switch (source) {
@@ -5440,7 +5440,7 @@ pub const ImageGenStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ImageGenStreamEvent {
         switch (source) {
@@ -5591,7 +5591,7 @@ pub const InputContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !InputContent {
         switch (source) {
@@ -5728,7 +5728,7 @@ pub const InputParam = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !InputParam {
         switch (source) {
@@ -5871,7 +5871,7 @@ pub const Item = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !Item {
         switch (source) {
@@ -6090,7 +6090,7 @@ pub const InputItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !InputItem {
         switch (source) {
@@ -6187,7 +6187,7 @@ pub const ItemResource = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ItemResource {
         switch (source) {
@@ -6601,7 +6601,7 @@ pub const MessageTextAnnotation = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !MessageTextAnnotation {
         switch (source) {
@@ -6675,7 +6675,7 @@ pub const MessageTextAnnotationDelta = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !MessageTextAnnotationDelta {
         switch (source) {
@@ -6765,7 +6765,7 @@ pub const MessageContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !MessageContent {
         switch (source) {
@@ -6877,7 +6877,7 @@ pub const MessageContentDelta = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !MessageContentDelta {
         switch (source) {
@@ -7144,7 +7144,7 @@ pub const MessageStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !MessageStreamEvent {
         switch (source) {
@@ -7367,7 +7367,7 @@ pub const OutputContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !OutputContent {
         switch (source) {
@@ -7553,7 +7553,7 @@ pub const OutputItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !OutputItem {
         switch (source) {
@@ -7903,7 +7903,7 @@ pub const Prompt = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !Prompt {
         _ = allocator;
@@ -8020,7 +8020,7 @@ pub const RealtimeAudioFormats = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RealtimeAudioFormats {
         _ = allocator;
@@ -8596,7 +8596,7 @@ pub const RealtimeConversationItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RealtimeConversationItem {
         switch (source) {
@@ -9518,7 +9518,7 @@ pub const RealtimeTurnDetection = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RealtimeTurnDetection {
         switch (source) {
@@ -9608,7 +9608,7 @@ pub const RealtimeTruncation = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RealtimeTruncation {
         switch (source) {
@@ -9707,7 +9707,7 @@ pub const ResponseOutput = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ResponseOutput {
         switch (source) {
@@ -9782,7 +9782,7 @@ pub const Response = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !Response {
         const parsed = std.json.parseFromValue(
@@ -9932,7 +9932,7 @@ pub const ResponseError = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ResponseError {
         const parsed = std.json.parseFromValue(
@@ -10937,7 +10937,7 @@ pub const ResponseStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ResponseStreamEvent {
         switch (source) {
@@ -11737,7 +11737,7 @@ pub const RunStepDeltaStepDetailsToolCall = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RunStepDeltaStepDetailsToolCall {
         _ = allocator;
@@ -11813,7 +11813,7 @@ pub const RunStepDeltaStepDetails = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RunStepDeltaStepDetails {
         _ = allocator;
@@ -11858,7 +11858,7 @@ pub const RunStepDetailsToolCall = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RunStepDetailsToolCall {
         _ = allocator;
@@ -11945,7 +11945,7 @@ pub const RunStepDetails = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RunStepDetails {
         _ = allocator;
@@ -12082,7 +12082,7 @@ pub const RunStepStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RunStepStreamEvent {
         switch (source) {
@@ -12315,7 +12315,7 @@ pub const RunStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !RunStreamEvent {
         switch (source) {
@@ -12515,7 +12515,7 @@ pub const StopConfiguration = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !StopConfiguration {
         switch (source) {
@@ -12638,7 +12638,7 @@ pub const TextResponseFormatConfiguration = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !TextResponseFormatConfiguration {
         switch (source) {
@@ -12762,7 +12762,7 @@ pub const ThreadItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ThreadItem {
         switch (source) {
@@ -12906,7 +12906,7 @@ pub const ThreadStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ThreadStreamEvent {
         switch (source) {
@@ -13022,7 +13022,7 @@ pub const Tool = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !Tool {
         _ = allocator;
@@ -13158,7 +13158,7 @@ pub const ToolChoiceParam = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !ToolChoiceParam {
         _ = allocator;
@@ -13469,7 +13469,7 @@ pub const UserMessageItemContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: JsonObject,
+        source: FunctionParameters,
         options: std.json.ParseOptions,
     ) !UserMessageItemContent {
         switch (source) {
