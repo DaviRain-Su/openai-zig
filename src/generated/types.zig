@@ -3103,7 +3103,7 @@ pub const CreateEvalCompletionsRunDataSource = struct {
         tools: ?[]const ChatCompletionTool,
     },
     model: ?[]const u8,
-    source: JsonObject,
+    source: FunctionParameters,
 };
 pub const CreateEvalDataSourceConfig = union(enum) {
     custom: CreateEvalCustomDataSourceConfig,
@@ -3269,7 +3269,7 @@ pub const CreateEvalItem = union(enum) {
 };
 pub const CreateEvalJsonlRunDataSource = struct {
     type: []const u8,
-    source: JsonObject,
+    source: FunctionParameters,
 };
 pub const CreateEvalLabelModelGrader = struct {
     type: []const u8,

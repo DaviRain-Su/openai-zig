@@ -3964,3 +3964,33 @@ test "migrated semantic fields keep schema/raw behavior" {
         else => try std.testing.expect(false),
     }
 }
+
+test "eval create request sources now parse via FunctionParameters" {
+    const completions_payload =
+        "{\"type\":\"completions\",\"input_messages\":[\"hello\"],\"source\":{\"id\":\"s1\",\"name\":\"demo\"}}";
+    const completions_request = try std.json.parseFromSlice(
+        gen.CreateEvalCompletionsRunDataSource,
+        std.testing.allocator,
+        completions_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer completions_request.deinit();
+    switch (completions_request.value.source) {
+        .schema => |value| try std.testing.expectEqualStrings("s1", value.object.get("id").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("s1", value.object.get("id").?.string),
+    }
+
+    const jsonl_payload =
+        "{\"type\":\"jsonl\",\"source\":{\"id\":\"file_123\"}}";
+    const jsonl_request = try std.json.parseFromSlice(
+        gen.CreateEvalJsonlRunDataSource,
+        std.testing.allocator,
+        jsonl_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer jsonl_request.deinit();
+    switch (jsonl_request.value.source) {
+        .schema => |value| try std.testing.expectEqualStrings("file_123", value.object.get("id").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("file_123", value.object.get("id").?.string),
+    }
+}
