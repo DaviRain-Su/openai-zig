@@ -5545,3 +5545,66 @@ test "deepseek response stream output_text_annotation_added and reasoning_summar
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream audio event variants" {
+    const audio_delta_payload =
+        \\{"type":"response.audio.delta","sequence_number":64,"delta":"data_chunk"}
+    ;
+    const audio_delta_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        audio_delta_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer audio_delta_event.deinit();
+
+    switch (audio_delta_event.value) {
+        .audio_delta => |evt| {
+            try std.testing.expectEqual(@as(i64, 64), evt.sequence_number);
+            try std.testing.expectEqualStrings("data_chunk", evt.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const audio_done_payload =
+        \\{"type":"response.audio.done","sequence_number":65}
+    ;
+    const audio_done_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        audio_done_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer audio_done_event.deinit();
+
+    switch (audio_done_event.value) {
+        .audio_done => |evt| {
+            try std.testing.expectEqual(@as(i64, 65), evt.sequence_number);
+            try std.testing.expectEqualStrings("response.audio.done", evt.type);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream image generation in progress event" {
+    const payload =
+        \\{"type":"response.image_generation_call.in_progress","output_index":20,"sequence_number":66,"item_id":"img_3"}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .image_gen_call_in_progress => |evt| {
+            try std.testing.expectEqualStrings("img_3", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 20), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 66), evt.sequence_number);
+            try std.testing.expectEqualStrings("response.image_generation_call.in_progress", evt.type);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
