@@ -130,8 +130,8 @@ pub const AssignedRoleDetails = struct {
     created_at: ?i64,
     updated_at: ?i64,
     created_by: ?[]const u8,
-    created_by_user_obj: std.json.Value,
-    metadata: std.json.Value,
+    created_by_user_obj: Metadata,
+    metadata: Metadata,
 };
 pub const AssistantMessageItem = struct {
     id: []const u8,
@@ -1496,7 +1496,7 @@ pub const ChatkitConfigurationParam = struct {
 pub const ChatkitWorkflow = struct {
     id: []const u8,
     version: ?[]const u8,
-    state_variables: std.json.Value,
+    state_variables: Metadata,
     tracing: ChatkitWorkflowTracing,
 };
 pub const ChatkitWorkflowTracing = struct {
@@ -2832,7 +2832,7 @@ pub const ConversationParam_2 = struct {
 pub const ConversationResource = struct {
     id: []const u8,
     object: []const u8,
-    metadata: std.json.Value,
+    metadata: Metadata,
     created_at: i64,
 };
 pub const CostsResult = struct {
@@ -3193,7 +3193,7 @@ pub const CreateEvalDataSourceConfig = union(enum) {
 };
 pub const CreateEvalCustomDataSourceConfig = struct {
     type: []const u8,
-    item_schema: std.json.Value,
+    item_schema: FunctionParameters,
     include_sample_schema: ?bool,
 };
 pub const CreateEvalSimpleInputMessage = struct {
@@ -3411,7 +3411,7 @@ pub const CreateEvalRequest = struct {
 };
 pub const CreateEvalResponsesRunDataSource = struct {
     type: []const u8,
-    input_messages: ?std.json.Value,
+    input_messages: ?Content,
     sampling_params: ?struct {
         reasoning_effort: ?ReasoningEffort,
         temperature: ?f64,
@@ -3424,16 +3424,16 @@ pub const CreateEvalResponsesRunDataSource = struct {
         },
     },
     model: ?[]const u8,
-    source: std.json.Value,
+    source: FunctionParameters,
 };
 pub const CreateEvalRunRequest = struct {
     name: ?[]const u8,
     metadata: ?Metadata,
-    data_source: std.json.Value,
+    data_source: FunctionParameters,
 };
 pub const CreateEvalStoredCompletionsDataSourceConfig = struct {
     type: []const u8,
-    metadata: ?std.json.Value,
+    metadata: ?Metadata,
 };
 pub const CreateFileRequest = struct {
     file: []const u8,
@@ -3473,7 +3473,7 @@ pub const CreateGroupUserBody = struct {
     user_id: []const u8,
 };
 pub const CreateImageEditRequest = struct {
-    image: std.json.Value,
+    image: FunctionParameters,
     prompt: []const u8,
     mask: ?[]const u8,
     background: ?[]const u8,
@@ -4259,7 +4259,7 @@ pub const DragPoint = struct {
 };
 pub const EasyInputMessage = struct {
     role: []const u8,
-    content: std.json.Value,
+    content: Content,
     type: ?[]const u8,
 };
 pub const Embedding = struct {
@@ -4299,7 +4299,7 @@ pub const EvalApiError = struct {
 };
 pub const EvalCustomDataSourceConfig = struct {
     type: []const u8,
-    schema: std.json.Value,
+    schema: FunctionParameters,
 };
 pub const EvalGraderLabelModel = GraderLabelModel;
 pub const EvalGraderPython = GraderPython;
@@ -4589,7 +4589,7 @@ pub const EvalRun = struct {
         passed: i64,
         failed: i64,
     },
-    data_source: std.json.Value,
+    data_source: FunctionParameters,
     metadata: Metadata,
     _error: EvalApiError,
 };
@@ -4608,7 +4608,7 @@ pub const EvalRunOutputItem = struct {
     created_at: i64,
     status: []const u8,
     datasource_item_id: i64,
-    datasource_item: std.json.Value,
+    datasource_item: FunctionParameters,
     results: []const EvalRunOutputItemResult,
     sample: struct {
         input: []const struct {
@@ -4885,14 +4885,14 @@ pub const FineTuningJobEvent = struct {
     level: []const u8,
     message: []const u8,
     type: ?[]const u8,
-    data: ?std.json.Value,
+    data: ?FunctionParameters,
 };
 pub const FunctionCallItemStatus = []const u8;
 pub const FunctionCallOutputItemParam = struct {
     id: ?[]const u8,
     call_id: []const u8,
     type: []const u8,
-    output: std.json.Value,
+    output: FunctionParameters,
     status: ?FunctionCallItemStatus,
 };
 pub const FunctionAndCustomToolCallOutput = union(enum) {
@@ -5156,7 +5156,7 @@ pub const FunctionTool = struct {
     type: []const u8,
     name: []const u8,
     description: ?[]const u8,
-    parameters: std.json.Value,
+    parameters: FunctionParameters,
     strict: bool,
 };
 pub const FunctionToolCall = struct {
@@ -5171,7 +5171,7 @@ pub const FunctionToolCallOutput = struct {
     id: ?[]const u8,
     type: []const u8,
     call_id: []const u8,
-    output: std.json.Value,
+    output: FunctionParameters,
     status: ?[]const u8,
 };
 pub const FunctionToolCallOutputResource = FunctionToolCallOutput;
@@ -5187,7 +5187,7 @@ pub const GraderLabelModel = struct {
 pub const GraderMulti = struct {
     type: []const u8,
     name: []const u8,
-    graders: std.json.Value,
+    graders: FunctionParameters,
     calculate_output: []const u8,
 };
 pub const GraderPython = struct {
