@@ -310,3 +310,4 @@
 - [x] 继续收窄（run data source）：引入 `EvalRunDataSource` 结构化 union（`completions/jsonl/responses/raw`），并将 `CreateEvalRunRequest.data_source` 与 `EvalRun.data_source` 从 `std.json.Value` 收敛为该 union；新增兼容测试覆盖 typed 解析与未知类型 raw fallback。
 - [x] 继续收敛高频动态字段表示：将 `raw/source` 字段与 `forRaw` 入参从直接 `std.json.Value` 统一改为语义根别名 `JsonObject`，消除 `src/generated/types.zig` 中所有字段级 `std.json.Value` 书写（仅保留根别名定义）。
 - [x] 继续收敛 alias：`Metadata` 改为复用 `FunctionParameters`（不再直接 alias `JsonObject`），将语义根 alias 进一步收敛为 `FunctionParameters` + `JsonObject` 两层。
+- [x] 继续收窄（fine-tune message payloads）：将 `FineTuneChatRequestInput.messages`、`FineTunePreferenceRequestInput.input.messages`、`FineTuneReinforcementRequestInput.messages` 从 JSON 数组收敛为 `[]const ChatCompletionRequestMessage`；并将 `FineTunePreferenceRequestInput.preferred_output/non_preferred_output` 收敛为 `[]const FineTuneChatCompletionRequestAssistantMessage`，补充 typed + raw fallback 解析测试。

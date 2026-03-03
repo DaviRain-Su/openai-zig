@@ -4553,7 +4553,7 @@ pub const FineTuneChatCompletionRequestAssistantMessage = union(enum) {
     }
 };
 pub const FineTuneChatRequestInput = struct {
-    messages: ?JsonObjectArray,
+    messages: ?[]const ChatCompletionRequestMessage,
     tools: ?[]const ChatCompletionTool,
     parallel_tool_calls: ?ParallelToolCalls,
     functions: ?[]const ChatCompletionFunctions,
@@ -4575,12 +4575,12 @@ pub const FineTuneMethod = struct {
 };
 pub const FineTunePreferenceRequestInput = struct {
     input: ?struct {
-        messages: ?JsonObjectArray,
+        messages: ?[]const ChatCompletionRequestMessage,
         tools: ?[]const ChatCompletionTool,
         parallel_tool_calls: ?ParallelToolCalls,
     },
-    preferred_output: ?JsonObjectArray,
-    non_preferred_output: ?JsonObjectArray,
+    preferred_output: ?[]const FineTuneChatCompletionRequestAssistantMessage,
+    non_preferred_output: ?[]const FineTuneChatCompletionRequestAssistantMessage,
 };
 pub const FineTuneReinforcementHyperparameters = struct {
     batch_size: ?i64,
@@ -4596,7 +4596,7 @@ pub const FineTuneReinforcementMethod = struct {
     hyperparameters: ?FineTuneReinforcementHyperparameters,
 };
 pub const FineTuneReinforcementRequestInput = struct {
-    messages: JsonObjectArray,
+    messages: []const ChatCompletionRequestMessage,
     tools: ?[]const ChatCompletionTool,
 };
 pub const FineTuneSupervisedHyperparameters = struct {

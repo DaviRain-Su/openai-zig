@@ -3058,3 +3058,85 @@ test "create eval run request parses typed data source" {
         else => try std.testing.expect(false),
     }
 }
+
+test "fine-tune chat request input parses typed message unions" {
+    const payload =
+        \\{"messages":[{"role":"user","content":"hello"},{"role":"assistant","content":"world"}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.FineTuneChatRequestInput,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expect(parsed.value.messages != null);
+    try std.testing.expectEqual(@as(usize, 2), parsed.value.messages.?.len);
+    switch (parsed.value.messages.?[0]) {
+        .user => |value| try std.testing.expectEqualStrings("user", value.role),
+        else => try std.testing.expect(false),
+    }
+    switch (parsed.value.messages.?[1]) {
+        .assistant => |value| try std.testing.expectEqualStrings("assistant", value.role),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "fine-tune preference request input parses assistant outputs with raw fallback" {
+    const payload =
+        \\{"input":{"messages":[{"role":"user","content":"prompt"}]},"preferred_output":[{"role":"assistant","content":"good"}],"non_preferred_output":[{"role":"tool","content":"bad"}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.FineTunePreferenceRequestInput,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const input = parsed.value.input orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expect(input.messages != null);
+    switch (input.messages.?[0]) {
+        .user => |value| try std.testing.expectEqualStrings("user", value.role),
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expect(parsed.value.preferred_output != null);
+    switch (parsed.value.preferred_output.?[0]) {
+        .message => |value| try std.testing.expectEqualStrings("assistant", value.role),
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expect(parsed.value.non_preferred_output != null);
+    switch (parsed.value.non_preferred_output.?[0]) {
+        .raw => |value| try std.testing.expectEqualStrings("tool", value.object.get("role").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "fine-tune reinforcement request input parses typed message unions" {
+    const payload =
+        \\{"messages":[{"role":"user","content":"q"},{"role":"assistant","content":"a"}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.FineTuneReinforcementRequestInput,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(@as(usize, 2), parsed.value.messages.len);
+    switch (parsed.value.messages[0]) {
+        .user => |value| try std.testing.expectEqualStrings("user", value.role),
+        else => try std.testing.expect(false),
+    }
+    switch (parsed.value.messages[1]) {
+        .assistant => |value| try std.testing.expectEqualStrings("assistant", value.role),
+        else => try std.testing.expect(false),
+    }
+}
