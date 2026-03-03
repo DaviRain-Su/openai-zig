@@ -4438,3 +4438,101 @@ test "deepseek response stream function_call argument events" {
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream output_item_done wraps function_tool_call item" {
+    const payload =
+        \\{"type":"response.output_item.done","output_index":1,"sequence_number":2,"item":{"type":"function_tool_call","id":"ftc_1","call_id":"call_1","name":"lookup_user","arguments":"{\"user_id\":\"u_123\"}","status":"completed"}}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .output_item_done => |evt| {
+            try std.testing.expectEqual(@as(i64, 1), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 2), evt.sequence_number);
+            switch (evt.item) {
+                .function_tool_call => |call| {
+                    try std.testing.expectEqualStrings("ftc_1", call.id orelse "");
+                    try std.testing.expectEqualStrings("call_1", call.call_id);
+                    try std.testing.expectEqualStrings("lookup_user", call.name);
+                    try std.testing.expectEqualStrings("{\"user_id\":\"u_123\"}", call.arguments);
+                },
+                else => return error.TestUnexpectedResult,
+            }
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream response.in_progress parses nested response" {
+    const payload =
+        \\{"type":"response.in_progress","response":{"id":"resp_1","object":"response","status":"in_progress","model":"deepseek-reasoner","created_at":1710000001},"sequence_number":3}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .in_progress => |evt| {
+            try std.testing.expectEqual(@as(i64, 3), evt.sequence_number);
+            const response = evt.response.object;
+            try std.testing.expectEqualStrings("resp_1", response.id orelse "");
+            try std.testing.expectEqualStrings("response", response.object orelse "");
+            try std.testing.expectEqualStrings("in_progress", response.status orelse "");
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream response.failed preserves response payload" {
+    const payload =
+        \\{"type":"response.failed","response":{"id":"resp_2","object":"response","status":"failed","model":"deepseek-reasoner","created_at":1710000002},"sequence_number":11}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .failed => |evt| {
+            try std.testing.expectEqual(@as(i64, 11), evt.sequence_number);
+            try std.testing.expectEqualStrings("resp_2", evt.response.object.id orelse "");
+            try std.testing.expectEqualStrings("failed", evt.response.object.status orelse "");
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream error event captures message and optional code" {
+    const payload =
+        \\{"type":"error","code":"server_error","message":"overload","param":null,"sequence_number":12}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .err => |evt| {
+            try std.testing.expectEqual(@as(i64, 12), evt.sequence_number);
+            try std.testing.expectEqualStrings("overload", evt.message);
+            try std.testing.expectEqualStrings("server_error", evt.code orelse "");
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
