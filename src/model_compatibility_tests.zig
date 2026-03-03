@@ -2999,3 +2999,62 @@ test "eval data source config keeps raw fallback for unknown type" {
         else => try std.testing.expect(false),
     }
 }
+
+test "eval run data source parses typed variants and raw fallback" {
+    const responses_payload =
+        \\{"type":"responses","source":{"dataset":"eval-set"}}
+    ;
+    const parsed_responses = try std.json.parseFromSlice(
+        gen.EvalRunDataSource,
+        std.testing.allocator,
+        responses_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_responses.deinit();
+
+    switch (parsed_responses.value) {
+        .responses => |value| {
+            try std.testing.expectEqualStrings("responses", value.type);
+            try std.testing.expectEqualStrings("eval-set", value.source.object.get("dataset").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"type":"future_run_source","k":1}
+    ;
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.EvalRunDataSource,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future_run_source", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create eval run request parses typed data source" {
+    const payload =
+        \\{"name":"nightly-eval","data_source":{"type":"completions","source":{"id":"src_1"}}}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.CreateEvalRunRequest,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqualStrings("nightly-eval", parsed.value.name.?);
+    switch (parsed.value.data_source) {
+        .completions => |value| {
+            try std.testing.expectEqualStrings("completions", value.type);
+            try std.testing.expectEqualStrings("src_1", value.source.object.get("id").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}

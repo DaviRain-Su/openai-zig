@@ -3306,10 +3306,85 @@ pub const CreateEvalResponsesRunDataSource = struct {
     model: ?[]const u8,
     source: std.json.Value,
 };
+pub const EvalRunDataSource = union(enum) {
+    completions: CreateEvalCompletionsRunDataSource,
+    jsonl: CreateEvalJsonlRunDataSource,
+    responses: CreateEvalResponsesRunDataSource,
+    raw: JsonObject,
+
+    pub fn forRaw(value: JsonObject) EvalRunDataSource {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: EvalRunDataSource, writer: anytype) !void {
+        switch (self) {
+            .completions => |value| try writer.write(value),
+            .jsonl => |value| try writer.write(value),
+            .responses => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !EvalRunDataSource {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !EvalRunDataSource {
+        switch (source) {
+            .object => |root| {
+                const type_value = root.get("type");
+                const kind = if (type_value != null and type_value.? == .string) type_value.?.string else null;
+
+                if (kind) |value| {
+                    if (std.mem.eql(u8, value, "completions")) {
+                        const parsed = std.json.parseFromValue(CreateEvalCompletionsRunDataSource, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .completions = parsed.value };
+                    }
+
+                    if (std.mem.eql(u8, value, "responses")) {
+                        const parsed = std.json.parseFromValue(CreateEvalResponsesRunDataSource, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .responses = parsed.value };
+                    }
+
+                    if (std.mem.eql(u8, value, "jsonl")) {
+                        const parsed = std.json.parseFromValue(CreateEvalJsonlRunDataSource, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .jsonl = parsed.value };
+                    }
+                }
+
+                if (std.json.parseFromValue(CreateEvalCompletionsRunDataSource, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .completions = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(CreateEvalResponsesRunDataSource, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .responses = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(CreateEvalJsonlRunDataSource, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .jsonl = parsed.value };
+                } else |_| {}
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const CreateEvalRunRequest = struct {
     name: ?[]const u8,
     metadata: ?Metadata,
-    data_source: std.json.Value,
+    data_source: EvalRunDataSource,
 };
 pub const CreateEvalStoredCompletionsDataSourceConfig = struct {
     type: []const u8,
@@ -4297,7 +4372,7 @@ pub const EvalRun = struct {
         passed: i64,
         failed: i64,
     },
-    data_source: std.json.Value,
+    data_source: EvalRunDataSource,
     metadata: Metadata,
     _error: EvalApiError,
 };
