@@ -3910,3 +3910,57 @@ test "function-parameter aliases parse as schema/raw across migrated fields" {
         else => try std.testing.expect(false),
     }
 }
+
+test "migrated semantic fields keep schema/raw behavior" {
+    const local_shell = try std.json.parseFromSlice(
+        gen.LocalShellExecAction,
+        std.testing.allocator,
+        "{\"type\":\"exec\",\"command\":[\"echo\",\"hi\"],\"env\":{\"A\":\"1\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer local_shell.deinit();
+    const env = local_shell.value.env orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (env) {
+        .schema => |value| try std.testing.expectEqualStrings("1", value.object.get("A").?.string),
+        else => try std.testing.expect(false),
+    }
+
+    const mcp_tool = try std.json.parseFromSlice(
+        gen.MCPListToolsTool,
+        std.testing.allocator,
+        "{\"name\":\"weather\",\"input_schema\":{\"type\":\"object\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer mcp_tool.deinit();
+    switch (mcp_tool.value.input_schema) {
+        .schema => |value| try std.testing.expectEqualStrings("object", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+
+    const prediction = try std.json.parseFromSlice(
+        gen.PredictionContent,
+        std.testing.allocator,
+        "{\"type\":\"content\",\"content\":\"hello\"}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer prediction.deinit();
+    switch (prediction.value.content) {
+        .raw => |value| try std.testing.expectEqualStrings("hello", value.string),
+        else => try std.testing.expect(false),
+    }
+
+    const validate = try std.json.parseFromSlice(
+        gen.ValidateGraderRequest,
+        std.testing.allocator,
+        "{\"grader\":{\"type\":\"python\",\"name\":\"g\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer validate.deinit();
+    switch (validate.value.grader) {
+        .schema => |value| try std.testing.expectEqualStrings("python", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
