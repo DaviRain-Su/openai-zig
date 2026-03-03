@@ -1222,6 +1222,27 @@ pub const ChatCompletionRequestAssistantMessageContent = union(enum) {
             },
         }
     }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestAssistantMessageContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestAssistantMessageContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const ChatCompletionRequestAssistantMessageContentPart, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .parts = parsed.value };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
 pub const ChatCompletionRequestAssistantMessageContentPart = union(enum) {
     text: ChatCompletionRequestMessageContentPartText,
@@ -1239,6 +1260,39 @@ pub const ChatCompletionRequestAssistantMessageContentPart = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestAssistantMessageContentPart {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestAssistantMessageContentPart {
+        switch (source) {
+            .object => |root| {
+                const type_value = root.get("type");
+                if (type_value != null and type_value.? == .string) {
+                    if (std.mem.eql(u8, type_value.?.string, "text") or std.mem.eql(u8, type_value.?.string, "output_text")) {
+                        const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartText, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .text = parsed.value };
+                    }
+
+                    if (std.mem.eql(u8, type_value.?.string, "refusal")) {
+                        const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartRefusal, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .refusal = parsed.value };
+                    }
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -1263,6 +1317,27 @@ pub const ChatCompletionRequestDeveloperMessageContent = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestDeveloperMessageContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestDeveloperMessageContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const ChatCompletionRequestMessageContentPartText, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .parts = parsed.value };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -1446,6 +1521,27 @@ pub const ChatCompletionRequestSystemMessageContent = union(enum) {
             },
         }
     }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestSystemMessageContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestSystemMessageContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const ChatCompletionRequestSystemMessageContentPart, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .parts = parsed.value };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
 pub const ChatCompletionRequestSystemMessageContentPart = ChatCompletionRequestMessageContentPartText;
 pub const ChatCompletionRequestToolMessage = struct {
@@ -1469,6 +1565,27 @@ pub const ChatCompletionRequestToolMessageContent = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestToolMessageContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestToolMessageContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const ChatCompletionRequestToolMessageContentPart, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .parts = parsed.value };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -1496,6 +1613,27 @@ pub const ChatCompletionRequestUserMessageContent = union(enum) {
             },
         }
     }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestUserMessageContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestUserMessageContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const ChatCompletionRequestUserMessageContentPart, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .parts = parsed.value };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
 pub const ChatCompletionRequestUserMessageContentPart = union(enum) {
     text: ChatCompletionRequestMessageContentPartText,
@@ -1521,6 +1659,69 @@ pub const ChatCompletionRequestUserMessageContentPart = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestUserMessageContentPart {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestUserMessageContentPart {
+        switch (source) {
+            .object => |root| {
+                const type_value = root.get("type");
+                if (type_value != null and type_value.? == .string) {
+                    if (std.mem.eql(u8, type_value.?.string, "text") or std.mem.eql(u8, type_value.?.string, "input_text")) {
+                        const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartText, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .text = parsed.value };
+                    }
+
+                    if (std.mem.eql(u8, type_value.?.string, "image") or std.mem.eql(u8, type_value.?.string, "image_url") or root.get("image_url") != null) {
+                        const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartImage, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .image = parsed.value };
+                    }
+
+                    if (std.mem.eql(u8, type_value.?.string, "audio") or std.mem.eql(u8, type_value.?.string, "input_audio") or root.get("input_audio") != null) {
+                        const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartAudio, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .audio = parsed.value };
+                    }
+
+                    if (std.mem.eql(u8, type_value.?.string, "file") or root.get("file") != null) {
+                        const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartFile, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .file = parsed.value };
+                    }
+                }
+
+                if (root.get("image_url") != null) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartImage, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .image = parsed.value };
+                }
+
+                if (root.get("input_audio") != null) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartAudio, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .audio = parsed.value };
+                }
+
+                if (root.get("file") != null) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestMessageContentPartFile, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .file = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -3105,6 +3306,41 @@ pub const CreateCompletionLogitBias = union(enum) {
             },
         }
     }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateCompletionLogitBias {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !CreateCompletionLogitBias {
+        _ = options;
+        switch (source) {
+            .object => |root| {
+                var entries = std.ArrayList(CreateCompletionLogitBiasEntry).init(allocator);
+                defer entries.deinit();
+
+                var it = root.iterator();
+                while (it.next()) |kv| {
+                    const bias: i64 = switch (kv.value_ptr.*) {
+                        .integer => |value| @intCast(value),
+                        .float => |value| @intFromFloat(value),
+                        else => return .{ .raw = source },
+                    };
+                    try entries.append(.{
+                        .token = kv.key_ptr.*,
+                        .bias = bias,
+                    });
+                }
+
+                return .{ .entries = try entries.toOwnedSlice() };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
 pub const CreateCompletionRequest = struct {
     model: []const u8,
@@ -3192,6 +3428,27 @@ pub const CreateEmbeddingRequestInput = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateEmbeddingRequestInput {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !CreateEmbeddingRequestInput {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const []const u8, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .texts = parsed.value };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -12557,6 +12814,27 @@ pub const StopConfiguration = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !StopConfiguration {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !StopConfiguration {
+        switch (source) {
+            .string => return .{ .single = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const []const u8, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .multiple = parsed.value };
+            },
+            else => return .{ .raw = source },
         }
     }
 
