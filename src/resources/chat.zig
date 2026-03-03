@@ -158,7 +158,7 @@ pub const ChatToolsBuilder = struct {
             .function = .{
                 .name = name,
                 .description = description,
-                .parameters = .forSchema(parameters),
+                .parameters = parameters,
                 .strict = null,
             },
         };
@@ -175,7 +175,7 @@ pub const ChatToolsBuilder = struct {
             .function = .{
                 .name = name,
                 .description = description,
-                .parameters = .forSchema(parameters),
+                .parameters = parameters,
                 .strict = .{ .bool = strict },
             },
         };
@@ -1137,7 +1137,7 @@ test "create chat request supports tool declarations and tool_choice" {
             .function = .{
                 .name = "get_weather",
                 .description = "Get weather by city",
-                .parameters = .forSchema(tool_schema.value),
+                .parameters = tool_schema.value,
                 .strict = null,
             },
         },
@@ -1416,7 +1416,7 @@ test "create chat request supports compatibility extensions (function calling + 
             .{
                 .name = "get_weather",
                 .description = "Get weather",
-                .parameters = .forSchema(function_parameters.value),
+                .parameters = function_parameters.value,
             },
         },
         .function_call = .{ .raw = function_call.value },
