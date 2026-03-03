@@ -174,6 +174,7 @@ pub fn build(b: *std.Build) void {
         const has_openai_key = std.process.hasEnvVarConstant("OPENAI_API_KEY");
         const has_deepseek_key = std.process.hasEnvVarConstant("DEEPSEEK_API_KEY");
         const has_any_api_key = has_openai_key or has_deepseek_key;
+        const run_examples_without_key = b.option(bool, "run_examples_without_key", "Run examples even when API keys are missing") orelse false;
         const examples = [_]struct { name: []const u8, path: []const u8 }{
             .{ .name = "models_list", .path = "examples/models_list.zig" },
             .{ .name = "chat_completion", .path = "examples/chat_completion.zig" },
@@ -207,11 +208,11 @@ pub fn build(b: *std.Build) void {
             .{ .name = "user_balance", .path = "examples/user_balance.zig" },
         };
         const run_examples = b.step("run-examples", "Run all examples");
-        if (!has_any_api_key) {
+        if (!has_any_api_key and !run_examples_without_key) {
             const warn_missing_key = b.addSystemCommand(&[_][]const u8{
                 "sh",
                 "-c",
-                "echo 'Skipping run-examples: set OPENAI_API_KEY or DEEPSEEK_API_KEY to execute examples.'",
+                "echo 'Skipping run-examples: set OPENAI_API_KEY or DEEPSEEK_API_KEY, or pass -Drun_examples_without_key=true to force execution.'",
             });
             run_examples.dependOn(&warn_missing_key.step);
         }
@@ -236,7 +237,7 @@ pub fn build(b: *std.Build) void {
             const run_step_desc = std.fmt.comptimePrint("Run example {s}", .{ex.name});
             const per_example_step = b.step(run_step_name, run_step_desc);
 
-            if (has_any_api_key) {
+            if (has_any_api_key or run_examples_without_key) {
                 const run_ex = b.addRunArtifact(exe_example);
                 run_examples.dependOn(&run_ex.step);
                 per_example_step.dependOn(&run_ex.step);
