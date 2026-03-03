@@ -4742,3 +4742,126 @@ test "deepseek response stream reasoning text done and delta" {
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream completed event carries final response object" {
+    const payload =
+        \\{"type":"response.completed","response":{"id":"resp_4","object":"response","status":"completed","model":"deepseek-reasoner","created_at":1710000130,"usage":{"input_tokens":20,"input_tokens_details":{"cached_tokens":4},"output_tokens":12,"output_tokens_details":{"reasoning_tokens":6},"total_tokens":32},"output":[{"type":"message","id":"msg_9","status":"completed","role":"assistant","content":[]}]},"sequence_number":29}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .completed => |evt| {
+            try std.testing.expectEqual(@as(i64, 29), evt.sequence_number);
+            const response = evt.response.object;
+            try std.testing.expectEqualStrings("resp_4", response.id orelse "");
+            try std.testing.expectEqualStrings("completed", response.status orelse "");
+            try std.testing.expectEqual(@as(i64, 32), response.usage.?.total_tokens);
+            const output = response.output orelse return error.TestUnexpectedResult;
+            switch (output) {
+                .items => |items| {
+                    try std.testing.expectEqual(@as(usize, 1), items.len);
+                    switch (items[0]) {
+                        .message => |msg| {
+                            try std.testing.expectEqualStrings("msg_9", msg.id);
+                            try std.testing.expectEqualStrings("assistant", msg.role);
+                            try std.testing.expectEqualStrings("completed", msg.status orelse "");
+                        },
+                        else => return error.TestUnexpectedResult,
+                    }
+                },
+                else => return error.TestUnexpectedResult,
+            }
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream reasoning summary text delta" {
+    const payload =
+        \\{"type":"response.reasoning_summary_text.delta","item_id":"msg_10","output_index":11,"summary_index":0,"delta":"summary text chunk","sequence_number":30}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .reasoning_summary_text_delta => |evt| {
+            try std.testing.expectEqualStrings("msg_10", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 11), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.summary_index);
+            try std.testing.expectEqualStrings("summary text chunk", evt.delta);
+            try std.testing.expectEqual(@as(i64, 30), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream content part added with output_text content" {
+    const payload =
+        \\{"type":"response.content_part.added","item_id":"msg_11","output_index":12,"content_index":0,"part":{"type":"output_text","text":"hello"},"sequence_number":31}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .content_part_added => |evt| {
+            try std.testing.expectEqualStrings("msg_11", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 12), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.content_index);
+            try std.testing.expectEqual(@as(i64, 31), evt.sequence_number);
+            switch (evt.part) {
+                .text => |part| {
+                    try std.testing.expectEqualStrings("output_text", part.type);
+                    try std.testing.expectEqualStrings("hello", part.text);
+                },
+                else => return error.TestUnexpectedResult,
+            }
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream content part done with refusal content" {
+    const payload =
+        \\{"type":"response.content_part.done","item_id":"msg_12","output_index":13,"content_index":0,"part":{"type":"refusal","refusal":"not allowed"},"sequence_number":32}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .content_part_done => |evt| {
+            try std.testing.expectEqualStrings("msg_12", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 13), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.content_index);
+            try std.testing.expectEqual(@as(i64, 32), evt.sequence_number);
+            switch (evt.part) {
+                .refusal => |part| {
+                    try std.testing.expectEqualStrings("refusal", part.type);
+                    try std.testing.expectEqualStrings("not allowed", part.refusal);
+                },
+                else => return error.TestUnexpectedResult,
+            }
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
