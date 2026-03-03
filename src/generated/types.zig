@@ -4159,7 +4159,7 @@ pub const CustomToolCallOutput = struct {
     type: []const u8,
     id: ?[]const u8,
     call_id: []const u8,
-    output: std.json.Value,
+    output: FunctionParameters,
 };
 pub const CustomToolChatCompletions = struct {
     type: []const u8,
@@ -4528,7 +4528,7 @@ pub const EvalItemInputImage = struct {
 pub const EvalJsonlFileContentSource = struct {
     type: []const u8,
     content: []const struct {
-        item: std.json.Value,
+        item: FunctionParameters,
         sample: ?std.json.Value,
     },
 };
@@ -4546,7 +4546,7 @@ pub const EvalList = struct {
 pub const EvalLogsDataSourceConfig = struct {
     type: []const u8,
     metadata: ?Metadata,
-    schema: std.json.Value,
+    schema: FunctionParameters,
 };
 pub const EvalResponsesSource = struct {
     type: []const u8,
@@ -4651,7 +4651,7 @@ pub const EvalRunOutputItemResult = struct {
 pub const EvalStoredCompletionsDataSourceConfig = struct {
     type: []const u8,
     metadata: ?Metadata,
-    schema: std.json.Value,
+    schema: FunctionParameters,
 };
 pub const EvalStoredCompletionsSource = struct {
     type: []const u8,
@@ -4799,7 +4799,7 @@ pub const FineTuneReinforcementHyperparameters = struct {
     eval_samples: ?i64,
 };
 pub const FineTuneReinforcementMethod = struct {
-    grader: std.json.Value,
+    grader: FunctionParameters,
     hyperparameters: ?FineTuneReinforcementHyperparameters,
 };
 pub const FineTuneReinforcementRequestInput = struct {
@@ -5493,7 +5493,7 @@ pub const ImageGenToolCall = struct {
     type: []const u8,
     id: []const u8,
     status: []const u8,
-    result: std.json.Value,
+    result: FunctionParameters,
 };
 pub const ImageGenUsage = struct {
     input_tokens: i64,
@@ -6454,7 +6454,7 @@ pub const LocalShellExecAction = struct {
     command: []const []const u8,
     timeout_ms: ?i64,
     working_directory: ?[]const u8,
-    env: std.json.Value,
+    env: FunctionParameters,
     user: ?[]const u8,
 };
 pub const LocalShellToolCall = struct {
@@ -6519,7 +6519,7 @@ pub const MCPListTools = struct {
 pub const MCPListToolsTool = struct {
     name: []const u8,
     description: ?[]const u8,
-    input_schema: std.json.Value,
+    input_schema: FunctionParameters,
     annotations: ?std.json.Value,
 };
 pub const MCPTool = struct {
@@ -7711,7 +7711,7 @@ pub const ParallelToolCalls = bool;
 pub const PartialImages = i64;
 pub const PredictionContent = struct {
     type: []const u8,
-    content: std.json.Value,
+    content: Content,
 };
 pub const Project = struct {
     id: []const u8,
@@ -8541,7 +8541,7 @@ pub const RealtimeClientEventResponseCreate = struct {
 pub const RealtimeClientEventSessionUpdate = struct {
     event_id: ?[]const u8,
     type: []const u8,
-    session: std.json.Value,
+    session: FunctionParameters,
 };
 pub const RealtimeClientEventTranscriptionSessionUpdate = struct {
     event_id: ?[]const u8,
@@ -8825,7 +8825,7 @@ pub const RealtimeCreateClientSecretRequest = struct {
 pub const RealtimeCreateClientSecretResponse = struct {
     value: []const u8,
     expires_at: i64,
-    session: std.json.Value,
+    session: FunctionParameters,
 };
 pub const RealtimeFunctionTool = struct {
     type: ?[]const u8,
@@ -9268,12 +9268,12 @@ pub const RealtimeServerEventResponseTextDone = struct {
 pub const RealtimeServerEventSessionCreated = struct {
     event_id: []const u8,
     type: []const u8,
-    session: std.json.Value,
+    session: FunctionParameters,
 };
 pub const RealtimeServerEventSessionUpdated = struct {
     event_id: []const u8,
     type: []const u8,
-    session: std.json.Value,
+    session: FunctionParameters,
 };
 pub const RealtimeServerEventTranscriptionSessionUpdated = struct {
     event_id: []const u8,
@@ -11614,7 +11614,7 @@ pub const RunCompletionUsage = ?struct {
     total_tokens: i64,
 };
 pub const RunGraderRequest = struct {
-    grader: std.json.Value,
+    grader: FunctionParameters,
     item: ?std.json.Value,
     model_sample: []const u8,
 };
@@ -11640,12 +11640,12 @@ pub const RunGraderResponse = struct {
             model_grader_server_error_details: ?[]const u8,
         },
         execution_time: f64,
-        scores: std.json.Value,
+        scores: FunctionParameters,
         token_usage: ?i64,
         sampled_model_name: ?[]const u8,
     },
-    sub_rewards: std.json.Value,
-    model_grader_token_usage_per_model: std.json.Value,
+    sub_rewards: FunctionParameters,
+    model_grader_token_usage_per_model: FunctionParameters,
 };
 pub const RunObject = struct {
     id: []const u8,
@@ -11681,7 +11681,7 @@ pub const RunObject = struct {
     top_p: ?f64,
     max_prompt_tokens: i64,
     max_completion_tokens: i64,
-    truncation_strategy: std.json.Value,
+    truncation_strategy: FunctionParameters,
     tool_choice: AssistantsApiToolChoiceOption,
     parallel_tool_calls: ParallelToolCalls,
     response_format: AssistantsApiResponseFormatOption,
@@ -11770,7 +11770,7 @@ pub const RunStepDeltaStepDetailsToolCallsFileSearchObject = struct {
     index: i64,
     id: ?[]const u8,
     type: []const u8,
-    file_search: std.json.Value,
+    file_search: FunctionParameters,
 };
 pub const RunStepDeltaStepDetailsToolCallsFunctionObject = struct {
     index: i64,
@@ -13513,7 +13513,7 @@ pub const UserMessageItem = struct {
     type: []const u8,
     content: []const UserMessageItemContent,
     attachments: []const Attachment,
-    inference_options: std.json.Value,
+    inference_options: FunctionParameters,
 };
 pub const UserMessageQuotedText = struct {
     type: []const u8,
@@ -13534,7 +13534,7 @@ pub const VadConfig = struct {
     threshold: ?f64,
 };
 pub const ValidateGraderRequest = struct {
-    grader: std.json.Value,
+    grader: FunctionParameters,
 };
 pub const ValidateGraderResponse = struct {
     grader: ?std.json.Value,
@@ -13740,7 +13740,7 @@ pub const WebSearchToolCall = struct {
     id: []const u8,
     type: []const u8,
     status: []const u8,
-    action: std.json.Value,
+    action: FunctionParameters,
 };
 pub const WebhookBatchCancelled = struct {
     created_at: i64,
