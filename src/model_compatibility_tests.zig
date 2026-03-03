@@ -5079,3 +5079,469 @@ test "deepseek response stream incomplete carries partial response object" {
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream error event keeps message and optional code" {
+    const payload =
+        \\{"type":"error","message":"tool call failed","code":"tool_call_error","param":"timeout", "sequence_number":42}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .err => |evt| {
+            try std.testing.expectEqualStrings("error", evt.type);
+            try std.testing.expectEqualStrings("tool call failed", evt.message);
+            try std.testing.expectEqual(@as(i64, 42), evt.sequence_number);
+            try std.testing.expect(evt.code != null);
+            try std.testing.expectEqualStrings("tool_call_error", evt.code.?);
+            try std.testing.expect(evt.param != null);
+            try std.testing.expectEqualStrings("timeout", evt.param.?);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream file search call completed and in_progress" {
+    const completed_payload =
+        \\{"type":"response.file_search_call.completed","output_index":14,"sequence_number":43,"item_id":"fs_2"}
+    ;
+    const completed_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        completed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer completed_event.deinit();
+
+    switch (completed_event.value) {
+        .file_search_call_completed => |evt| {
+            try std.testing.expectEqual(@as(i64, 14), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 43), evt.sequence_number);
+            try std.testing.expectEqualStrings("fs_2", evt.item_id);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const in_progress_payload =
+        \\{"type":"response.file_search_call.in_progress","output_index":14,"sequence_number":44,"item_id":"fs_2"}
+    ;
+    const in_progress_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        in_progress_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer in_progress_event.deinit();
+
+    switch (in_progress_event.value) {
+        .file_search_call_in_progress => |evt| {
+            try std.testing.expectEqual(@as(i64, 14), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 44), evt.sequence_number);
+            try std.testing.expectEqualStrings("fs_2", evt.item_id);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream mcp call completed/in_progress/failed lifecycle" {
+    const in_progress_payload =
+        \\{"type":"response.mcp_call.in_progress","output_index":15,"sequence_number":45,"item_id":"mcpcall_1"}
+    ;
+    const in_progress_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        in_progress_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer in_progress_event.deinit();
+
+    switch (in_progress_event.value) {
+        .mcp_call_in_progress => |evt| {
+            try std.testing.expectEqualStrings("mcpcall_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 15), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 45), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const completed_payload =
+        \\{"type":"response.mcp_call.completed","output_index":15,"sequence_number":46,"item_id":"mcpcall_1"}
+    ;
+    const completed_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        completed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer completed_event.deinit();
+
+    switch (completed_event.value) {
+        .mcp_call_completed => |evt| {
+            try std.testing.expectEqualStrings("mcpcall_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 15), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 46), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const failed_payload =
+        \\{"type":"response.mcp_call.failed","output_index":15,"sequence_number":47,"item_id":"mcpcall_1"}
+    ;
+    const failed_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        failed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer failed_event.deinit();
+
+    switch (failed_event.value) {
+        .mcp_call_failed => |evt| {
+            try std.testing.expectEqualStrings("mcpcall_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 15), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 47), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream mcp list tools lifecycle" {
+    const completed_payload =
+        \\{"type":"response.mcp_list_tools.completed","output_index":16,"sequence_number":48,"item_id":"mcp_lst_1"}
+    ;
+    const completed_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        completed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer completed_event.deinit();
+
+    switch (completed_event.value) {
+        .mcp_list_tools_completed => |evt| {
+            try std.testing.expectEqualStrings("mcp_lst_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 16), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 48), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const in_progress_payload =
+        \\{"type":"response.mcp_list_tools.in_progress","output_index":16,"sequence_number":49,"item_id":"mcp_lst_1"}
+    ;
+    const in_progress_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        in_progress_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer in_progress_event.deinit();
+
+    switch (in_progress_event.value) {
+        .mcp_list_tools_in_progress => |evt| {
+            try std.testing.expectEqualStrings("mcp_lst_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 16), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 49), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const failed_payload =
+        \\{"type":"response.mcp_list_tools.failed","output_index":16,"sequence_number":50,"item_id":"mcp_lst_1"}
+    ;
+    const failed_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        failed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer failed_event.deinit();
+
+    switch (failed_event.value) {
+        .mcp_list_tools_failed => |evt| {
+            try std.testing.expectEqualStrings("mcp_lst_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 16), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 50), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream web search and code interpreter lifecycle" {
+    const web_search_payload =
+        \\{"type":"response.web_search_call.searching","output_index":17,"sequence_number":51,"item_id":"ws_1"}
+    ;
+    const web_search_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        web_search_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer web_search_event.deinit();
+
+    switch (web_search_event.value) {
+        .web_search_call_searching => |evt| {
+            try std.testing.expectEqualStrings("ws_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 17), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 51), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const ws_progress_payload =
+        \\{"type":"response.web_search_call.in_progress","output_index":17,"sequence_number":52,"item_id":"ws_1"}
+    ;
+    const ws_progress_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        ws_progress_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer ws_progress_event.deinit();
+
+    switch (ws_progress_event.value) {
+        .web_search_call_in_progress => |evt| {
+            try std.testing.expectEqualStrings("ws_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 17), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 52), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const ws_completed_payload =
+        \\{"type":"response.web_search_call.completed","output_index":17,"sequence_number":53,"item_id":"ws_1"}
+    ;
+    const ws_completed_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        ws_completed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer ws_completed_event.deinit();
+
+    switch (ws_completed_event.value) {
+        .web_search_call_completed => |evt| {
+            try std.testing.expectEqualStrings("ws_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 17), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 53), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const ci_in_progress_payload =
+        \\{"type":"response.code_interpreter_call.in_progress","output_index":18,"sequence_number":54,"item_id":"ci_2"}
+    ;
+    const ci_in_progress_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        ci_in_progress_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer ci_in_progress_event.deinit();
+
+    switch (ci_in_progress_event.value) {
+        .code_interpreter_call_in_progress => |evt| {
+            try std.testing.expectEqualStrings("ci_2", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 18), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 54), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const ci_interpreting_payload =
+        \\{"type":"response.code_interpreter_call.interpreting","output_index":18,"sequence_number":55,"item_id":"ci_2"}
+    ;
+    const ci_interpreting_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        ci_interpreting_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer ci_interpreting_event.deinit();
+
+    switch (ci_interpreting_event.value) {
+        .code_interpreter_call_interpreting => |evt| {
+            try std.testing.expectEqualStrings("ci_2", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 18), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 55), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const ci_completed_payload =
+        \\{"type":"response.code_interpreter_call.completed","output_index":18,"sequence_number":56,"item_id":"ci_2"}
+    ;
+    const ci_completed_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        ci_completed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer ci_completed_event.deinit();
+
+    switch (ci_completed_event.value) {
+        .code_interpreter_call_completed => |evt| {
+            try std.testing.expectEqualStrings("ci_2", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 18), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 56), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream audio transcript and image generation completion" {
+    const audio_delta_payload =
+        \\{"type":"response.audio.transcript.delta","delta":"你好","sequence_number":57}
+    ;
+    const audio_delta_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        audio_delta_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer audio_delta_event.deinit();
+
+    switch (audio_delta_event.value) {
+        .audio_transcript_delta => |evt| {
+            try std.testing.expectEqual(@as(i64, 57), evt.sequence_number);
+            try std.testing.expectEqualStrings("你好", evt.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const audio_done_payload =
+        \\{"type":"response.audio.transcript.done","sequence_number":58}
+    ;
+    const audio_done_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        audio_done_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer audio_done_event.deinit();
+
+    switch (audio_done_event.value) {
+        .audio_transcript_done => |evt| {
+            try std.testing.expectEqual(@as(i64, 58), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const img_generating_payload =
+        \\{"type":"response.image_generation_call.generating","output_index":19,"sequence_number":59,"item_id":"img_2"}
+    ;
+    const img_generating_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        img_generating_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer img_generating_event.deinit();
+
+    switch (img_generating_event.value) {
+        .image_gen_call_generating => |evt| {
+            try std.testing.expectEqualStrings("img_2", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 19), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 59), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const img_completed_payload =
+        \\{"type":"response.image_generation_call.completed","output_index":19,"sequence_number":60,"item_id":"img_2"}
+    ;
+    const img_completed_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        img_completed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer img_completed_event.deinit();
+
+    switch (img_completed_event.value) {
+        .image_gen_call_completed => |evt| {
+            try std.testing.expectEqualStrings("img_2", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 19), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 60), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream output_text_annotation_added and reasoning_summary_part events" {
+    const annotation_payload =
+        \\{"type":"response.output_text.annotation_added","item_id":"msg_14","output_index":20,"content_index":0,"annotation_index":0,"sequence_number":61,"annotation":{"type":"url_citation","url_citation":{"end_index":7,"start_index":0,"url":"https://example.com","title":"Example"}}}
+    ;
+    const annotation_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        annotation_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer annotation_event.deinit();
+
+    switch (annotation_event.value) {
+        .output_text_annotation_added => |evt| {
+            try std.testing.expectEqualStrings("msg_14", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 20), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.content_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.annotation_index);
+            try std.testing.expectEqual(@as(i64, 61), evt.sequence_number);
+            try std.testing.expectEqualStrings("url_citation", evt.annotation.type);
+            try std.testing.expectEqualStrings("https://example.com", evt.annotation.url_citation.url);
+            try std.testing.expectEqualStrings("Example", evt.annotation.url_citation.title);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const part_added_payload =
+        \\{"type":"response.reasoning_summary_part.added","item_id":"msg_15","output_index":21,"summary_index":0,"sequence_number":62,"part":{"type":"text","text":"part"}}
+    ;
+    const part_added_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        part_added_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer part_added_event.deinit();
+
+    switch (part_added_event.value) {
+        .reasoning_summary_part_added => |evt| {
+            try std.testing.expectEqualStrings("msg_15", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 21), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.summary_index);
+            try std.testing.expectEqualStrings("text", evt.part.type);
+            try std.testing.expectEqualStrings("part", evt.part.text);
+            try std.testing.expectEqual(@as(i64, 62), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const part_done_payload =
+        \\{"type":"response.reasoning_summary_part.done","item_id":"msg_15","output_index":21,"summary_index":0,"sequence_number":63,"part":{"type":"text","text":"donepart"}}
+    ;
+    const part_done_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        part_done_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer part_done_event.deinit();
+
+    switch (part_done_event.value) {
+        .reasoning_summary_part_done => |evt| {
+            try std.testing.expectEqualStrings("msg_15", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 21), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.summary_index);
+            try std.testing.expectEqualStrings("text", evt.part.type);
+            try std.testing.expectEqualStrings("donepart", evt.part.text);
+            try std.testing.expectEqual(@as(i64, 63), evt.sequence_number);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
