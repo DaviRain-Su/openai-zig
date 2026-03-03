@@ -7303,6 +7303,8 @@ pub const Move = struct {
     y: i64,
 };
 pub const NoiseReductionType = []const u8;
+pub const OpenAIFileStatusDetails = FunctionParameters;
+
 pub const OpenAIFile = struct {
     id: []const u8 = "",
     object: []const u8 = "",
@@ -7311,7 +7313,7 @@ pub const OpenAIFile = struct {
     filename: []const u8 = "",
     purpose: []const u8 = "",
     status: []const u8 = "",
-    status_details: ?FunctionParameters = null,
+    status_details: ?OpenAIFileStatusDetails = null,
 };
 pub const OrderEnum = []const u8;
 pub const OtherChunkingStrategyResponseParam = struct {
@@ -8486,9 +8488,14 @@ pub const RealtimeBetaServerEventTranscriptionSessionUpdated = struct {
     type: []const u8,
     session: RealtimeTranscriptionSessionCreateResponse,
 };
+pub const RealtimeCallCreateSession = FunctionParameters;
+pub const RealtimeSessionUpdatePayload = FunctionParameters;
+pub const RealtimeClientSecretSessionPayload = FunctionParameters;
+pub const RealtimeServerEventSessionPayload = FunctionParameters;
+
 pub const RealtimeCallCreateRequest = struct {
     sdp: []const u8,
-    session: ?FunctionParameters,
+    session: ?RealtimeCallCreateSession,
 };
 pub const RealtimeCallReferRequest = struct {
     target_uri: []const u8,
@@ -8550,7 +8557,7 @@ pub const RealtimeClientEventResponseCreate = struct {
 pub const RealtimeClientEventSessionUpdate = struct {
     event_id: ?[]const u8,
     type: []const u8,
-    session: FunctionParameters,
+    session: RealtimeSessionUpdatePayload,
 };
 pub const RealtimeClientEventTranscriptionSessionUpdate = struct {
     event_id: ?[]const u8,
@@ -8829,12 +8836,12 @@ pub const RealtimeCreateClientSecretRequest = struct {
         anchor: ?[]const u8,
         seconds: ?i64,
     },
-    session: ?FunctionParameters,
+    session: ?RealtimeClientSecretSessionPayload,
 };
 pub const RealtimeCreateClientSecretResponse = struct {
     value: []const u8,
     expires_at: i64,
-    session: FunctionParameters,
+    session: RealtimeClientSecretSessionPayload,
 };
 pub const RealtimeFunctionTool = struct {
     type: ?[]const u8,
@@ -9277,12 +9284,12 @@ pub const RealtimeServerEventResponseTextDone = struct {
 pub const RealtimeServerEventSessionCreated = struct {
     event_id: []const u8,
     type: []const u8,
-    session: FunctionParameters,
+    session: RealtimeServerEventSessionPayload,
 };
 pub const RealtimeServerEventSessionUpdated = struct {
     event_id: []const u8,
     type: []const u8,
-    session: FunctionParameters,
+    session: RealtimeServerEventSessionPayload,
 };
 pub const RealtimeServerEventTranscriptionSessionUpdated = struct {
     event_id: []const u8,

@@ -4086,7 +4086,6 @@ test "eval data source schema aliases resolve through FunctionParameters-backed 
     }
 }
 
-
 test "mcp list tools aliases parse as FunctionParameters-backed fields" {
     const mcp_tool_payload =
         "{\"name\":\"search\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"q\":{\"type\":\"string\"}}},\"annotations\":{\"scope\":\"mcp\",\"version\":1},\"description\":\"search web\"}";
@@ -4144,5 +4143,94 @@ test "mcp list tools aliases parse as FunctionParameters-backed fields" {
             "object",
             value.object.get("type").?.string,
         ),
+    }
+}
+
+test "realtime status/details and session payload aliases remain parseable" {
+    const openai_file = try std.json.parseFromSlice(
+        gen.OpenAIFile,
+        std.testing.allocator,
+        "{\"id\":\"file_123\",\"object\":\"file\",\"filename\":\"x\",\"purpose\":\"assistants\",\"status\":\"processed\",\"status_details\":{\"state\":\"ok\",\"retry\":false}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer openai_file.deinit();
+    try std.testing.expect(openai_file.value.status_details != null);
+    switch (openai_file.value.status_details.?) {
+        .schema => |v| try std.testing.expectEqualStrings("ok", v.object.get("state").?.string),
+        .raw => |v| try std.testing.expectEqualStrings("ok", v.object.get("state").?.string),
+    }
+
+    const server_session_created = try std.json.parseFromSlice(
+        gen.RealtimeServerEventSessionCreated,
+        std.testing.allocator,
+        "{\"event_id\":\"ev_1\",\"type\":\"session.created\",\"session\":{\"model\":\"gpt-realtime\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer server_session_created.deinit();
+    switch (server_session_created.value.session) {
+        .schema => |value| try std.testing.expectEqualStrings("gpt-realtime", value.object.get("model").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("gpt-realtime", value.object.get("model").?.string),
+    }
+
+    const server_session_updated = try std.json.parseFromSlice(
+        gen.RealtimeServerEventSessionUpdated,
+        std.testing.allocator,
+        "{\"event_id\":\"ev_2\",\"type\":\"session.updated\",\"session\":{\"id\":\"session_1\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer server_session_updated.deinit();
+    switch (server_session_updated.value.session) {
+        .schema => |value| try std.testing.expectEqualStrings("session_1", value.object.get("id").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("session_1", value.object.get("id").?.string),
+    }
+
+    const call_create_req = try std.json.parseFromSlice(
+        gen.RealtimeCallCreateRequest,
+        std.testing.allocator,
+        "{\"sdp\":\"v=0\",\"session\":{\"type\":\"session\",\"model\":\"gpt-4o-realtime\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer call_create_req.deinit();
+    try std.testing.expect(call_create_req.value.session != null);
+    switch (call_create_req.value.session.?) {
+        .schema => |value| try std.testing.expectEqualStrings("session", value.object.get("type").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("session", value.object.get("type").?.string),
+    }
+
+    const client_secret_request = try std.json.parseFromSlice(
+        gen.RealtimeCreateClientSecretRequest,
+        std.testing.allocator,
+        "{\"session\":{\"expires\":3600},\"expires_after\":{\"seconds\":900}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer client_secret_request.deinit();
+    try std.testing.expect(client_secret_request.value.session != null);
+    switch (client_secret_request.value.session.?) {
+        .schema => |value| try std.testing.expectEqual(@as(?i64, 3600), value.object.get("expires").?.integer),
+        .raw => |value| try std.testing.expectEqual(@as(?i64, 3600), value.object.get("expires").?.integer),
+    }
+
+    const client_secret_response = try std.json.parseFromSlice(
+        gen.RealtimeCreateClientSecretResponse,
+        std.testing.allocator,
+        "{\"value\":\"abc\",\"expires_at\":123,\"session\":{\"region\":\"ap-east\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer client_secret_response.deinit();
+    switch (client_secret_response.value.session) {
+        .schema => |value| try std.testing.expectEqualStrings("ap-east", value.object.get("region").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("ap-east", value.object.get("region").?.string),
+    }
+
+    const client_event_update = try std.json.parseFromSlice(
+        gen.RealtimeClientEventSessionUpdate,
+        std.testing.allocator,
+        "{\"type\":\"session.update\",\"session\":{\"voice\":\"alloy\"},\"event_id\":\"evt_100\"}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer client_event_update.deinit();
+    switch (client_event_update.value.session) {
+        .schema => |value| try std.testing.expectEqualStrings("alloy", value.object.get("voice").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("alloy", value.object.get("voice").?.string),
     }
 }
