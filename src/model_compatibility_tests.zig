@@ -2856,3 +2856,81 @@ test "generic content keeps raw fallback for object payload" {
         else => try std.testing.expect(false),
     }
 }
+
+test "create eval request parses testing criteria as typed grader config" {
+    const payload =
+        \\{"name":"eval-1","data_source_config":{"foo":"bar"},"testing_criteria":[{"type":"python","name":"grader_py","source":"return 1"}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.CreateEvalRequest,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(@as(usize, 1), parsed.value.testing_criteria.len);
+    switch (parsed.value.testing_criteria[0]) {
+        .python => |value| {
+            try std.testing.expectEqualStrings("grader_py", value.name);
+            try std.testing.expectEqualStrings("return 1", value.source);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "function tool call output parses generic content variants" {
+    const text_payload =
+        \\{"type":"function_call_output","call_id":"call_1","output":"ok"}
+    ;
+    const parsed_text = try std.json.parseFromSlice(
+        gen.FunctionToolCallOutput,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value.output) {
+        .text => |value| try std.testing.expectEqualStrings("ok", value),
+        else => try std.testing.expect(false),
+    }
+
+    const object_payload =
+        \\{"type":"function_call_output","call_id":"call_1","output":{"foo":"bar"}}
+    ;
+    const parsed_object = try std.json.parseFromSlice(
+        gen.FunctionToolCallOutput,
+        std.testing.allocator,
+        object_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_object.deinit();
+
+    switch (parsed_object.value.output) {
+        .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime mcp obfuscation parses generic content" {
+    const payload =
+        \\{"event_id":"evt_1","type":"response.mcp_call.arguments.delta","response_id":"resp_1","item_id":"item_1","output_index":0,"delta":"x","obfuscation":"redacted"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.RealtimeServerEventResponseMCPCallArgumentsDelta,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const obfuscation = parsed.value.obfuscation orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (obfuscation) {
+        .text => |value| try std.testing.expectEqualStrings("redacted", value),
+        else => try std.testing.expect(false),
+    }
+}

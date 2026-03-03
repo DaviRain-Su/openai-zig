@@ -3,10 +3,10 @@ const std = @import("std");
 pub const JsonObject = std.json.Value;
 pub const JsonObjectArray = []const JsonObject;
 pub const EvalDataSourceConfig = JsonObject;
-pub const EvalTestingCriterion = JsonObject;
+pub const EvalTestingCriterion = EvalGraderConfig;
 pub const EvalSchema = JsonObject;
-pub const EvalSample = JsonObject;
-pub const EvalDatasourceItem = JsonObject;
+pub const EvalSample = EvalItemContent;
+pub const EvalDatasourceItem = CreateEvalItem;
 pub const GenericContent = union(enum) {
     text: []const u8,
     items: JsonObjectArray,
@@ -166,8 +166,8 @@ pub const EvalGraderConfig = union(enum) {
         }
     }
 };
-pub const ToolOutputPayload = JsonObject;
-pub const RealtimeObfuscation = JsonObject;
+pub const ToolOutputPayload = GenericContent;
+pub const RealtimeObfuscation = GenericContent;
 
 pub const ActiveStatus = struct {
     type: []const u8,
