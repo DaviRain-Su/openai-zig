@@ -4865,3 +4865,217 @@ test "deepseek response stream content part done with refusal content" {
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream custom tool call input delta" {
+    const payload =
+        \\{"type":"response.custom_tool_call_input.delta","output_index":1,"sequence_number":33,"item_id":"tool_1","delta":"{\"arg\": \"v\"}"}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .custom_tool_call_input_delta => |evt| {
+            try std.testing.expectEqual(@as(i64, 33), evt.sequence_number);
+            try std.testing.expectEqual(@as(i64, 1), evt.output_index);
+            try std.testing.expectEqualStrings("tool_1", evt.item_id);
+            try std.testing.expectEqualStrings("{\"arg\": \"v\"}", evt.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream custom tool call input done" {
+    const payload =
+        \\{"type":"response.custom_tool_call_input.done","output_index":1,"sequence_number":34,"item_id":"tool_1","input":"{\"arg\": \"done\"}"}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .custom_tool_call_input_done => |evt| {
+            try std.testing.expectEqual(@as(i64, 34), evt.sequence_number);
+            try std.testing.expectEqual(@as(i64, 1), evt.output_index);
+            try std.testing.expectEqualStrings("tool_1", evt.item_id);
+            try std.testing.expectEqualStrings("{\"arg\": \"done\"}", evt.input);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream code interpreter code delta and done" {
+    const delta_payload =
+        \\{"type":"response.code_interpreter_call.code_delta","output_index":2,"sequence_number":35,"item_id":"ci_1","delta":"print('hi')"}
+    ;
+    const delta_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        delta_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer delta_event.deinit();
+
+    switch (delta_event.value) {
+        .code_interpreter_call_code_delta => |evt| {
+            try std.testing.expectEqual(@as(i64, 35), evt.sequence_number);
+            try std.testing.expectEqual(@as(i64, 2), evt.output_index);
+            try std.testing.expectEqualStrings("ci_1", evt.item_id);
+            try std.testing.expectEqualStrings("print('hi')", evt.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const done_payload =
+        \\{"type":"response.code_interpreter_call_code.done","output_index":2,"sequence_number":36,"item_id":"ci_1","code":"print('done')"}
+    ;
+    const done_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        done_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer done_event.deinit();
+
+    switch (done_event.value) {
+        .code_interpreter_call_code_done => |evt| {
+            try std.testing.expectEqual(@as(i64, 36), evt.sequence_number);
+            try std.testing.expectEqual(@as(i64, 2), evt.output_index);
+            try std.testing.expectEqualStrings("ci_1", evt.item_id);
+            try std.testing.expectEqualStrings("print('done')", evt.code);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream file search call searching" {
+    const payload =
+        \\{"type":"response.file_search_call.searching","output_index":3,"sequence_number":37,"item_id":"fs_1"}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .file_search_call_searching => |evt| {
+            try std.testing.expectEqual(@as(i64, 3), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 37), evt.sequence_number);
+            try std.testing.expectEqualStrings("fs_1", evt.item_id);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream image generation partial image" {
+    const payload =
+        \\{"type":"response.image_generation_call.partial_image","output_index":4,"sequence_number":38,"item_id":"img_1","partial_image_index":0,"partial_image_b64":"aW1hZ2VfYmFzZTY0"}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .image_gen_call_partial_image => |evt| {
+            try std.testing.expectEqual(@as(i64, 4), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 38), evt.sequence_number);
+            try std.testing.expectEqualStrings("img_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 0), evt.partial_image_index);
+            try std.testing.expectEqualStrings("aW1hZ2VfYmFzZTY0", evt.partial_image_b64);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream mcp call arguments lifecycle" {
+    const delta_payload =
+        \\{"type":"response.mcp_call_arguments.delta","output_index":5,"sequence_number":39,"item_id":"mcp_1","delta":"{\"tool\": \"foo\"}"}
+    ;
+    const delta_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        delta_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer delta_event.deinit();
+
+    switch (delta_event.value) {
+        .mcp_call_arguments_delta => |evt| {
+            try std.testing.expectEqual(@as(i64, 39), evt.sequence_number);
+            try std.testing.expectEqual(@as(i64, 5), evt.output_index);
+            try std.testing.expectEqualStrings("mcp_1", evt.item_id);
+            try std.testing.expectEqualStrings("{\"tool\": \"foo\"}", evt.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const done_payload =
+        \\{"type":"response.mcp_call_arguments.done","output_index":5,"sequence_number":40,"item_id":"mcp_1","arguments":"{\"tool\": \"foo\", \"ok\": true}"}
+    ;
+    const done_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        done_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer done_event.deinit();
+
+    switch (done_event.value) {
+        .mcp_call_arguments_done => |evt| {
+            try std.testing.expectEqual(@as(i64, 40), evt.sequence_number);
+            try std.testing.expectEqual(@as(i64, 5), evt.output_index);
+            try std.testing.expectEqualStrings("mcp_1", evt.item_id);
+            try std.testing.expectEqualStrings("{\"tool\": \"foo\", \"ok\": true}", evt.arguments);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream incomplete carries partial response object" {
+    const payload =
+        \\{"type":"response.incomplete","response":{"id":"resp_incomplete_1","object":"response","status":"incomplete","model":"deepseek-reasoner","created_at":1710000140,"output":[{"type":"message","id":"msg_13","status":"in_progress","role":"assistant","content":[]}]} ,"sequence_number":41}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .incomplete => |evt| {
+            try std.testing.expectEqual(@as(i64, 41), evt.sequence_number);
+            const response = evt.response.object;
+            try std.testing.expectEqualStrings("resp_incomplete_1", response.id orelse "");
+            try std.testing.expectEqualStrings("incomplete", response.status orelse "");
+            const output = response.output orelse return error.TestUnexpectedResult;
+            switch (output) {
+                .items => |items| {
+                    try std.testing.expectEqual(@as(usize, 1), items.len);
+                    switch (items[0]) {
+                        .message => |msg| try std.testing.expectEqualStrings("msg_13", msg.id),
+                        else => return error.TestUnexpectedResult,
+                    }
+                },
+                else => return error.TestUnexpectedResult,
+            }
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
