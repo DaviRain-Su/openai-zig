@@ -162,7 +162,7 @@ pub const AssistantStreamEvent = union(enum) {
     run_step: RunStepStreamEvent,
     message: MessageStreamEvent,
     err: ErrorEvent,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forThread(value: ThreadStreamEvent) AssistantStreamEvent {
         return .{ .thread = value };
@@ -184,7 +184,7 @@ pub const AssistantStreamEvent = union(enum) {
         return .{ .err = value };
     }
 
-    pub fn forRaw(value: std.json.Value) AssistantStreamEvent {
+    pub fn forRaw(value: JsonObject) AssistantStreamEvent {
         return .{ .raw = value };
     }
 
@@ -218,7 +218,7 @@ pub const AssistantStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !AssistantStreamEvent {
         switch (source) {
@@ -326,7 +326,7 @@ pub const AssistantsApiResponseFormatOption = union(enum) {
     text: ResponseFormatText,
     json_object: ResponseFormatJsonObject,
     json_schema: ResponseFormatJsonSchema,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forAuto() AssistantsApiResponseFormatOption {
         return .auto;
@@ -344,7 +344,7 @@ pub const AssistantsApiResponseFormatOption = union(enum) {
         return .{ .json_schema = json_schema };
     }
 
-    pub fn forRaw(value: std.json.Value) AssistantsApiResponseFormatOption {
+    pub fn forRaw(value: JsonObject) AssistantsApiResponseFormatOption {
         return .{ .raw = value };
     }
 
@@ -375,7 +375,7 @@ pub const AssistantsApiResponseFormatOption = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !AssistantsApiResponseFormatOption {
         _ = allocator;
@@ -484,7 +484,7 @@ pub const AuditLog = struct {
     },
     external_key_registered: ?struct {
         id: ?[]const u8,
-        data: ?std.json.Value,
+        data: ?FunctionParameters,
     },
     external_key_removed: ?struct {
         id: ?[]const u8,
@@ -549,12 +549,12 @@ pub const AuditLog = struct {
             name: ?[]const u8,
         },
     },
-    login_succeeded: ?std.json.Value,
+    login_succeeded: ?FunctionParameters,
     login_failed: ?struct {
         error_code: ?[]const u8,
         error_message: ?[]const u8,
     },
-    logout_succeeded: ?std.json.Value,
+    logout_succeeded: ?FunctionParameters,
     logout_failed: ?struct {
         error_code: ?[]const u8,
         error_message: ?[]const u8,
@@ -620,7 +620,7 @@ pub const AuditLog = struct {
             permissions_added: ?[]const []const u8,
             permissions_removed: ?[]const []const u8,
             description: ?[]const u8,
-            metadata: ?std.json.Value,
+            metadata: ?FunctionParameters,
         },
     },
     role_deleted: ?struct {
@@ -792,8 +792,8 @@ pub const BatchRequestOutput = struct {
 pub const BatchRequestOutputResponse = struct {
     status_code: ?i64 = null,
     request_id: ?[]const u8 = null,
-    headers: ?std.json.Value = null,
-    body: ?std.json.Value = null,
+    headers: ?FunctionParameters = null,
+    body: ?FunctionParameters = null,
 };
 
 pub const BatchRequestOutputError = struct {
@@ -816,7 +816,7 @@ pub const Certificate = struct {
 };
 pub const ChatCompletionAllowedTools = struct {
     mode: []const u8,
-    tools: []const std.json.Value,
+    tools: []const FunctionParameters,
 };
 pub const ChatCompletionAllowedToolsChoice = struct {
     type: []const u8,
@@ -917,7 +917,7 @@ pub const ChatCompletionRequestFunctionCall = struct {
 pub const ChatCompletionRequestAssistantMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestAssistantMessageContentPart,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ChatCompletionRequestAssistantMessageContent, writer: anytype) !void {
         switch (self) {
@@ -957,7 +957,7 @@ pub const ChatCompletionRequestAssistantMessageContent = union(enum) {
 pub const ChatCompletionRequestAssistantMessageContentPart = union(enum) {
     text: ChatCompletionRequestMessageContentPartText,
     refusal: ChatCompletionRequestMessageContentPartRefusal,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ChatCompletionRequestAssistantMessageContentPart, writer: anytype) !void {
         switch (self) {
@@ -1014,7 +1014,7 @@ pub const ChatCompletionRequestDeveloperMessage = struct {
 pub const ChatCompletionRequestDeveloperMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestMessageContentPartText,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ChatCompletionRequestDeveloperMessageContent, writer: anytype) !void {
         switch (self) {
@@ -1186,7 +1186,7 @@ pub const ChatCompletionRequestSystemMessage = struct {
 pub const ChatCompletionRequestSystemMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestSystemMessageContentPart,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ChatCompletionRequestSystemMessageContent, writer: anytype) !void {
         switch (self) {
@@ -1232,7 +1232,7 @@ pub const ChatCompletionRequestToolMessage = struct {
 pub const ChatCompletionRequestToolMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestToolMessageContentPart,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ChatCompletionRequestToolMessageContent, writer: anytype) !void {
         switch (self) {
@@ -1278,7 +1278,7 @@ pub const ChatCompletionRequestUserMessage = struct {
 pub const ChatCompletionRequestUserMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestUserMessageContentPart,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ChatCompletionRequestUserMessageContent, writer: anytype) !void {
         switch (self) {
@@ -1320,7 +1320,7 @@ pub const ChatCompletionRequestUserMessageContentPart = union(enum) {
     image: ChatCompletionRequestMessageContentPartImage,
     audio: ChatCompletionRequestMessageContentPartAudio,
     file: ChatCompletionRequestMessageContentPartFile,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ChatCompletionRequestUserMessageContentPart, writer: anytype) !void {
         switch (self) {
@@ -1506,7 +1506,7 @@ pub const ChunkingStrategyRequestParam = union(enum) {
     auto: AutoChunkingStrategyRequestParam,
     static: StaticChunkingStrategyRequestParam,
     other: OtherChunkingStrategyResponseParam,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forAuto() ChunkingStrategyRequestParam {
         return .{ .auto = .{ .type = "auto" } };
@@ -1525,7 +1525,7 @@ pub const ChunkingStrategyRequestParam = union(enum) {
         return .{ .other = .{ .type = value } };
     }
 
-    pub fn forRaw(value: std.json.Value) ChunkingStrategyRequestParam {
+    pub fn forRaw(value: JsonObject) ChunkingStrategyRequestParam {
         return .{ .raw = value };
     }
 
@@ -1553,7 +1553,7 @@ pub const ChunkingStrategyRequestParam = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ChunkingStrategyRequestParam {
         _ = allocator;
@@ -1608,7 +1608,7 @@ pub const ChunkingStrategyResponse = union(enum) {
     auto: AutoChunkingStrategyRequestParam,
     static: StaticChunkingStrategyResponseParam,
     other: OtherChunkingStrategyResponseParam,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forAuto() ChunkingStrategyResponse {
         return .{ .auto = .{ .type = "auto" } };
@@ -1627,7 +1627,7 @@ pub const ChunkingStrategyResponse = union(enum) {
         return .{ .other = .{ .type = value } };
     }
 
-    pub fn forRaw(value: std.json.Value) ChunkingStrategyResponse {
+    pub fn forRaw(value: JsonObject) ChunkingStrategyResponse {
         return .{ .raw = value };
     }
 
@@ -1655,7 +1655,7 @@ pub const ChunkingStrategyResponse = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ChunkingStrategyResponse {
         _ = allocator;
@@ -1737,13 +1737,13 @@ pub const CodeInterpreterContainerAuto = struct {
 };
 pub const CodeInterpreterToolContainer = union(enum) {
     auto: CodeInterpreterContainerAuto,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forAuto(container: CodeInterpreterContainerAuto) CodeInterpreterToolContainer {
         return .{ .auto = container };
     }
 
-    pub fn forRaw(value: std.json.Value) CodeInterpreterToolContainer {
+    pub fn forRaw(value: JsonObject) CodeInterpreterToolContainer {
         return .{ .raw = value };
     }
 
@@ -1769,7 +1769,7 @@ pub const CodeInterpreterToolContainer = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !CodeInterpreterToolContainer {
         switch (source) {
@@ -1818,7 +1818,7 @@ pub const CodeInterpreterOutput = union(enum) {
     logs: CodeInterpreterOutputLogs,
     text: CodeInterpreterTextOutput,
     file: CodeInterpreterFileOutput,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: CodeInterpreterOutput, writer: anytype) !void {
         switch (self) {
@@ -1842,13 +1842,13 @@ pub const CodeInterpreterOutput = union(enum) {
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CodeInterpreterOutput {
         return .{
-            .raw = try std.json.Value.jsonParse(allocator, source, options),
+            .raw = try JsonObject.jsonParse(allocator, source, options),
         };
     }
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !CodeInterpreterOutput {
         _ = allocator;
@@ -1877,7 +1877,7 @@ pub const CompactResource = struct {
 };
 pub const CompactResponseMethodPublicBody = struct {
     model: ModelIdsCompaction,
-    input: ?std.json.Value,
+    input: ?FunctionParameters,
     previous_response_id: ?[]const u8,
     instructions: ?[]const u8,
 };
@@ -1900,7 +1900,7 @@ pub const ComparisonFilter = struct {
 pub const ComparisonFilterValueItems = union(enum) {
     string: []const u8,
     number: f64,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forString(value: []const u8) ComparisonFilterValueItems {
         return .{ .string = value };
@@ -1910,7 +1910,7 @@ pub const ComparisonFilterValueItems = union(enum) {
         return .{ .number = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ComparisonFilterValueItems {
+    pub fn forRaw(value: JsonObject) ComparisonFilterValueItems {
         return .{ .raw = value };
     }
 
@@ -1939,7 +1939,7 @@ pub const ComparisonFilterValueItems = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ComparisonFilterValueItems {
         _ = options;
@@ -1957,7 +1957,7 @@ pub const ComparisonFilterValue = union(enum) {
     number: f64,
     boolean: bool,
     items: []const ComparisonFilterValueItems,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ComparisonFilterValue, writer: anytype) !void {
         switch (self) {
@@ -1999,7 +1999,7 @@ pub const ComparisonFilterValue = union(enum) {
         return .{ .items = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ComparisonFilterValue {
+    pub fn forRaw(value: JsonObject) ComparisonFilterValue {
         return .{ .raw = value };
     }
 
@@ -2014,7 +2014,7 @@ pub const ComparisonFilterValue = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ComparisonFilterValue {
         switch (source) {
@@ -2058,12 +2058,12 @@ pub const CompletionUsage = struct {
 };
 pub const CompoundFilter = struct {
     type: []const u8,
-    filters: []const std.json.Value,
+    filters: []const FunctionParameters,
 };
 pub const Filters = union(enum) {
     comparison: ComparisonFilter,
     compound: CompoundFilter,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: Filters, writer: anytype) !void {
         switch (self) {
@@ -2090,7 +2090,7 @@ pub const Filters = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !Filters {
         switch (source) {
@@ -2133,7 +2133,7 @@ pub const ComputerAction = union(enum) {
     scroll: Scroll,
     type_action: Type,
     wait: Wait,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forClick(value: ClickParam) ComputerAction {
         return .{ .click = value };
@@ -2171,7 +2171,7 @@ pub const ComputerAction = union(enum) {
         return .{ .wait = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ComputerAction {
+    pub fn forRaw(value: JsonObject) ComputerAction {
         return .{ .raw = value };
     }
 
@@ -2217,7 +2217,7 @@ pub const ComputerAction = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ComputerAction {
         switch (source) {
@@ -2450,7 +2450,7 @@ pub const ConversationItem = union(enum) {
     mcp_tool_call: MCPToolCall,
     custom_tool_call: CustomToolCall,
     custom_tool_call_output: CustomToolCallOutput,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forMessage(value: Message) ConversationItem {
         return .{ .message = value };
@@ -2460,7 +2460,7 @@ pub const ConversationItem = union(enum) {
         return .{ .function_tool_call = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ConversationItem {
+    pub fn forRaw(value: JsonObject) ConversationItem {
         return .{ .raw = value };
     }
 
@@ -2499,7 +2499,7 @@ pub const ConversationItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ConversationItem {
         switch (source) {
@@ -2775,7 +2775,7 @@ pub const ConversationItemList = struct {
 pub const ConversationParam = union(enum) {
     id: []const u8,
     conversation: ConversationParam_2,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forId(value: []const u8) ConversationParam {
         return .{ .id = value };
@@ -2785,7 +2785,7 @@ pub const ConversationParam = union(enum) {
         return .{ .conversation = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ConversationParam {
+    pub fn forRaw(value: JsonObject) ConversationParam {
         return .{ .raw = value };
     }
 
@@ -2804,7 +2804,7 @@ pub const ConversationParam = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ConversationParam {
         switch (source) {
@@ -2841,7 +2841,7 @@ pub const CostsResult = struct {
         value: ?f64,
         currency: ?[]const u8,
     },
-    line_item: ?std.json.Value,
+    line_item: ?FunctionParameters,
     project_id: ?[]const u8,
 };
 pub const CreateAssistantRequest = struct {
@@ -2910,13 +2910,13 @@ pub const CreateCompletionLogitBiasEntry = struct {
 };
 pub const CreateCompletionLogitBias = union(enum) {
     entries: []const CreateCompletionLogitBiasEntry,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forEntries(entries: []const CreateCompletionLogitBiasEntry) CreateCompletionLogitBias {
         return .{ .entries = entries };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateCompletionLogitBias {
+    pub fn forRaw(value: JsonObject) CreateCompletionLogitBias {
         return .{ .raw = value };
     }
 
@@ -3032,7 +3032,7 @@ pub const CreateEmbeddingRequest = struct {
 pub const CreateEmbeddingRequestInput = union(enum) {
     text: []const u8,
     texts: []const []const u8,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(text: []const u8) CreateEmbeddingRequestInput {
         return .{ .text = text };
@@ -3042,7 +3042,7 @@ pub const CreateEmbeddingRequestInput = union(enum) {
         return .{ .texts = texts };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateEmbeddingRequestInput {
+    pub fn forRaw(value: JsonObject) CreateEmbeddingRequestInput {
         return .{ .raw = value };
     }
 
@@ -3092,24 +3092,24 @@ pub const CreateEmbeddingResponse = struct {
 };
 pub const CreateEvalCompletionsRunDataSource = struct {
     type: []const u8,
-    input_messages: ?std.json.Value,
+    input_messages: ?FunctionParameters,
     sampling_params: ?struct {
         reasoning_effort: ?ReasoningEffort,
         temperature: ?f64,
         max_completion_tokens: ?i64,
         top_p: ?f64,
         seed: ?i64,
-        response_format: ?std.json.Value,
+        response_format: ?FunctionParameters,
         tools: ?[]const ChatCompletionTool,
     },
     model: ?[]const u8,
-    source: std.json.Value,
+    source: JsonObject,
 };
 pub const CreateEvalDataSourceConfig = union(enum) {
     custom: CreateEvalCustomDataSourceConfig,
     logs: CreateEvalLogsDataSourceConfig,
     stored_completions: CreateEvalStoredCompletionsDataSourceConfig,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forCustom(value: CreateEvalCustomDataSourceConfig) CreateEvalDataSourceConfig {
         return .{ .custom = value };
@@ -3123,7 +3123,7 @@ pub const CreateEvalDataSourceConfig = union(enum) {
         return .{ .stored_completions = value };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateEvalDataSourceConfig {
+    pub fn forRaw(value: JsonObject) CreateEvalDataSourceConfig {
         return .{ .raw = value };
     }
 
@@ -3147,7 +3147,7 @@ pub const CreateEvalDataSourceConfig = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !CreateEvalDataSourceConfig {
         if (source != .object) return .{ .raw = source };
@@ -3203,7 +3203,7 @@ pub const CreateEvalSimpleInputMessage = struct {
 pub const CreateEvalItem = union(enum) {
     simple: CreateEvalSimpleInputMessage,
     eval_item: EvalItem,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forSimple(value: CreateEvalSimpleInputMessage) CreateEvalItem {
         return .{ .simple = value };
@@ -3213,7 +3213,7 @@ pub const CreateEvalItem = union(enum) {
         return .{ .eval_item = value };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateEvalItem {
+    pub fn forRaw(value: JsonObject) CreateEvalItem {
         return .{ .raw = value };
     }
 
@@ -3236,7 +3236,7 @@ pub const CreateEvalItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !CreateEvalItem {
         if (source != .object) return .{ .raw = source };
@@ -3269,7 +3269,7 @@ pub const CreateEvalItem = union(enum) {
 };
 pub const CreateEvalJsonlRunDataSource = struct {
     type: []const u8,
-    source: std.json.Value,
+    source: JsonObject,
 };
 pub const CreateEvalLabelModelGrader = struct {
     type: []const u8,
@@ -3281,7 +3281,7 @@ pub const CreateEvalLabelModelGrader = struct {
 };
 pub const CreateEvalLogsDataSourceConfig = struct {
     type: []const u8,
-    metadata: ?std.json.Value,
+    metadata: ?FunctionParameters,
 };
 pub const CreateEvalTestingCriteria = union(enum) {
     label_model: CreateEvalLabelModelGrader,
@@ -3289,7 +3289,7 @@ pub const CreateEvalTestingCriteria = union(enum) {
     text_similarity: EvalGraderTextSimilarity,
     python: EvalGraderPython,
     score_model: EvalGraderScoreModel,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forLabelModel(value: CreateEvalLabelModelGrader) CreateEvalTestingCriteria {
         return .{ .label_model = value };
@@ -3311,7 +3311,7 @@ pub const CreateEvalTestingCriteria = union(enum) {
         return .{ .score_model = value };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateEvalTestingCriteria {
+    pub fn forRaw(value: JsonObject) CreateEvalTestingCriteria {
         return .{ .raw = value };
     }
 
@@ -3337,7 +3337,7 @@ pub const CreateEvalTestingCriteria = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !CreateEvalTestingCriteria {
         if (source != .object) return .{ .raw = source };
@@ -3733,31 +3733,31 @@ pub const CreateModerationResponse = struct {
     },
 };
 pub const CreateResponseObject = struct {
-    input: ?std.json.Value = null,
+    input: ?FunctionParameters = null,
     model: ?[]const u8 = null,
     instructions: ?[]const u8 = null,
-    tools: ?[]const std.json.Value = null,
-    tool_choice: ?std.json.Value = null,
+    tools: ?[]const FunctionParameters = null,
+    tool_choice: ?FunctionParameters = null,
     parallel_tool_calls: ?bool = null,
     temperature: ?f64 = null,
     top_p: ?f64 = null,
     max_output_tokens: ?i64 = null,
     stream: ?bool = null,
-    response_format: ?std.json.Value = null,
+    response_format: ?FunctionParameters = null,
     previous_response_id: ?[]const u8 = null,
-    conversation: ?std.json.Value = null,
+    conversation: ?FunctionParameters = null,
     metadata: ?Metadata = null,
 };
 
 pub const CreateResponse = union(enum) {
     object: CreateResponseObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forObject(value: CreateResponseObject) CreateResponse {
         return .{ .object = value };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateResponse {
+    pub fn forRaw(value: JsonObject) CreateResponse {
         return .{ .raw = value };
     }
 
@@ -3779,7 +3779,7 @@ pub const CreateResponse = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !CreateResponse {
         const parsed = std.json.parseFromValue(
@@ -3842,7 +3842,7 @@ pub const CreateSpeechRequest = struct {
 pub const CreateSpeechResponseStreamEvent = union(enum) {
     delta: SpeechAudioDeltaEvent,
     done: SpeechAudioDoneEvent,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forDelta(value: SpeechAudioDeltaEvent) CreateSpeechResponseStreamEvent {
         return .{ .delta = value };
@@ -3852,7 +3852,7 @@ pub const CreateSpeechResponseStreamEvent = union(enum) {
         return .{ .done = value };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateSpeechResponseStreamEvent {
+    pub fn forRaw(value: JsonObject) CreateSpeechResponseStreamEvent {
         return .{ .raw = value };
     }
 
@@ -3877,7 +3877,7 @@ pub const CreateSpeechResponseStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !CreateSpeechResponseStreamEvent {
         switch (source) {
@@ -3984,7 +3984,7 @@ pub const CreateTranscriptionResponseStreamEvent = union(enum) {
     delta: TranscriptTextDeltaEvent,
     done: TranscriptTextDoneEvent,
     segment: TranscriptTextSegmentEvent,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forDelta(value: TranscriptTextDeltaEvent) CreateTranscriptionResponseStreamEvent {
         return .{ .delta = value };
@@ -3998,7 +3998,7 @@ pub const CreateTranscriptionResponseStreamEvent = union(enum) {
         return .{ .segment = value };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateTranscriptionResponseStreamEvent {
+    pub fn forRaw(value: JsonObject) CreateTranscriptionResponseStreamEvent {
         return .{ .raw = value };
     }
 
@@ -4026,7 +4026,7 @@ pub const CreateTranscriptionResponseStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !CreateTranscriptionResponseStreamEvent {
         switch (source) {
@@ -4166,14 +4166,14 @@ pub const CustomToolChatCompletions = struct {
     custom: struct {
         name: []const u8,
         description: ?[]const u8,
-        format: ?std.json.Value,
+        format: ?FunctionParameters,
     },
 };
 pub const CustomToolParam = struct {
     type: []const u8,
     name: []const u8,
     description: ?[]const u8,
-    format: ?std.json.Value,
+    format: ?FunctionParameters,
 };
 pub const DeleteAssistantResponse = struct {
     id: []const u8,
@@ -4328,7 +4328,7 @@ pub const EvalItem = struct {
 pub const EvalItemContent = union(enum) {
     item: EvalItemContentItem,
     items: EvalItemContentArray,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forItem(value: EvalItemContentItem) EvalItemContent {
         return .{ .item = value };
@@ -4338,7 +4338,7 @@ pub const EvalItemContent = union(enum) {
         return .{ .items = value };
     }
 
-    pub fn forRaw(value: std.json.Value) EvalItemContent {
+    pub fn forRaw(value: JsonObject) EvalItemContent {
         return .{ .raw = value };
     }
 
@@ -4367,7 +4367,7 @@ pub const EvalItemContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !EvalItemContent {
         switch (source) {
@@ -4395,7 +4395,7 @@ pub const EvalItemContentItem = union(enum) {
     output_text: EvalItemContentOutputText,
     input_image: EvalItemInputImage,
     input_audio: InputAudio,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(value: EvalItemContentText) EvalItemContentItem {
         return .{ .text = value };
@@ -4417,7 +4417,7 @@ pub const EvalItemContentItem = union(enum) {
         return .{ .input_audio = value };
     }
 
-    pub fn forRaw(value: std.json.Value) EvalItemContentItem {
+    pub fn forRaw(value: JsonObject) EvalItemContentItem {
         return .{ .raw = value };
     }
 
@@ -4455,7 +4455,7 @@ pub const EvalItemContentItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !EvalItemContentItem {
         if (source == .string) {
@@ -4529,7 +4529,7 @@ pub const EvalJsonlFileContentSource = struct {
     type: []const u8,
     content: []const struct {
         item: FunctionParameters,
-        sample: ?std.json.Value,
+        sample: ?FunctionParameters,
     },
 };
 pub const EvalJsonlFileIdSource = struct {
@@ -4646,7 +4646,7 @@ pub const EvalRunOutputItemResult = struct {
     type: ?[]const u8,
     score: f64,
     passed: bool,
-    sample: ?std.json.Value,
+    sample: ?FunctionParameters,
 };
 pub const EvalStoredCompletionsDataSourceConfig = struct {
     type: []const u8,
@@ -4760,7 +4760,7 @@ pub const FineTuneChatCompletionRequestAssistantMessage = union(enum) {
     }
 };
 pub const FineTuneChatRequestInput = struct {
-    messages: ?[]const std.json.Value,
+    messages: ?[]const FunctionParameters,
     tools: ?[]const ChatCompletionTool,
     parallel_tool_calls: ?ParallelToolCalls,
     functions: ?[]const ChatCompletionFunctions,
@@ -4782,12 +4782,12 @@ pub const FineTuneMethod = struct {
 };
 pub const FineTunePreferenceRequestInput = struct {
     input: ?struct {
-        messages: ?[]const std.json.Value,
+        messages: ?[]const FunctionParameters,
         tools: ?[]const ChatCompletionTool,
         parallel_tool_calls: ?ParallelToolCalls,
     },
-    preferred_output: ?[]const std.json.Value,
-    non_preferred_output: ?[]const std.json.Value,
+    preferred_output: ?[]const FunctionParameters,
+    non_preferred_output: ?[]const FunctionParameters,
 };
 pub const FineTuneReinforcementHyperparameters = struct {
     batch_size: ?i64,
@@ -4803,7 +4803,7 @@ pub const FineTuneReinforcementMethod = struct {
     hyperparameters: ?FineTuneReinforcementHyperparameters,
 };
 pub const FineTuneReinforcementRequestInput = struct {
-    messages: []const std.json.Value,
+    messages: []const FunctionParameters,
     tools: ?[]const ChatCompletionTool,
 };
 pub const FineTuneSupervisedHyperparameters = struct {
@@ -4898,7 +4898,7 @@ pub const FunctionCallOutputItemParam = struct {
 pub const FunctionAndCustomToolCallOutput = union(enum) {
     function: FunctionToolCallOutput,
     custom: CustomToolCallOutput,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forFunction(value: FunctionToolCallOutput) FunctionAndCustomToolCallOutput {
         return .{ .function = value };
@@ -4908,7 +4908,7 @@ pub const FunctionAndCustomToolCallOutput = union(enum) {
         return .{ .custom = value };
     }
 
-    pub fn forRaw(value: std.json.Value) FunctionAndCustomToolCallOutput {
+    pub fn forRaw(value: JsonObject) FunctionAndCustomToolCallOutput {
         return .{ .raw = value };
     }
 
@@ -4932,7 +4932,7 @@ pub const FunctionAndCustomToolCallOutput = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !FunctionAndCustomToolCallOutput {
         if (source != .object) return .{ .raw = source };
@@ -5072,7 +5072,7 @@ pub const FunctionShellCallOutputItemParam = struct {
 pub const FunctionShellCallOutputOutcome = union(enum) {
     exit: FunctionShellCallOutputExitOutcome,
     timeout: FunctionShellCallOutputTimeoutOutcome,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forExit(outcome: FunctionShellCallOutputExitOutcome) FunctionShellCallOutputOutcome {
         return .{ .exit = outcome };
@@ -5082,7 +5082,7 @@ pub const FunctionShellCallOutputOutcome = union(enum) {
         return .{ .timeout = outcome };
     }
 
-    pub fn forRaw(value: std.json.Value) FunctionShellCallOutputOutcome {
+    pub fn forRaw(value: JsonObject) FunctionShellCallOutputOutcome {
         return .{ .raw = value };
     }
 
@@ -5106,7 +5106,7 @@ pub const FunctionShellCallOutputOutcome = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !FunctionShellCallOutputOutcome {
         if (source != .object) return .{ .raw = source };
@@ -5306,7 +5306,7 @@ pub const ImageEditPartialImageEvent = struct {
 pub const ImageEditStreamEvent = union(enum) {
     completed: ImageEditCompletedEvent,
     partial_image: ImageEditPartialImageEvent,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forCompleted(value: ImageEditCompletedEvent) ImageEditStreamEvent {
         return .{ .completed = value };
@@ -5316,7 +5316,7 @@ pub const ImageEditStreamEvent = union(enum) {
         return .{ .partial_image = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ImageEditStreamEvent {
+    pub fn forRaw(value: JsonObject) ImageEditStreamEvent {
         return .{ .raw = value };
     }
 
@@ -5341,7 +5341,7 @@ pub const ImageEditStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ImageEditStreamEvent {
         switch (source) {
@@ -5405,7 +5405,7 @@ pub const ImageGenPartialImageEvent = struct {
 pub const ImageGenStreamEvent = union(enum) {
     completed: ImageGenCompletedEvent,
     partial_image: ImageGenPartialImageEvent,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forCompleted(value: ImageGenCompletedEvent) ImageGenStreamEvent {
         return .{ .completed = value };
@@ -5415,7 +5415,7 @@ pub const ImageGenStreamEvent = union(enum) {
         return .{ .partial_image = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ImageGenStreamEvent {
+    pub fn forRaw(value: JsonObject) ImageGenStreamEvent {
         return .{ .raw = value };
     }
 
@@ -5440,7 +5440,7 @@ pub const ImageGenStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ImageGenStreamEvent {
         switch (source) {
@@ -5537,7 +5537,7 @@ pub const InputContent = union(enum) {
     image: InputImageContent,
     file: InputFileContent,
     audio: InputAudio,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(value: []const u8) InputContent {
         return .{
@@ -5560,7 +5560,7 @@ pub const InputContent = union(enum) {
         return .{ .audio = value };
     }
 
-    pub fn forRaw(value: std.json.Value) InputContent {
+    pub fn forRaw(value: JsonObject) InputContent {
         return .{ .raw = value };
     }
 
@@ -5591,7 +5591,7 @@ pub const InputContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !InputContent {
         switch (source) {
@@ -5693,7 +5693,7 @@ pub const InputMessageResource = struct {
 pub const InputParam = union(enum) {
     text: []const u8,
     items: []const InputItem,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(value: []const u8) InputParam {
         return .{ .text = value };
@@ -5703,7 +5703,7 @@ pub const InputParam = union(enum) {
         return .{ .items = value };
     }
 
-    pub fn forRaw(value: std.json.Value) InputParam {
+    pub fn forRaw(value: JsonObject) InputParam {
         return .{ .raw = value };
     }
 
@@ -5728,7 +5728,7 @@ pub const InputParam = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !InputParam {
         switch (source) {
@@ -5816,7 +5816,7 @@ pub const Item = union(enum) {
     mcp_tool_call: MCPToolCall,
     custom_tool_call: CustomToolCall,
     custom_tool_call_output: CustomToolCallOutput,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forInputMessage(value: InputMessage) Item {
         return .{ .input_message = value };
@@ -5830,7 +5830,7 @@ pub const Item = union(enum) {
         return .{ .file_search_tool_call = value };
     }
 
-    pub fn forRaw(value: std.json.Value) Item {
+    pub fn forRaw(value: JsonObject) Item {
         return .{ .raw = value };
     }
 
@@ -5871,7 +5871,7 @@ pub const Item = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !Item {
         switch (source) {
@@ -6056,7 +6056,7 @@ pub const InputItem = union(enum) {
     easy_message: EasyInputMessage,
     item: Item,
     item_reference: ItemReferenceParam,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forEasyMessage(value: EasyInputMessage) InputItem {
         return .{ .easy_message = value };
@@ -6070,7 +6070,7 @@ pub const InputItem = union(enum) {
         return .{ .item_reference = value };
     }
 
-    pub fn forRaw(value: std.json.Value) InputItem {
+    pub fn forRaw(value: JsonObject) InputItem {
         return .{ .raw = value };
     }
 
@@ -6090,7 +6090,7 @@ pub const InputItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !InputItem {
         switch (source) {
@@ -6148,9 +6148,9 @@ pub const ItemResource = union(enum) {
     mcp_approval_request: MCPApprovalRequest,
     mcp_approval_response: MCPApprovalResponseResource,
     mcp_tool_call: MCPToolCall,
-    raw: std.json.Value,
+    raw: JsonObject,
 
-    pub fn forRaw(value: std.json.Value) ItemResource {
+    pub fn forRaw(value: JsonObject) ItemResource {
         return .{ .raw = value };
     }
 
@@ -6187,7 +6187,7 @@ pub const ItemResource = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ItemResource {
         switch (source) {
@@ -6520,7 +6520,7 @@ pub const MCPListToolsTool = struct {
     name: []const u8,
     description: ?[]const u8,
     input_schema: FunctionParameters,
-    annotations: ?std.json.Value,
+    annotations: ?FunctionParameters,
 };
 pub const MCPTool = struct {
     type: []const u8,
@@ -6529,9 +6529,9 @@ pub const MCPTool = struct {
     connector_id: ?[]const u8,
     authorization: ?[]const u8,
     server_description: ?[]const u8,
-    headers: ?std.json.Value,
-    allowed_tools: ?std.json.Value,
-    require_approval: ?std.json.Value,
+    headers: ?FunctionParameters,
+    allowed_tools: ?FunctionParameters,
+    require_approval: ?FunctionParameters,
 };
 pub const MCPToolCall = struct {
     type: []const u8,
@@ -6566,7 +6566,7 @@ pub const Message = struct {
 pub const MessageTextAnnotation = union(enum) {
     file_citation: MessageContentTextAnnotationsFileCitationObject,
     file_path: MessageContentTextAnnotationsFilePathObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forFileCitation(value: MessageContentTextAnnotationsFileCitationObject) MessageTextAnnotation {
         return .{ .file_citation = value };
@@ -6576,7 +6576,7 @@ pub const MessageTextAnnotation = union(enum) {
         return .{ .file_path = value };
     }
 
-    pub fn forRaw(value: std.json.Value) MessageTextAnnotation {
+    pub fn forRaw(value: JsonObject) MessageTextAnnotation {
         return .{ .raw = value };
     }
 
@@ -6601,7 +6601,7 @@ pub const MessageTextAnnotation = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !MessageTextAnnotation {
         switch (source) {
@@ -6640,7 +6640,7 @@ pub const MessageTextAnnotation = union(enum) {
 pub const MessageTextAnnotationDelta = union(enum) {
     file_citation: MessageDeltaContentTextAnnotationsFileCitationObject,
     file_path: MessageDeltaContentTextAnnotationsFilePathObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forFileCitation(value: MessageDeltaContentTextAnnotationsFileCitationObject) MessageTextAnnotationDelta {
         return .{ .file_citation = value };
@@ -6650,7 +6650,7 @@ pub const MessageTextAnnotationDelta = union(enum) {
         return .{ .file_path = value };
     }
 
-    pub fn forRaw(value: std.json.Value) MessageTextAnnotationDelta {
+    pub fn forRaw(value: JsonObject) MessageTextAnnotationDelta {
         return .{ .raw = value };
     }
 
@@ -6675,7 +6675,7 @@ pub const MessageTextAnnotationDelta = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !MessageTextAnnotationDelta {
         switch (source) {
@@ -6716,7 +6716,7 @@ pub const MessageContent = union(enum) {
     image_file: MessageContentImageFileObject,
     image_url: MessageContentImageUrlObject,
     refusal: MessageContentRefusalObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(value: MessageContentTextObject) MessageContent {
         return .{ .text = value };
@@ -6734,7 +6734,7 @@ pub const MessageContent = union(enum) {
         return .{ .refusal = value };
     }
 
-    pub fn forRaw(value: std.json.Value) MessageContent {
+    pub fn forRaw(value: JsonObject) MessageContent {
         return .{ .raw = value };
     }
 
@@ -6765,7 +6765,7 @@ pub const MessageContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !MessageContent {
         switch (source) {
@@ -6828,7 +6828,7 @@ pub const MessageContentDelta = union(enum) {
     image_file: MessageDeltaContentImageFileObject,
     image_url: MessageDeltaContentImageUrlObject,
     refusal: MessageDeltaContentRefusalObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(value: MessageDeltaContentTextObject) MessageContentDelta {
         return .{ .text = value };
@@ -6846,7 +6846,7 @@ pub const MessageContentDelta = union(enum) {
         return .{ .refusal = value };
     }
 
-    pub fn forRaw(value: std.json.Value) MessageContentDelta {
+    pub fn forRaw(value: JsonObject) MessageContentDelta {
         return .{ .raw = value };
     }
 
@@ -6877,7 +6877,7 @@ pub const MessageContentDelta = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !MessageContentDelta {
         switch (source) {
@@ -7088,7 +7088,7 @@ pub const MessageStreamEvent = union(enum) {
     delta: MessageStreamEventDelta,
     completed: MessageStreamEventCompleted,
     incomplete: MessageStreamEventIncomplete,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forCreated(value: MessageStreamEventCreated) MessageStreamEvent {
         return .{ .created = value };
@@ -7110,7 +7110,7 @@ pub const MessageStreamEvent = union(enum) {
         return .{ .incomplete = value };
     }
 
-    pub fn forRaw(value: std.json.Value) MessageStreamEvent {
+    pub fn forRaw(value: JsonObject) MessageStreamEvent {
         return .{ .raw = value };
     }
 
@@ -7144,7 +7144,7 @@ pub const MessageStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !MessageStreamEvent {
         switch (source) {
@@ -7302,7 +7302,7 @@ pub const OpenAIFile = struct {
     filename: []const u8 = "",
     purpose: []const u8 = "",
     status: []const u8 = "",
-    status_details: ?std.json.Value = null,
+    status_details: ?FunctionParameters = null,
 };
 pub const OrderEnum = []const u8;
 pub const OtherChunkingStrategyResponseParam = struct {
@@ -7318,7 +7318,7 @@ pub const OutputContent = union(enum) {
     refusal: RefusalContent,
     reasoning: ReasoningTextContent,
     audio: OutputAudio,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(value: OutputTextContent) OutputContent {
         return .{ .text = value };
@@ -7336,7 +7336,7 @@ pub const OutputContent = union(enum) {
         return .{ .audio = value };
     }
 
-    pub fn forRaw(value: std.json.Value) OutputContent {
+    pub fn forRaw(value: JsonObject) OutputContent {
         return .{ .raw = value };
     }
 
@@ -7367,7 +7367,7 @@ pub const OutputContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !OutputContent {
         switch (source) {
@@ -7444,7 +7444,7 @@ pub const OutputItem = union(enum) {
     mcp_list_tools: MCPListTools,
     mcp_approval_request: MCPApprovalRequest,
     custom_tool_call: CustomToolCall,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forMessage(value: OutputMessage) OutputItem {
         return .{ .message = value };
@@ -7518,7 +7518,7 @@ pub const OutputItem = union(enum) {
         return .{ .custom_tool_call = value };
     }
 
-    pub fn forRaw(value: std.json.Value) OutputItem {
+    pub fn forRaw(value: JsonObject) OutputItem {
         return .{ .raw = value };
     }
 
@@ -7553,7 +7553,7 @@ pub const OutputItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !OutputItem {
         switch (source) {
@@ -7875,13 +7875,13 @@ pub const PromptTemplate = struct {
 
 pub const Prompt = union(enum) {
     template: PromptTemplate,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forTemplate(value: PromptTemplate) Prompt {
         return .{ .template = value };
     }
 
-    pub fn forRaw(value: std.json.Value) Prompt {
+    pub fn forRaw(value: JsonObject) Prompt {
         return .{ .raw = value };
     }
 
@@ -7903,7 +7903,7 @@ pub const Prompt = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !Prompt {
         _ = allocator;
@@ -7978,7 +7978,7 @@ pub const RealtimeAudioFormats = union(enum) {
     pcm: RealtimeAudioFormatPcm,
     pcmu: RealtimeAudioFormatPcmu,
     pcma: RealtimeAudioFormatPcma,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forPcm(value: RealtimeAudioFormatPcm) RealtimeAudioFormats {
         return .{ .pcm = value };
@@ -7992,7 +7992,7 @@ pub const RealtimeAudioFormats = union(enum) {
         return .{ .pcma = value };
     }
 
-    pub fn forRaw(value: std.json.Value) RealtimeAudioFormats {
+    pub fn forRaw(value: JsonObject) RealtimeAudioFormats {
         return .{ .raw = value };
     }
 
@@ -8020,7 +8020,7 @@ pub const RealtimeAudioFormats = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RealtimeAudioFormats {
         _ = allocator;
@@ -8168,12 +8168,12 @@ pub const RealtimeBetaResponseCreateParams = struct {
         type: ?[]const u8,
         name: ?[]const u8,
         description: ?[]const u8,
-        parameters: ?std.json.Value,
+        parameters: ?FunctionParameters,
     },
     tool_choice: ?ToolChoiceParam,
     temperature: ?f64,
     max_output_tokens: ?i64,
-    conversation: ?std.json.Value,
+    conversation: ?FunctionParameters,
     metadata: ?Metadata,
     prompt: ?Prompt,
     input: ?[]const RealtimeConversationItem,
@@ -8397,7 +8397,7 @@ pub const RealtimeBetaServerEventResponseMCPCallArgumentsDelta = struct {
     item_id: []const u8,
     output_index: i64,
     delta: []const u8,
-    obfuscation: ?std.json.Value,
+    obfuscation: ?FunctionParameters,
 };
 pub const RealtimeBetaServerEventResponseMCPCallArgumentsDone = struct {
     event_id: []const u8,
@@ -8479,7 +8479,7 @@ pub const RealtimeBetaServerEventTranscriptionSessionUpdated = struct {
 };
 pub const RealtimeCallCreateRequest = struct {
     sdp: []const u8,
-    session: ?std.json.Value,
+    session: ?FunctionParameters,
 };
 pub const RealtimeCallReferRequest = struct {
     target_uri: []const u8,
@@ -8563,13 +8563,13 @@ pub const RealtimeConversationItem = union(enum) {
     mcp_approval_response: RealtimeMCPApprovalResponse,
     mcp_list_tools: RealtimeMCPListTools,
     mcp_tool_call: RealtimeMCPToolCall,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forFunctionCall(value: RealtimeConversationItemFunctionCall) RealtimeConversationItem {
         return .{ .function_call = value };
     }
 
-    pub fn forRaw(value: std.json.Value) RealtimeConversationItem {
+    pub fn forRaw(value: JsonObject) RealtimeConversationItem {
         return .{ .raw = value };
     }
 
@@ -8596,7 +8596,7 @@ pub const RealtimeConversationItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RealtimeConversationItem {
         switch (source) {
@@ -8820,7 +8820,7 @@ pub const RealtimeCreateClientSecretRequest = struct {
         anchor: ?[]const u8,
         seconds: ?i64,
     },
-    session: ?std.json.Value,
+    session: ?FunctionParameters,
 };
 pub const RealtimeCreateClientSecretResponse = struct {
     value: []const u8,
@@ -8831,7 +8831,7 @@ pub const RealtimeFunctionTool = struct {
     type: ?[]const u8,
     name: ?[]const u8,
     description: ?[]const u8,
-    parameters: ?std.json.Value,
+    parameters: ?FunctionParameters,
 };
 pub const RealtimeMCPApprovalRequest = struct {
     type: []const u8,
@@ -8871,7 +8871,7 @@ pub const RealtimeMCPToolCall = struct {
     arguments: []const u8,
     approval_request_id: ?[]const u8,
     output: ?[]const u8,
-    _error: ?std.json.Value,
+    _error: ?FunctionParameters,
 };
 pub const RealtimeMCPToolExecutionError = struct {
     type: []const u8,
@@ -8930,10 +8930,10 @@ pub const RealtimeResponseCreateParams = struct {
             voice: ?VoiceIdsShared,
         },
     },
-    tools: ?[]const std.json.Value,
+    tools: ?[]const FunctionParameters,
     tool_choice: ?ToolChoiceParam,
     max_output_tokens: ?i64,
-    conversation: ?std.json.Value,
+    conversation: ?FunctionParameters,
     metadata: ?Metadata,
     prompt: ?Prompt,
     input: ?[]const RealtimeConversationItem,
@@ -9205,7 +9205,7 @@ pub const RealtimeServerEventResponseMCPCallArgumentsDelta = struct {
     item_id: []const u8,
     output_index: i64,
     delta: []const u8,
-    obfuscation: ?std.json.Value,
+    obfuscation: ?FunctionParameters,
 };
 pub const RealtimeServerEventResponseMCPCallArgumentsDone = struct {
     event_id: []const u8,
@@ -9289,20 +9289,20 @@ pub const RealtimeSession = struct {
     voice: ?VoiceIdsShared,
     input_audio_format: ?[]const u8,
     output_audio_format: ?[]const u8,
-    input_audio_transcription: ?std.json.Value,
+    input_audio_transcription: ?FunctionParameters,
     turn_detection: ?RealtimeTurnDetection,
     input_audio_noise_reduction: ?struct {
         type: ?NoiseReductionType,
     },
     speed: ?f64,
-    tracing: ?std.json.Value,
+    tracing: ?FunctionParameters,
     tools: ?[]const RealtimeFunctionTool,
     tool_choice: ?[]const u8,
     temperature: ?f64,
     max_response_output_tokens: ?i64,
     expires_at: ?i64,
-    prompt: ?std.json.Value,
-    include: ?std.json.Value,
+    prompt: ?FunctionParameters,
+    include: ?FunctionParameters,
 };
 pub const RealtimeSessionCreateRequest = struct {
     client_secret: struct {
@@ -9318,13 +9318,13 @@ pub const RealtimeSessionCreateRequest = struct {
         model: ?[]const u8,
     },
     speed: ?f64,
-    tracing: ?std.json.Value,
+    tracing: ?FunctionParameters,
     turn_detection: ?RealtimeTurnDetection,
     tools: ?[]const struct {
         type: ?[]const u8,
         name: ?[]const u8,
         description: ?[]const u8,
-        parameters: ?std.json.Value,
+        parameters: ?FunctionParameters,
     },
     tool_choice: ?[]const u8,
     temperature: ?f64,
@@ -9353,8 +9353,8 @@ pub const RealtimeSessionCreateRequestGA = struct {
         },
     },
     include: ?[]const []const u8,
-    tracing: ?std.json.Value,
-    tools: ?[]const std.json.Value,
+    tracing: ?FunctionParameters,
+    tools: ?[]const FunctionParameters,
     tool_choice: ?ToolChoiceParam,
     max_output_tokens: ?i64,
     truncation: ?RealtimeTruncation,
@@ -9383,7 +9383,7 @@ pub const RealtimeSessionCreateResponse = struct {
             speed: ?f64,
         },
     },
-    tracing: ?std.json.Value,
+    tracing: ?FunctionParameters,
     turn_detection: ?RealtimeTurnDetection,
     tools: ?[]const RealtimeFunctionTool,
     tool_choice: ?[]const u8,
@@ -9414,8 +9414,8 @@ pub const RealtimeSessionCreateResponseGA = struct {
         },
     },
     include: ?[]const []const u8,
-    tracing: ?std.json.Value,
-    tools: ?[]const std.json.Value,
+    tracing: ?FunctionParameters,
+    tools: ?[]const FunctionParameters,
     tool_choice: ?ToolChoiceParam,
     max_output_tokens: ?i64,
     truncation: ?RealtimeTruncation,
@@ -9489,7 +9489,7 @@ pub const RealtimeTurnDetectionSemanticVad = struct {
 pub const RealtimeTurnDetection = union(enum) {
     server_vad: RealtimeTurnDetectionServerVad,
     semantic_vad: RealtimeTurnDetectionSemanticVad,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forServerVad(value: RealtimeTurnDetectionServerVad) RealtimeTurnDetection {
         return .{ .server_vad = value };
@@ -9499,7 +9499,7 @@ pub const RealtimeTurnDetection = union(enum) {
         return .{ .semantic_vad = value };
     }
 
-    pub fn forRaw(value: std.json.Value) RealtimeTurnDetection {
+    pub fn forRaw(value: JsonObject) RealtimeTurnDetection {
         return .{ .raw = value };
     }
 
@@ -9518,7 +9518,7 @@ pub const RealtimeTurnDetection = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RealtimeTurnDetection {
         switch (source) {
@@ -9565,7 +9565,7 @@ pub const RealtimeTruncation = union(enum) {
         retention_ratio: f64,
         token_limits: ?RealtimeTruncationTokenLimits = null,
     },
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forAuto() RealtimeTruncation {
         return .auto;
@@ -9588,7 +9588,7 @@ pub const RealtimeTruncation = union(enum) {
         };
     }
 
-    pub fn forRaw(value: std.json.Value) RealtimeTruncation {
+    pub fn forRaw(value: JsonObject) RealtimeTruncation {
         return .{ .raw = value };
     }
 
@@ -9608,7 +9608,7 @@ pub const RealtimeTruncation = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RealtimeTruncation {
         switch (source) {
@@ -9655,7 +9655,7 @@ pub const ReasoningEffort = []const u8;
 pub const ReasoningItem = struct {
     type: []const u8,
     id: []const u8,
-    encrypted_content: ?std.json.Value,
+    encrypted_content: ?FunctionParameters,
     summary: []const Summary,
     content: ?[]const ReasoningTextContent,
     status: ?[]const u8,
@@ -9671,7 +9671,7 @@ pub const RefusalContent = struct {
 pub const ResponseOutput = union(enum) {
     item: OutputItem,
     items: []const OutputItem,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forItem(value: OutputItem) ResponseOutput {
         return .{ .item = value };
@@ -9681,7 +9681,7 @@ pub const ResponseOutput = union(enum) {
         return .{ .items = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ResponseOutput {
+    pub fn forRaw(value: JsonObject) ResponseOutput {
         return .{ .raw = value };
     }
 
@@ -9707,7 +9707,7 @@ pub const ResponseOutput = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ResponseOutput {
         switch (source) {
@@ -9754,13 +9754,13 @@ pub const ResponseObject = struct {
 
 pub const Response = union(enum) {
     object: ResponseObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forObject(value: ResponseObject) Response {
         return .{ .object = value };
     }
 
-    pub fn forRaw(value: std.json.Value) Response {
+    pub fn forRaw(value: JsonObject) Response {
         return .{ .raw = value };
     }
 
@@ -9782,7 +9782,7 @@ pub const Response = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !Response {
         const parsed = std.json.parseFromValue(
@@ -9894,7 +9894,7 @@ pub const ResponseError = union(enum) {
         message: []const u8,
         param: ?[]const u8 = null,
     },
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forObject(
         error_type: ?[]const u8,
@@ -9910,7 +9910,7 @@ pub const ResponseError = union(enum) {
         } };
     }
 
-    pub fn forRaw(value: std.json.Value) ResponseError {
+    pub fn forRaw(value: JsonObject) ResponseError {
         return .{ .raw = value };
     }
 
@@ -9932,7 +9932,7 @@ pub const ResponseError = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ResponseError {
         const parsed = std.json.parseFromValue(
@@ -10653,7 +10653,7 @@ pub const ResponseStreamEvent = union(enum) {
     web_search_call_completed: ResponseStreamEventWebSearchCallCompleted,
     web_search_call_in_progress: ResponseStreamEventWebSearchCallInProgress,
     web_search_call_searching: ResponseStreamEventWebSearchCallSearching,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forAudioDelta(value: ResponseStreamEventAudioDelta) ResponseStreamEvent {
         return .{ .audio_delta = value };
@@ -10867,7 +10867,7 @@ pub const ResponseStreamEvent = union(enum) {
         return .{ .web_search_call_searching = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ResponseStreamEvent {
+    pub fn forRaw(value: JsonObject) ResponseStreamEvent {
         return .{ .raw = value };
     }
 
@@ -10937,7 +10937,7 @@ pub const ResponseStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ResponseStreamEvent {
         switch (source) {
@@ -11615,7 +11615,7 @@ pub const RunCompletionUsage = ?struct {
 };
 pub const RunGraderRequest = struct {
     grader: FunctionParameters,
-    item: ?std.json.Value,
+    item: ?FunctionParameters,
     model_sample: []const u8,
 };
 pub const RunGraderResponse = struct {
@@ -11710,7 +11710,7 @@ pub const RunStepDeltaStepDetailsToolCall = union(enum) {
     code_interpreter: RunStepDeltaStepDetailsToolCallsCodeObject,
     file_search: RunStepDeltaStepDetailsToolCallsFileSearchObject,
     function: RunStepDeltaStepDetailsToolCallsFunctionObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: RunStepDeltaStepDetailsToolCall, writer: anytype) !void {
         switch (self) {
@@ -11731,13 +11731,13 @@ pub const RunStepDeltaStepDetailsToolCall = union(enum) {
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RunStepDeltaStepDetailsToolCall {
         return .{
-            .raw = try std.json.Value.jsonParse(allocator, source, options),
+            .raw = try JsonObject.jsonParse(allocator, source, options),
         };
     }
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RunStepDeltaStepDetailsToolCall {
         _ = allocator;
@@ -11789,7 +11789,7 @@ pub const RunStepDeltaStepDetailsToolCallsObject = struct {
 pub const RunStepDeltaStepDetails = union(enum) {
     message_creation: RunStepDeltaStepDetailsMessageCreationObject,
     tool_calls: RunStepDeltaStepDetailsToolCallsObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: RunStepDeltaStepDetails, writer: anytype) !void {
         switch (self) {
@@ -11807,13 +11807,13 @@ pub const RunStepDeltaStepDetails = union(enum) {
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RunStepDeltaStepDetails {
         return .{
-            .raw = try std.json.Value.jsonParse(allocator, source, options),
+            .raw = try JsonObject.jsonParse(allocator, source, options),
         };
     }
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RunStepDeltaStepDetails {
         _ = allocator;
@@ -11831,7 +11831,7 @@ pub const RunStepDetailsToolCall = union(enum) {
     code_interpreter: RunStepDetailsToolCallsCodeObject,
     file_search: RunStepDetailsToolCallsFileSearchObject,
     function: RunStepDetailsToolCallsFunctionObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: RunStepDetailsToolCall, writer: anytype) !void {
         switch (self) {
@@ -11852,13 +11852,13 @@ pub const RunStepDetailsToolCall = union(enum) {
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RunStepDetailsToolCall {
         return .{
-            .raw = try std.json.Value.jsonParse(allocator, source, options),
+            .raw = try JsonObject.jsonParse(allocator, source, options),
         };
     }
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RunStepDetailsToolCall {
         _ = allocator;
@@ -11921,7 +11921,7 @@ pub const RunStepDetailsToolCallsObject = struct {
 pub const RunStepDetails = union(enum) {
     message_creation: RunStepDetailsMessageCreationObject,
     tool_calls: RunStepDetailsToolCallsObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: RunStepDetails, writer: anytype) !void {
         switch (self) {
@@ -11939,13 +11939,13 @@ pub const RunStepDetails = union(enum) {
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !RunStepDetails {
         return .{
-            .raw = try std.json.Value.jsonParse(allocator, source, options),
+            .raw = try JsonObject.jsonParse(allocator, source, options),
         };
     }
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RunStepDetails {
         _ = allocator;
@@ -12012,7 +12012,7 @@ pub const RunStepStreamEvent = union(enum) {
     failed: RunStepStreamEventFailed,
     cancelled: RunStepStreamEventCancelled,
     expired: RunStepStreamEventExpired,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forCreated(value: RunStepStreamEventCreated) RunStepStreamEvent {
         return .{ .created = value };
@@ -12042,7 +12042,7 @@ pub const RunStepStreamEvent = union(enum) {
         return .{ .expired = value };
     }
 
-    pub fn forRaw(value: std.json.Value) RunStepStreamEvent {
+    pub fn forRaw(value: JsonObject) RunStepStreamEvent {
         return .{ .raw = value };
     }
 
@@ -12082,7 +12082,7 @@ pub const RunStepStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RunStepStreamEvent {
         switch (source) {
@@ -12224,7 +12224,7 @@ pub const RunStreamEvent = union(enum) {
     cancelling: RunStreamEventCancelling,
     cancelled: RunStreamEventCancelled,
     expired: RunStreamEventExpired,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forCreated(value: RunStreamEventCreated) RunStreamEvent {
         return .{ .created = value };
@@ -12266,7 +12266,7 @@ pub const RunStreamEvent = union(enum) {
         return .{ .expired = value };
     }
 
-    pub fn forRaw(value: std.json.Value) RunStreamEvent {
+    pub fn forRaw(value: JsonObject) RunStreamEvent {
         return .{ .raw = value };
     }
 
@@ -12315,7 +12315,7 @@ pub const RunStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !RunStreamEvent {
         switch (source) {
@@ -12492,7 +12492,7 @@ pub const StaticChunkingStrategyResponseParam = struct {
 pub const StopConfiguration = union(enum) {
     single: []const u8,
     multiple: []const []const u8,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: StopConfiguration, writer: anytype) !void {
         switch (self) {
@@ -12537,7 +12537,7 @@ pub const StopConfiguration = union(enum) {
         return .{ .multiple = values };
     }
 
-    pub fn forRaw(value: std.json.Value) StopConfiguration {
+    pub fn forRaw(value: JsonObject) StopConfiguration {
         return .{ .raw = value };
     }
 };
@@ -12596,7 +12596,7 @@ pub const TextResponseFormatConfiguration = union(enum) {
     text: ResponseFormatText,
     json_schema: TextResponseFormatJsonSchema,
     json_object: ResponseFormatJsonObject,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(value: ResponseFormatText) TextResponseFormatConfiguration {
         return .{ .text = value };
@@ -12610,7 +12610,7 @@ pub const TextResponseFormatConfiguration = union(enum) {
         return .{ .json_object = value };
     }
 
-    pub fn forRaw(value: std.json.Value) TextResponseFormatConfiguration {
+    pub fn forRaw(value: JsonObject) TextResponseFormatConfiguration {
         return .{ .raw = value };
     }
 
@@ -12638,7 +12638,7 @@ pub const TextResponseFormatConfiguration = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !TextResponseFormatConfiguration {
         switch (source) {
@@ -12699,7 +12699,7 @@ pub const ThreadItem = union(enum) {
     client_tool_call: ClientToolCallItem,
     task: TaskItem,
     task_group: TaskGroupItem,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forUser(value: UserMessageItem) ThreadItem {
         return .{ .user = value };
@@ -12725,7 +12725,7 @@ pub const ThreadItem = union(enum) {
         return .{ .task_group = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ThreadItem {
+    pub fn forRaw(value: JsonObject) ThreadItem {
         return .{ .raw = value };
     }
 
@@ -12762,7 +12762,7 @@ pub const ThreadItem = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ThreadItem {
         switch (source) {
@@ -12878,13 +12878,13 @@ pub const ThreadStreamEventCreated = struct {
 };
 pub const ThreadStreamEvent = union(enum) {
     created: ThreadStreamEventCreated,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forCreated(value: ThreadStreamEventCreated) ThreadStreamEvent {
         return .{ .created = value };
     }
 
-    pub fn forRaw(value: std.json.Value) ThreadStreamEvent {
+    pub fn forRaw(value: JsonObject) ThreadStreamEvent {
         return .{ .raw = value };
     }
 
@@ -12906,7 +12906,7 @@ pub const ThreadStreamEvent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ThreadStreamEvent {
         switch (source) {
@@ -12936,16 +12936,16 @@ pub const ToggleCertificatesRequest = struct {
 };
 pub const TokenCountsBody = struct {
     model: ?[]const u8,
-    input: ?std.json.Value,
+    input: ?FunctionParameters,
     previous_response_id: ?[]const u8,
     tools: ?[]const Tool,
-    text: ?std.json.Value,
-    reasoning: ?std.json.Value,
+    text: ?FunctionParameters,
+    reasoning: ?FunctionParameters,
     truncation: ?TruncationEnum,
     instructions: ?[]const u8,
-    conversation: ?std.json.Value,
+    conversation: ?FunctionParameters,
     tool_choice: ?ToolChoiceParam,
-    parallel_tool_calls: ?std.json.Value,
+    parallel_tool_calls: ?FunctionParameters,
 };
 pub const TokenCountsResource = struct {
     object: []const u8,
@@ -12958,7 +12958,7 @@ pub const Tool = union(enum) {
     computer: ComputerUsePreviewTool,
     custom: CustomToolParam,
     mcp: MCPTool,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forFunction(function: FunctionTool) Tool {
         return .{ .function = function };
@@ -12984,7 +12984,7 @@ pub const Tool = union(enum) {
         return .{ .mcp = tool };
     }
 
-    pub fn forRaw(value: std.json.Value) Tool {
+    pub fn forRaw(value: JsonObject) Tool {
         return .{ .raw = value };
     }
 
@@ -13016,13 +13016,13 @@ pub const Tool = union(enum) {
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !Tool {
         return .{
-            .raw = try std.json.Value.jsonParse(allocator, source, options),
+            .raw = try JsonObject.jsonParse(allocator, source, options),
         };
     }
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !Tool {
         _ = allocator;
@@ -13036,7 +13036,7 @@ pub const ToolChoice = struct {
 pub const ToolChoiceAllowed = struct {
     type: []const u8,
     mode: []const u8,
-    tools: []const std.json.Value,
+    tools: []const FunctionParameters,
 };
 pub const ToolChoiceCustom = struct {
     type: []const u8,
@@ -13061,7 +13061,7 @@ pub const ToolChoiceParam = union(enum) {
     custom: ToolChoiceCustom,
     mcp: ToolChoiceMCP,
     allowed: ToolChoiceAllowed,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forNone() ToolChoiceParam {
         return .none;
@@ -13114,7 +13114,7 @@ pub const ToolChoiceParam = union(enum) {
         };
     }
 
-    pub fn forRaw(value: std.json.Value) ToolChoiceParam {
+    pub fn forRaw(value: JsonObject) ToolChoiceParam {
         return .{ .raw = value };
     }
 
@@ -13152,13 +13152,13 @@ pub const ToolChoiceParam = union(enum) {
 
     pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ToolChoiceParam {
         return .{
-            .raw = try std.json.Value.jsonParse(allocator, source, options),
+            .raw = try JsonObject.jsonParse(allocator, source, options),
         };
     }
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !ToolChoiceParam {
         _ = allocator;
@@ -13394,7 +13394,7 @@ pub const UsageTimeBucket = struct {
     object: []const u8,
     start_time: i64,
     end_time: i64,
-    result: []const std.json.Value,
+    result: []const FunctionParameters,
 };
 pub const UsageVectorStoresResult = struct {
     object: []const u8,
@@ -13434,7 +13434,7 @@ pub const UserMessageInputText = struct {
 pub const UserMessageItemContent = union(enum) {
     input_text: UserMessageInputText,
     quoted_text: UserMessageQuotedText,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forInputText(value: UserMessageInputText) UserMessageItemContent {
         return .{ .input_text = value };
@@ -13444,7 +13444,7 @@ pub const UserMessageItemContent = union(enum) {
         return .{ .quoted_text = value };
     }
 
-    pub fn forRaw(value: std.json.Value) UserMessageItemContent {
+    pub fn forRaw(value: JsonObject) UserMessageItemContent {
         return .{ .raw = value };
     }
 
@@ -13469,7 +13469,7 @@ pub const UserMessageItemContent = union(enum) {
 
     pub fn jsonParseFromValue(
         allocator: std.mem.Allocator,
-        source: std.json.Value,
+        source: JsonObject,
         options: std.json.ParseOptions,
     ) !UserMessageItemContent {
         switch (source) {
@@ -13537,7 +13537,7 @@ pub const ValidateGraderRequest = struct {
     grader: FunctionParameters,
 };
 pub const ValidateGraderResponse = struct {
-    grader: ?std.json.Value,
+    grader: ?FunctionParameters,
 };
 pub const VectorStoreExpirationAfter = struct {
     anchor: []const u8,
@@ -13732,7 +13732,7 @@ pub const WebSearchPreviewTool = struct {
 };
 pub const WebSearchTool = struct {
     type: []const u8,
-    filters: ?std.json.Value,
+    filters: ?FunctionParameters,
     user_location: ?WebSearchApproximateLocation,
     search_context_size: ?[]const u8,
 };
@@ -13892,7 +13892,7 @@ pub const WidgetMessageItem = struct {
 pub const WorkflowParam = struct {
     id: []const u8,
     version: ?[]const u8,
-    state_variables: ?std.json.Value,
+    state_variables: ?FunctionParameters,
     tracing: ?WorkflowTracingParam,
 };
 pub const WorkflowTracingParam = struct {
