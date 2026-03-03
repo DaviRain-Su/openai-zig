@@ -2857,7 +2857,7 @@ pub const CreateAssistantRequest = struct {
     top_p: ?f64,
     response_format: ?AssistantsApiResponseFormatOption,
 };
-pub const CreateChatCompletionRequest = std.json.Value;
+pub const CreateChatCompletionRequest = FunctionParameters;
 pub const CreateChatCompletionResponse = struct {
     id: []const u8 = "",
     choices: []const ChatCompletionChoice = &.{},
@@ -4720,7 +4720,45 @@ pub const FileUploadParam = struct {
     max_file_size: ?i64,
     max_files: ?i64,
 };
-pub const FineTuneChatCompletionRequestAssistantMessage = std.json.Value;
+pub const FineTuneChatCompletionRequestAssistantMessage = union(enum) {
+    message: ChatCompletionRequestAssistantMessage,
+    raw: JsonObject,
+
+    pub fn forMessage(value: ChatCompletionRequestAssistantMessage) FineTuneChatCompletionRequestAssistantMessage {
+        return .{ .message = value };
+    }
+
+    pub fn forRaw(value: JsonObject) FineTuneChatCompletionRequestAssistantMessage {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: FineTuneChatCompletionRequestAssistantMessage, writer: anytype) !void {
+        switch (self) {
+            .message => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !FineTuneChatCompletionRequestAssistantMessage {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !FineTuneChatCompletionRequestAssistantMessage {
+        if (source != .object) return .{ .raw = source };
+        const root = source.object;
+        const role = root.get("role") orelse return .{ .raw = source };
+        if (role != .string or !std.mem.eql(u8, role.string, "assistant")) return .{ .raw = source };
+
+        const parsed = std.json.parseFromValue(ChatCompletionRequestAssistantMessage, allocator, source, options) catch return .{ .raw = source };
+        defer parsed.deinit();
+        return .{ .message = parsed.value };
+    }
+};
 pub const FineTuneChatRequestInput = struct {
     messages: ?[]const std.json.Value,
     tools: ?[]const ChatCompletionTool,
@@ -8449,7 +8487,7 @@ pub const RealtimeCallReferRequest = struct {
 pub const RealtimeCallRejectRequest = struct {
     status_code: ?i64,
 };
-pub const RealtimeClientEvent = std.json.Value;
+pub const RealtimeClientEvent = FunctionParameters;
 pub const RealtimeClientEventConversationItemCreate = struct {
     event_id: ?[]const u8,
     type: []const u8,
@@ -8900,7 +8938,7 @@ pub const RealtimeResponseCreateParams = struct {
     prompt: ?Prompt,
     input: ?[]const RealtimeConversationItem,
 };
-pub const RealtimeServerEvent = std.json.Value;
+pub const RealtimeServerEvent = FunctionParameters;
 pub const RealtimeServerEventConversationCreated = struct {
     event_id: []const u8,
     type: []const u8,
