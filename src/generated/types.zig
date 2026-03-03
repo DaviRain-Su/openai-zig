@@ -2,9 +2,132 @@ const std = @import("std");
 
 pub const JsonObject = std.json.Value;
 pub const JsonObjectArray = []const JsonObject;
-pub const EvalDataSourceConfig = JsonObject;
+pub const EvalDataSourceConfig = union(enum) {
+    custom_create: CreateEvalCustomDataSourceConfig,
+    logs_create: CreateEvalLogsDataSourceConfig,
+    stored_completions_create: CreateEvalStoredCompletionsDataSourceConfig,
+    custom: EvalCustomDataSourceConfig,
+    logs: EvalLogsDataSourceConfig,
+    stored_completions: EvalStoredCompletionsDataSourceConfig,
+    raw: JsonObject,
+
+    pub fn forRaw(value: JsonObject) EvalDataSourceConfig {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: EvalDataSourceConfig, writer: anytype) !void {
+        switch (self) {
+            .custom_create => |value| try writer.write(value),
+            .logs_create => |value| try writer.write(value),
+            .stored_completions_create => |value| try writer.write(value),
+            .custom => |value| try writer.write(value),
+            .logs => |value| try writer.write(value),
+            .stored_completions => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !EvalDataSourceConfig {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: std.json.Value,
+        options: std.json.ParseOptions,
+    ) !EvalDataSourceConfig {
+        switch (source) {
+            .object => |root| {
+                const type_value = root.get("type");
+                const kind = if (type_value != null and type_value.? == .string) type_value.?.string else null;
+
+                if (kind) |value| {
+                    if (std.mem.eql(u8, value, "custom")) {
+                        if (root.get("item_schema") != null) {
+                            const parsed = std.json.parseFromValue(CreateEvalCustomDataSourceConfig, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .custom_create = parsed.value };
+                        }
+
+                        if (root.get("schema") != null) {
+                            const parsed = std.json.parseFromValue(EvalCustomDataSourceConfig, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .custom = parsed.value };
+                        }
+                    }
+
+                    if (std.mem.eql(u8, value, "logs")) {
+                        if (root.get("schema") != null) {
+                            const parsed = std.json.parseFromValue(EvalLogsDataSourceConfig, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .logs = parsed.value };
+                        }
+
+                        const parsed = std.json.parseFromValue(CreateEvalLogsDataSourceConfig, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .logs_create = parsed.value };
+                    }
+
+                    if (std.mem.eql(u8, value, "stored_completions")) {
+                        if (root.get("schema") != null) {
+                            const parsed = std.json.parseFromValue(EvalStoredCompletionsDataSourceConfig, allocator, source, options) catch return .{ .raw = source };
+                            defer parsed.deinit();
+                            return .{ .stored_completions = parsed.value };
+                        }
+
+                        const parsed = std.json.parseFromValue(CreateEvalStoredCompletionsDataSourceConfig, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .stored_completions_create = parsed.value };
+                    }
+                }
+
+                if (root.get("item_schema") != null) {
+                    const parsed = std.json.parseFromValue(CreateEvalCustomDataSourceConfig, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .custom_create = parsed.value };
+                }
+
+                if (root.get("schema") != null) {
+                    if (std.json.parseFromValue(EvalLogsDataSourceConfig, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .logs = parsed.value };
+                    } else |_| {}
+
+                    if (std.json.parseFromValue(EvalStoredCompletionsDataSourceConfig, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .stored_completions = parsed.value };
+                    } else |_| {}
+
+                    if (std.json.parseFromValue(EvalCustomDataSourceConfig, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .custom = parsed.value };
+                    } else |_| {}
+                }
+
+                if (std.json.parseFromValue(CreateEvalLogsDataSourceConfig, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .logs_create = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(CreateEvalStoredCompletionsDataSourceConfig, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .stored_completions_create = parsed.value };
+                } else |_| {}
+
+                if (std.json.parseFromValue(CreateEvalCustomDataSourceConfig, allocator, source, options)) |parsed| {
+                    defer parsed.deinit();
+                    return .{ .custom_create = parsed.value };
+                } else |_| {}
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const EvalTestingCriterion = EvalGraderConfig;
-pub const EvalSchema = JsonObject;
+pub const EvalSchema = FunctionParameters;
 pub const EvalSample = EvalItemContent;
 pub const EvalDatasourceItem = CreateEvalItem;
 pub const GenericContent = union(enum) {
@@ -9735,7 +9858,7 @@ pub const ResponseFormatJsonSchema = struct {
         strict: ?bool,
     },
 };
-pub const ResponseFormatJsonSchemaSchema = JsonObject;
+pub const ResponseFormatJsonSchemaSchema = FunctionParameters;
 pub const ResponseFormatText = struct {
     type: []const u8,
 };
@@ -9889,7 +10012,7 @@ pub const ResponseOutputTextAnnotationAddedEvent = struct {
     sequence_number: i64,
     annotation: Annotation,
 };
-pub const ResponsePromptVariables = JsonObject;
+pub const ResponsePromptVariables = Metadata;
 pub const ResponseProperties = struct {
     previous_response_id: ?[]const u8,
     model: ?ModelIdsResponses,
@@ -13254,7 +13377,7 @@ pub const VectorStoreExpirationAfter = struct {
     anchor: []const u8,
     days: i64,
 };
-pub const VectorStoreFileAttributes = JsonObject;
+pub const VectorStoreFileAttributes = Metadata;
 pub const VectorStoreFileBatchObject = struct {
     id: []const u8,
     object: []const u8,

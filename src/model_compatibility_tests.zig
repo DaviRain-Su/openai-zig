@@ -2934,3 +2934,68 @@ test "realtime mcp obfuscation parses generic content" {
         else => try std.testing.expect(false),
     }
 }
+
+test "eval data source config parses typed create and eval variants" {
+    const create_logs_payload =
+        \\{"type":"logs","metadata":{"team":"alpha"}}
+    ;
+    const parsed_create_logs = try std.json.parseFromSlice(
+        gen.EvalDataSourceConfig,
+        std.testing.allocator,
+        create_logs_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_create_logs.deinit();
+
+    switch (parsed_create_logs.value) {
+        .logs_create => |value| {
+            const metadata = value.metadata orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            try std.testing.expectEqualStrings("alpha", metadata.object.get("team").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const eval_stored_payload =
+        \\{"type":"stored_completions","metadata":{"source":"api"},"schema":{"type":"object"}}
+    ;
+    const parsed_eval_stored = try std.json.parseFromSlice(
+        gen.EvalDataSourceConfig,
+        std.testing.allocator,
+        eval_stored_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_eval_stored.deinit();
+
+    switch (parsed_eval_stored.value) {
+        .stored_completions => |value| {
+            const metadata = value.metadata orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            try std.testing.expectEqualStrings("api", metadata.object.get("source").?.string);
+            try std.testing.expectEqualStrings("object", value.schema.object.get("type").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval data source config keeps raw fallback for unknown type" {
+    const payload =
+        \\{"type":"future_source","foo":1}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.EvalDataSourceConfig,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future_source", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
