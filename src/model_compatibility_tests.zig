@@ -3995,9 +3995,9 @@ test "eval create request sources now parse via FunctionParameters" {
     }
 }
 
-test "raw constructors accept plain JsonObject for FunctionParameters-backed unions" {
+test "raw constructors accept plain std.json.Value for FunctionParameters-backed unions" {
     const raw_value = try std.json.parseFromSlice(
-        gen.JsonObject,
+        std.json.Value,
         std.testing.allocator,
         "{\"x\":1,\"type\":\"test\"}",
         .{ .ignore_unknown_fields = true },
