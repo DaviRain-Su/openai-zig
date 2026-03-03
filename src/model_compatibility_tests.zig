@@ -1,5 +1,6 @@
 const std = @import("std");
 const gen = @import("generated/types.zig");
+const user_balance = @import("resources/user_balance.zig");
 
 test "core responses ignore unknown fields" {
     const list_models_payload =
@@ -4233,4 +4234,45 @@ test "realtime status/details and session payload aliases remain parseable" {
         .schema => |value| try std.testing.expectEqualStrings("alloy", value.object.get("voice").?.string),
         .raw => |value| try std.testing.expectEqualStrings("alloy", value.object.get("voice").?.string),
     }
+}
+
+test "deepseek completion usage includes reasoning token details" {
+    const payload =
+        "{\"id\":\"cmpl-reason\",\"object\":\"text_completion\",\"created\":1700000000,\"model\":\"deepseek-reasoner\",\"choices\":[{\"text\":\"ok\",\"index\":0,\"logprobs\":null,\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":12,\"completion_tokens\":34,\"total_tokens\":46,\"completion_tokens_details\":{\"reasoning_tokens\":19,\"accepted_prediction_tokens\":5},\"prompt_tokens_details\":{\"cached_tokens\":7}}}";
+    const response = try std.json.parseFromSlice(
+        gen.CreateCompletionResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer response.deinit();
+
+    const usage = response.value.usage orelse return error.TestUnexpectedResult;
+    const completion_details = usage.completion_tokens_details orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(i64, 19), completion_details.reasoning_tokens.?);
+    try std.testing.expectEqual(@as(i64, 5), completion_details.accepted_prediction_tokens.?);
+    const prompt_details = usage.prompt_tokens_details orelse return error.TestUnexpectedResult;
+    try std.testing.expectEqual(@as(i64, 7), prompt_details.cached_tokens.?);
+}
+
+test "deepseek user balance response follows compatibility contract" {
+    const payload =
+        "{\"is_available\":true,\"balance_infos\":[{\"currency\":\"USD\",\"total_balance\":\"9.990000\",\"granted_balance\":\"8.120000\",\"topped_up_balance\":\"1.870000\",\"extra\":\"ignored\"},{\"currency\":\"CNY\",\"total_balance\":\"66.000\",\"granted_balance\":\"55.000\",\"topped_up_balance\":\"11.000\"}],\"unsupported\":false}";
+    const parsed = try std.json.parseFromSlice(
+        user_balance.GetUserBalanceResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(true, parsed.value.is_available);
+    try std.testing.expectEqual(@as(usize, 2), parsed.value.balance_infos.len);
+
+    const usd = parsed.value.balance_infos[0];
+    const cny = parsed.value.balance_infos[1];
+    try std.testing.expectEqualStrings("USD", usd.currency);
+    try std.testing.expectEqualStrings("9.990000", usd.total_balance);
+    try std.testing.expectEqualStrings("CNY", cny.currency);
+    try std.testing.expectEqualStrings("66.000", cny.total_balance);
 }

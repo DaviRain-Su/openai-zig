@@ -744,13 +744,13 @@ fn parseProxy(allocator: std.mem.Allocator, raw_proxy_url: []const u8) !?*std.ht
 
     const proxy = try allocator.create(std.http.Client.Proxy);
     proxy.* = .{
-            .protocol = protocol,
-            .host = host,
-            .authorization = authorization,
-            .port = uriPort(raw_proxy_url, protocol),
-            .supports_connect = true,
-        };
-        return proxy;
+        .protocol = protocol,
+        .host = host,
+        .authorization = authorization,
+        .port = uriPort(raw_proxy_url, protocol),
+        .supports_connect = true,
+    };
+    return proxy;
 }
 
 fn mapTransportError(err: anyerror) errors.Error {
@@ -860,16 +860,7 @@ fn isRetryableStatus(status: u16) bool {
 
 fn isRetryableFetchError(err: anytype) bool {
     return switch (@as(anyerror, err)) {
-        error.ConnectionRefused,
-        error.NetworkUnreachable,
-        error.ConnectionTimedOut,
-        error.ConnectionResetByPeer,
-        error.TemporaryNameServerFailure,
-        error.NameServerFailure,
-        error.UnexpectedConnectFailure,
-        error.ReadFailed,
-        error.WriteFailed,
-        error.UnsupportedCompressionMethod => true,
+        error.ConnectionRefused, error.NetworkUnreachable, error.ConnectionTimedOut, error.ConnectionResetByPeer, error.TemporaryNameServerFailure, error.NameServerFailure, error.UnexpectedConnectFailure, error.ReadFailed, error.WriteFailed, error.UnsupportedCompressionMethod => true,
         else => false,
     };
 }
@@ -914,7 +905,7 @@ fn uriPort(raw_proxy_url: []const u8, protocol: std.http.Client.Protocol) u16 {
         .tls => 443,
     };
     const scheme_end = std.mem.indexOf(u8, raw_proxy_url, "://") orelse 0;
-    const after_scheme = raw_proxy_url[scheme_end + if (scheme_end == 0) @as(usize, 0) else @as(usize, 3)..];
+    const after_scheme = raw_proxy_url[scheme_end + if (scheme_end == 0) @as(usize, 0) else @as(usize, 3) ..];
     const authority_end = std.mem.indexOfAny(u8, after_scheme, "/?#") orelse after_scheme.len;
     var authority = after_scheme[0..authority_end];
 
@@ -1108,6 +1099,14 @@ test "deepseek completions requests are routed to /beta" {
     );
     defer std.testing.allocator.free(chat_prefix_user_last);
     try std.testing.expectEqualStrings("https://api.deepseek.com/v1", chat_prefix_user_last);
+
+    const models_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/models", null);
+    defer std.testing.allocator.free(models_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", models_url);
+
+    const user_balance_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/user/balance", null);
+    defer std.testing.allocator.free(user_balance_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", user_balance_url);
 }
 
 test "non-deepseek base URLs keep original host" {
