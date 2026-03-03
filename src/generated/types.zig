@@ -6972,7 +6972,7 @@ pub const MessageStreamEvent = union(enum) {
         }
     }
 };
-pub const Metadata = JsonObject;
+pub const Metadata = FunctionParameters;
 pub const Model = struct {
     id: []const u8 = "",
     object: []const u8 = "",
