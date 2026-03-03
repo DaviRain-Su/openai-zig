@@ -3585,3 +3585,286 @@ test "create moderation request input parses scalar/array/raw variants" {
         else => try std.testing.expect(false),
     }
 }
+
+test "assistant content and parts parse typed variants and raw fallback" {
+    const text_payload = "\"assistant-text\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestAssistantMessageContent,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("assistant-text", value),
+        else => try std.testing.expect(false),
+    }
+
+    const parts_payload =
+        \\[
+        \\  {"type":"text","text":"ok"},
+        \\  {"type":"refusal","refusal":"no"},
+        \\  {"type":"future","x":1}
+        \\]
+    ;
+    const parsed_parts = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestAssistantMessageContent,
+        std.testing.allocator,
+        parts_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_parts.deinit();
+
+    switch (parsed_parts.value) {
+        .parts => |parts| {
+            try std.testing.expectEqual(@as(usize, 3), parts.len);
+            switch (parts[0]) {
+                .text => |value| try std.testing.expectEqualStrings("ok", value.text),
+                else => try std.testing.expect(false),
+            }
+            switch (parts[1]) {
+                .refusal => |value| try std.testing.expectEqualStrings("no", value.refusal),
+                else => try std.testing.expect(false),
+            }
+            switch (parts[2]) {
+                .raw => |value| try std.testing.expectEqualStrings("future", value.object.get("type").?.string),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "user content part parses text/image/audio/file and raw fallback" {
+    const text_payload =
+        \\{"type":"text","text":"hello"}
+    ;
+    const parsed_text = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestUserMessageContentPart,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("hello", value.text),
+        else => try std.testing.expect(false),
+    }
+
+    const image_payload =
+        \\{"type":"image_url","image_url":{"url":"https://example.com/a.png","detail":"auto"}}
+    ;
+    const parsed_image = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestUserMessageContentPart,
+        std.testing.allocator,
+        image_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_image.deinit();
+    switch (parsed_image.value) {
+        .image => |value| try std.testing.expectEqualStrings("https://example.com/a.png", value.image_url.url),
+        else => try std.testing.expect(false),
+    }
+
+    const audio_payload =
+        \\{"type":"input_audio","input_audio":{"data":"Zm9v","format":"wav"}}
+    ;
+    const parsed_audio = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestUserMessageContentPart,
+        std.testing.allocator,
+        audio_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_audio.deinit();
+    switch (parsed_audio.value) {
+        .audio => |value| try std.testing.expectEqualStrings("wav", value.input_audio.format),
+        else => try std.testing.expect(false),
+    }
+
+    const file_payload =
+        \\{"type":"file","file":{"file_id":"file_1"}}
+    ;
+    const parsed_file = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestUserMessageContentPart,
+        std.testing.allocator,
+        file_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_file.deinit();
+    switch (parsed_file.value) {
+        .file => |value| try std.testing.expectEqualStrings("file_1", value.file.file_id.?),
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"type":"future","x":1}
+    ;
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestUserMessageContentPart,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "developer/system/tool content parse text and parts" {
+    const text_payload = "\"hello\"";
+
+    const dev_text = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestDeveloperMessageContent,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer dev_text.deinit();
+    switch (dev_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("hello", value),
+        else => try std.testing.expect(false),
+    }
+
+    const sys_parts_payload =
+        \\[{"type":"text","text":"sys"}]
+    ;
+    const sys_parts = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestSystemMessageContent,
+        std.testing.allocator,
+        sys_parts_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer sys_parts.deinit();
+    switch (sys_parts.value) {
+        .parts => |value| try std.testing.expectEqualStrings("sys", value[0].text),
+        else => try std.testing.expect(false),
+    }
+
+    const tool_parts_payload =
+        \\[{"type":"text","text":"tool"}]
+    ;
+    const tool_parts = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestToolMessageContent,
+        std.testing.allocator,
+        tool_parts_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer tool_parts.deinit();
+    switch (tool_parts.value) {
+        .parts => |value| try std.testing.expectEqualStrings("tool", value[0].text),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "completion logit bias parses entries and raw fallback" {
+    const payload =
+        \\{"123":-5,"456":10}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.CreateCompletionLogitBias,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .entries => |entries| {
+            try std.testing.expectEqual(@as(usize, 2), entries.len);
+            var seen_123 = false;
+            var seen_456 = false;
+            for (entries) |entry| {
+                if (std.mem.eql(u8, entry.token, "123")) {
+                    seen_123 = true;
+                    try std.testing.expectEqual(@as(i64, -5), entry.bias);
+                }
+                if (std.mem.eql(u8, entry.token, "456")) {
+                    seen_456 = true;
+                    try std.testing.expectEqual(@as(i64, 10), entry.bias);
+                }
+            }
+            try std.testing.expect(seen_123 and seen_456);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\[1,2]
+    ;
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.CreateCompletionLogitBias,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqual(@as(usize, 2), value.array.items.len),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "embedding input and stop configuration parse scalar/array/raw variants" {
+    const embedding_text = try std.json.parseFromSlice(
+        gen.CreateEmbeddingRequestInput,
+        std.testing.allocator,
+        "\"embed me\"",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer embedding_text.deinit();
+    switch (embedding_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("embed me", value),
+        else => try std.testing.expect(false),
+    }
+
+    const embedding_array = try std.json.parseFromSlice(
+        gen.CreateEmbeddingRequestInput,
+        std.testing.allocator,
+        "[\"a\",\"b\"]",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer embedding_array.deinit();
+    switch (embedding_array.value) {
+        .texts => |values| try std.testing.expectEqual(@as(usize, 2), values.len),
+        else => try std.testing.expect(false),
+    }
+
+    const stop_single = try std.json.parseFromSlice(
+        gen.StopConfiguration,
+        std.testing.allocator,
+        "\"STOP\"",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer stop_single.deinit();
+    switch (stop_single.value) {
+        .single => |value| try std.testing.expectEqualStrings("STOP", value),
+        else => try std.testing.expect(false),
+    }
+
+    const stop_multi = try std.json.parseFromSlice(
+        gen.StopConfiguration,
+        std.testing.allocator,
+        "[\"A\",\"B\"]",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer stop_multi.deinit();
+    switch (stop_multi.value) {
+        .multiple => |value| try std.testing.expectEqual(@as(usize, 2), value.len),
+        else => try std.testing.expect(false),
+    }
+
+    const stop_raw = try std.json.parseFromSlice(
+        gen.StopConfiguration,
+        std.testing.allocator,
+        "{\"k\":\"v\"}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer stop_raw.deinit();
+    switch (stop_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("v", value.object.get("k").?.string),
+        else => try std.testing.expect(false),
+    }
+}
