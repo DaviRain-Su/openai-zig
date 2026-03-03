@@ -4315,3 +4315,47 @@ test "deepseek responses parse status/output/usage contract" {
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream event reasoning text delta" {
+    const payload =
+        "{\"type\":\"reasoning_text_delta\",\"item_id\":\"item_1\",\"output_index\":0,\"content_index\":0,\"delta\":\"Let's reason...\",\"sequence_number\":14}";
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .reasoning_text_delta => |delta| {
+            try std.testing.expectEqualStrings("item_1", delta.item_id);
+            try std.testing.expectEqual(@as(i64, 14), delta.sequence_number);
+            try std.testing.expectEqualStrings("Let's reason...", delta.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "response stream unknown event falls back to raw payload" {
+    const payload =
+        "{\"type\":\"new_experimental_event\",\"item_id\":\"item_unknown\",\"sequence_number\":7,\"note\":\"future_compat\"}";
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .raw => |raw| {
+            try std.testing.expectEqual(@as(?i64, 7), raw.object.get("sequence_number").?.integer);
+            switch (raw) {
+                .schema => |v| try std.testing.expectEqualStrings("future_compat", v.object.get("note").?.string),
+                .raw => |v| try std.testing.expectEqualStrings("future_compat", v.object.get("note").?.string),
+            }
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
