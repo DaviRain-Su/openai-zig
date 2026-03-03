@@ -3868,3 +3868,45 @@ test "embedding input and stop configuration parse scalar/array/raw variants" {
         else => try std.testing.expect(false),
     }
 }
+
+test "function-parameter aliases parse as schema/raw across migrated fields" {
+    const eval_run = try std.json.parseFromSlice(
+        gen.EvalRun,
+        std.testing.allocator,
+        "{\"object\":\"eval.run\",\"id\":\"run_1\",\"status\":\"completed\",\"model\":\"gpt-4o-mini\",\"name\":\"sample\",\"created_at\":1,\"report_url\":\"https://example.com/r\",\"result_counts\":{\"total\":1,\"errored\":0,\"failed\":0,\"passed\":1},\"per_model_usage\":[],\"per_testing_criteria_results\":[],\"data_source\":{\"type\":\"responses\"},\"metadata\":{},\"error\":{\"code\":\"ok\",\"message\":\"ok\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer eval_run.deinit();
+    switch (eval_run.value.data_source) {
+        .schema => |value| try std.testing.expectEqualStrings("responses", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+
+    const custom_tool = try std.json.parseFromSlice(
+        gen.CustomToolCallOutput,
+        std.testing.allocator,
+        "{\"type\":\"custom\",\"call_id\":\"call_1\",\"output\":\"ok\"}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer custom_tool.deinit();
+    switch (custom_tool.value.output) {
+        .raw => |value| try std.testing.expectEqualStrings("ok", value.string),
+        else => try std.testing.expect(false),
+    }
+
+    const rt_session = try std.json.parseFromSlice(
+        gen.RealtimeClientEventSessionUpdate,
+        std.testing.allocator,
+        "{\"type\":\"session.update\",\"session\":{\"model\":\"gpt-4o-mini\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer rt_session.deinit();
+    const session = rt_session.value.session orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (session) {
+        .schema => |value| try std.testing.expectEqualStrings("gpt-4o-mini", value.object.get("model").?.string),
+        else => try std.testing.expect(false),
+    }
+}
