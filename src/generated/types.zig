@@ -3191,11 +3191,14 @@ pub const CreateEvalDataSourceConfig = union(enum) {
         return .{ .raw = source };
     }
 };
+
+pub const EvalItemSchema = FunctionParameters;
 pub const CreateEvalCustomDataSourceConfig = struct {
     type: []const u8,
-    item_schema: FunctionParameters,
+    item_schema: EvalItemSchema,
     include_sample_schema: ?bool,
 };
+
 pub const CreateEvalSimpleInputMessage = struct {
     role: []const u8,
     content: []const u8,
@@ -4297,9 +4300,11 @@ pub const EvalApiError = struct {
     code: []const u8,
     message: []const u8,
 };
+pub const EvalDataSourceSchema = FunctionParameters;
+
 pub const EvalCustomDataSourceConfig = struct {
     type: []const u8,
-    schema: FunctionParameters,
+    schema: EvalDataSourceSchema,
 };
 pub const EvalGraderLabelModel = GraderLabelModel;
 pub const EvalGraderPython = GraderPython;
@@ -4546,7 +4551,7 @@ pub const EvalList = struct {
 pub const EvalLogsDataSourceConfig = struct {
     type: []const u8,
     metadata: ?Metadata,
-    schema: FunctionParameters,
+    schema: EvalDataSourceSchema,
 };
 pub const EvalResponsesSource = struct {
     type: []const u8,
@@ -4651,7 +4656,7 @@ pub const EvalRunOutputItemResult = struct {
 pub const EvalStoredCompletionsDataSourceConfig = struct {
     type: []const u8,
     metadata: ?Metadata,
-    schema: FunctionParameters,
+    schema: EvalDataSourceSchema,
 };
 pub const EvalStoredCompletionsSource = struct {
     type: []const u8,

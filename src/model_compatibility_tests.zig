@@ -4047,3 +4047,41 @@ test "metadata alias parse supports optional metadata as FunctionParameters" {
         .raw => |value| try std.testing.expectEqualStrings("r1", value.object.get("run_id").?.string),
     }
 }
+
+test "eval data source schema aliases resolve through FunctionParameters-backed union" {
+    const custom_source = try std.json.parseFromSlice(
+        gen.CreateEvalCustomDataSourceConfig,
+        std.testing.allocator,
+        "{\"type\":\"custom\",\"item_schema\":{\"type\":\"object\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer custom_source.deinit();
+    switch (custom_source.value.item_schema) {
+        .schema => |value| try std.testing.expectEqualStrings("object", value.object.get("type").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("object", value.object.get("type").?.string),
+    }
+
+    const logs_source = try std.json.parseFromSlice(
+        gen.EvalLogsDataSourceConfig,
+        std.testing.allocator,
+        "{\"type\":\"logs\",\"metadata\":{\"a\":1},\"schema\":{\"field\":\"v\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer logs_source.deinit();
+    switch (logs_source.value.schema) {
+        .schema => |value| try std.testing.expectEqualStrings("v", value.object.get("field").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("v", value.object.get("field").?.string),
+    }
+
+    const stored_source = try std.json.parseFromSlice(
+        gen.EvalStoredCompletionsDataSourceConfig,
+        std.testing.allocator,
+        "{\"type\":\"stored_completions\",\"schema\":{\"field\":\"w\"}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer stored_source.deinit();
+    switch (stored_source.value.schema) {
+        .schema => |value| try std.testing.expectEqualStrings("w", value.object.get("field").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("w", value.object.get("field").?.string),
+    }
+}
