@@ -314,3 +314,4 @@
 - [x] 继续语义化收敛（non-raw/non-source JsonObject 字段）：将审计/成本/MCP/本地执行/推理等多处字段改为 `Metadata`/`FunctionParameters`/`GenericContent` 语义类型（例如 `created_by_user_obj`、`line_item`、`env`、`annotations`、`headers`、`_error`、`encrypted_content`、`truncation_strategy`、`file_search`、`action`），并补充 `CreateImageEditRequest` 与 `FineTuningJobEvent` 回归测试。
 - [x] 继续收敛（usage buckets）：引入 `UsageResult` 结构化 union（completions/embeddings/images/moderations/audio/vector-stores/costs/raw），并将 `UsageTimeBucket.result` 从 `JsonObjectArray` 收敛为 `[]const UsageResult`；补充 typed 解析与 unknown-object raw fallback 回归测试。
 - [x] 继续收敛（最后一个 non-raw/source JsonObjectArray 字段）：将 `GenericContent.items` 从 `JsonObjectArray` 升级为递归 `[]const GenericContent`，保持 string/array/object 的 typed+raw 解析模型；更新相关回归测试断言。
+- [x] 完成 `FunctionParameters` 收尾结构化：从 `JsonObject` alias 升级为 `schema/raw` union（含 `asJson` helper），并更新 chat 资源构造与兼容测试；当前 `src/generated/types.zig` 已无 `= JsonObject` alias，`std.json.Value` 仅保留根别名 `JsonObject`。

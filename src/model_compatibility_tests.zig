@@ -335,7 +335,7 @@ test "prompt parses template object and falls back raw on invalid payload" {
             try std.testing.expectEqualStrings("prompt-123", value.id);
             try std.testing.expectEqualStrings("v1", value.version.?);
             try std.testing.expect(value.variables != null);
-            try std.testing.expectEqualStrings("Alice", value.variables.?.object.get("customer").?.string);
+            try std.testing.expectEqualStrings("Alice", value.variables.?.asJson().object.get("customer").?.string);
         },
         .raw => |_| {
             try std.testing.expect(false);
@@ -435,7 +435,7 @@ test "AssistantsApiResponseFormatOption parses json_schema form" {
             try std.testing.expectEqualStrings("question answer", value.json_schema.description.?);
             try std.testing.expect(value.json_schema.strict.?);
             try std.testing.expect(value.json_schema.schema != null);
-            try std.testing.expect(value.json_schema.schema != null and value.json_schema.schema.?.object.get("type") != null);
+            try std.testing.expect(value.json_schema.schema != null and value.json_schema.schema.?.asJson().object.get("type") != null);
         },
         else => try std.testing.expect(false),
     }
@@ -2959,7 +2959,7 @@ test "eval data source config parses typed create and eval variants" {
                 try std.testing.expect(false);
                 return;
             };
-            try std.testing.expectEqualStrings("alpha", metadata.object.get("team").?.string);
+            try std.testing.expectEqualStrings("alpha", metadata.asJson().object.get("team").?.string);
         },
         else => try std.testing.expect(false),
     }
@@ -2981,8 +2981,8 @@ test "eval data source config parses typed create and eval variants" {
                 try std.testing.expect(false);
                 return;
             };
-            try std.testing.expectEqualStrings("api", metadata.object.get("source").?.string);
-            try std.testing.expectEqualStrings("object", value.schema.object.get("type").?.string);
+            try std.testing.expectEqualStrings("api", metadata.asJson().object.get("source").?.string);
+            try std.testing.expectEqualStrings("object", value.schema.asJson().object.get("type").?.string);
         },
         else => try std.testing.expect(false),
     }
@@ -3197,7 +3197,7 @@ test "fine tuning job event keeps typed metadata payload" {
         try std.testing.expect(false);
         return;
     };
-    try std.testing.expectEqualStrings("bar", data.object.get("foo").?.string);
+    try std.testing.expectEqualStrings("bar", data.asJson().object.get("foo").?.string);
 }
 
 test "usage time bucket parses typed usage result variants" {
@@ -3247,6 +3247,38 @@ test "usage time bucket keeps raw fallback for unknown usage result" {
     try std.testing.expectEqual(@as(usize, 1), parsed.value.result.len);
     switch (parsed.value.result[0]) {
         .raw => |value| try std.testing.expectEqualStrings("organization.usage.future.result", value.object.get("object").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "function parameters parse schema object and raw fallback" {
+    const schema_payload =
+        \\{"type":"object","properties":{"city":{"type":"string"}}}
+    ;
+    const parsed_schema = try std.json.parseFromSlice(
+        gen.FunctionParameters,
+        std.testing.allocator,
+        schema_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_schema.deinit();
+
+    switch (parsed_schema.value) {
+        .schema => |value| try std.testing.expectEqualStrings("object", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload = "\"not-an-object\"";
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.FunctionParameters,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("not-an-object", value.string),
         else => try std.testing.expect(false),
     }
 }

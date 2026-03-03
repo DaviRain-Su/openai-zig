@@ -4767,7 +4767,47 @@ pub const FunctionObject = struct {
     parameters: ?FunctionParameters,
     strict: ?bool,
 };
-pub const FunctionParameters = JsonObject;
+pub const FunctionParameters = union(enum) {
+    schema: JsonObject,
+    raw: JsonObject,
+
+    pub fn forSchema(value: JsonObject) FunctionParameters {
+        return .{ .schema = value };
+    }
+
+    pub fn forRaw(value: JsonObject) FunctionParameters {
+        return .{ .raw = value };
+    }
+
+    pub fn asJson(self: FunctionParameters) JsonObject {
+        return switch (self) {
+            .schema => |value| value,
+            .raw => |value| value,
+        };
+    }
+
+    pub fn jsonStringify(self: FunctionParameters, writer: anytype) !void {
+        try writer.write(self.asJson());
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !FunctionParameters {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !FunctionParameters {
+        _ = allocator;
+        _ = options;
+        return switch (source) {
+            .object => .{ .schema = source },
+            else => .{ .raw = source },
+        };
+    }
+};
 pub const FunctionShellAction = struct {
     commands: []const []const u8,
     timeout_ms: i64,
