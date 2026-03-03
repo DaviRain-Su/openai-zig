@@ -2422,7 +2422,7 @@ pub const ContainerResource = struct {
     },
     memory_limit: ?[]const u8,
 };
-pub const Content = std.json.Value;
+pub const Content = FunctionParameters;
 pub const Conversation = ConversationResource;
 pub const Conversation_2 = struct {
     id: []const u8,
@@ -4936,7 +4936,41 @@ pub const FunctionObject = struct {
     parameters: ?FunctionParameters,
     strict: ?bool,
 };
-pub const FunctionParameters = std.json.Value;
+pub const FunctionParameters = union(enum) {
+    schema: JsonObject,
+    raw: JsonObject,
+
+    pub fn forSchema(value: JsonObject) FunctionParameters {
+        return .{ .schema = value };
+    }
+
+    pub fn forRaw(value: JsonObject) FunctionParameters {
+        return .{ .raw = value };
+    }
+
+    pub fn asJson(self: FunctionParameters) JsonObject {
+        return switch (self) {
+            .schema => |value| value,
+            .raw => |value| value,
+        };
+    }
+
+    pub fn jsonStringify(self: FunctionParameters, writer: anytype) !void {
+        try writer.write(self.asJson());
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !FunctionParameters {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return jsonParseFromValue(parsed);
+    }
+
+    pub fn jsonParseFromValue(source: JsonObject) FunctionParameters {
+        return switch (source) {
+            .object => .{ .schema = source },
+            else => .{ .raw = source },
+        };
+    }
+};
 pub const FunctionShellAction = struct {
     commands: []const []const u8,
     timeout_ms: i64,
@@ -7141,7 +7175,7 @@ pub const MessageStreamEvent = union(enum) {
         }
     }
 };
-pub const Metadata = std.json.Value;
+pub const Metadata = FunctionParameters;
 pub const Model = struct {
     id: []const u8 = "",
     object: []const u8 = "",
@@ -9931,7 +9965,7 @@ pub const ResponseFormatJsonSchema = struct {
         strict: ?bool,
     },
 };
-pub const ResponseFormatJsonSchemaSchema = std.json.Value;
+pub const ResponseFormatJsonSchemaSchema = FunctionParameters;
 pub const ResponseFormatText = struct {
     type: []const u8,
 };
@@ -10085,7 +10119,7 @@ pub const ResponseOutputTextAnnotationAddedEvent = struct {
     sequence_number: i64,
     annotation: Annotation,
 };
-pub const ResponsePromptVariables = std.json.Value;
+pub const ResponsePromptVariables = FunctionParameters;
 pub const ResponseProperties = struct {
     previous_response_id: ?[]const u8,
     model: ?ModelIdsResponses,
@@ -13471,7 +13505,7 @@ pub const VectorStoreExpirationAfter = struct {
     anchor: []const u8,
     days: i64,
 };
-pub const VectorStoreFileAttributes = std.json.Value;
+pub const VectorStoreFileAttributes = FunctionParameters;
 pub const VectorStoreFileBatchObject = struct {
     id: []const u8,
     object: []const u8,
