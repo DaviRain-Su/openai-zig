@@ -3475,6 +3475,10 @@ pub const CreateMessageRequestContentPart = union(enum) {
     },
     raw: JsonObject,
 
+    pub fn forRaw(value: JsonObject) CreateMessageRequestContentPart {
+        return .{ .raw = value };
+    }
+
     pub fn jsonStringify(self: CreateMessageRequestContentPart, writer: anytype) !void {
         switch (self) {
             .text => |value| {
@@ -3485,12 +3489,48 @@ pub const CreateMessageRequestContentPart = union(enum) {
             },
         }
     }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateMessageRequestContentPart {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !CreateMessageRequestContentPart {
+        switch (source) {
+            .object => |root| {
+                const type_value = root.get("type");
+                if (type_value != null and type_value.? == .string and std.mem.eql(u8, type_value.?.string, "text")) {
+                    const parsed = std.json.parseFromValue(@FieldType(CreateMessageRequestContentPart, "text"), allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .text = parsed.value };
+                }
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
 
 pub const CreateMessageRequestContent = union(enum) {
     text: []const u8,
     parts: []const CreateMessageRequestContentPart,
     raw: JsonObject,
+
+    pub fn forText(value: []const u8) CreateMessageRequestContent {
+        return .{ .text = value };
+    }
+
+    pub fn forParts(value: []const CreateMessageRequestContentPart) CreateMessageRequestContent {
+        return .{ .parts = value };
+    }
+
+    pub fn forRaw(value: JsonObject) CreateMessageRequestContent {
+        return .{ .raw = value };
+    }
 
     pub fn jsonStringify(self: CreateMessageRequestContent, writer: anytype) !void {
         switch (self) {
@@ -3503,6 +3543,27 @@ pub const CreateMessageRequestContent = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateMessageRequestContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !CreateMessageRequestContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const CreateMessageRequestContentPart, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .parts = parsed.value };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -3550,6 +3611,27 @@ pub const CreateModerationRequestInput = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateModerationRequestInput {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !CreateModerationRequestInput {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const []const u8, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .texts = parsed.value };
+            },
+            else => return .{ .raw = source },
         }
     }
 };

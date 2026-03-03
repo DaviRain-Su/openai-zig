@@ -3282,3 +3282,116 @@ test "function parameters parse schema object and raw fallback" {
         else => try std.testing.expect(false),
     }
 }
+
+test "create message request content parses text/parts/raw variants" {
+    const text_payload = "\"hello world\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.CreateMessageRequestContent,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("hello world", value),
+        else => try std.testing.expect(false),
+    }
+
+    const parts_payload =
+        \\[
+        \\  {"type":"text","text":"part-1"},
+        \\  {"type":"future","x":1}
+        \\]
+    ;
+    const parsed_parts = try std.json.parseFromSlice(
+        gen.CreateMessageRequestContent,
+        std.testing.allocator,
+        parts_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_parts.deinit();
+
+    switch (parsed_parts.value) {
+        .parts => |parts| {
+            try std.testing.expectEqual(@as(usize, 2), parts.len);
+            switch (parts[0]) {
+                .text => |value| try std.testing.expectEqualStrings("part-1", value.text),
+                else => try std.testing.expect(false),
+            }
+            switch (parts[1]) {
+                .raw => |value| try std.testing.expectEqualStrings("future", value.object.get("type").?.string),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"k":"v"}
+    ;
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.CreateMessageRequestContent,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("v", value.object.get("k").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create moderation request input parses scalar/array/raw variants" {
+    const text_payload = "\"safe text\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.CreateModerationRequestInput,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("safe text", value),
+        else => try std.testing.expect(false),
+    }
+
+    const array_payload =
+        \\["a","b"]
+    ;
+    const parsed_array = try std.json.parseFromSlice(
+        gen.CreateModerationRequestInput,
+        std.testing.allocator,
+        array_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_array.deinit();
+
+    switch (parsed_array.value) {
+        .texts => |texts| {
+            try std.testing.expectEqual(@as(usize, 2), texts.len);
+            try std.testing.expectEqualStrings("a", texts[0]);
+            try std.testing.expectEqualStrings("b", texts[1]);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"foo":"bar"}
+    ;
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.CreateModerationRequestInput,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
+    }
+}
