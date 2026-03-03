@@ -16,6 +16,10 @@ Environment overrides are also supported (priority: env vars override TOML):
 - `OPENAI_TIMEOUT_MS`, `OPENAI_MAX_RETRIES`, `OPENAI_RETRY_BASE_DELAY_MS`
 - `DEEPSEEK_TIMEOUT_MS`, `DEEPSEEK_MAX_RETRIES`, `DEEPSEEK_RETRY_BASE_DELAY_MS`
 
+Build/run tips:
+- `zig build -Dexamples=true run-examples` will auto-skip execution when both `OPENAI_API_KEY` and `DEEPSEEK_API_KEY` are missing.
+- Add `-Drun_examples_without_key=true` to force running examples without API keys.
+
 - `models_list.zig` — list models.
 - `chat_completion.zig` — create a chat completion.
 - `chat_completion_raw.zig` — raw JSON chat completion request.

@@ -104,9 +104,14 @@ try client.completions().create_completion_with_options(
 ```sh
 zig build          # compile
 zig build run      # run the demo (models list + chat completion)
-zig build -Dexamples=true run-examples  # build + run example binaries
+zig build -Dexamples=true run-examples  # build + run example binaries (auto-skip when no API key)
+zig build -Dexamples=true -Drun_examples_without_key=true run-examples  # force-run examples without API key
 bash scripts/check-op-coverage.sh     # verify operation coverage against generated/ir.json
 ```
+
+`run-examples` key behavior:
+- If neither `OPENAI_API_KEY` nor `DEEPSEEK_API_KEY` is set, `run-examples` now skips gracefully with a single warning line.
+- Use `-Drun_examples_without_key=true` to force running all example binaries even without API keys.
 
 ## Examples
 - `examples/models_list.zig` — list available models
