@@ -3140,3 +3140,56 @@ test "fine-tune reinforcement request input parses typed message unions" {
         else => try std.testing.expect(false),
     }
 }
+
+test "create image edit request parses generic image payload variants" {
+    const text_payload =
+        \\{"image":"ipfs://image-1","prompt":"retouch"}
+    ;
+    const parsed_text = try std.json.parseFromSlice(
+        gen.CreateImageEditRequest,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value.image) {
+        .text => |value| try std.testing.expectEqualStrings("ipfs://image-1", value),
+        else => try std.testing.expect(false),
+    }
+
+    const object_payload =
+        \\{"image":{"id":"img_1"},"prompt":"retouch"}
+    ;
+    const parsed_object = try std.json.parseFromSlice(
+        gen.CreateImageEditRequest,
+        std.testing.allocator,
+        object_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_object.deinit();
+
+    switch (parsed_object.value.image) {
+        .raw => |value| try std.testing.expectEqualStrings("img_1", value.object.get("id").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "fine tuning job event keeps typed metadata payload" {
+    const payload =
+        \\{"object":"fine_tuning.job.event","id":"ev_abc","created_at":1700000000,"level":"info","message":"starting","type":"message","data":{"foo":"bar"}}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.FineTuningJobEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    const data = event.value.data orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expectEqualStrings("bar", data.object.get("foo").?.string);
+}

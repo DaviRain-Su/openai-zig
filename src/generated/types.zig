@@ -420,7 +420,7 @@ pub const AssignedRoleDetails = struct {
     created_at: ?i64,
     updated_at: ?i64,
     created_by: ?[]const u8,
-    created_by_user_obj: JsonObject,
+    created_by_user_obj: Metadata,
     metadata: Metadata,
 };
 pub const AssistantMessageItem = struct {
@@ -774,7 +774,7 @@ pub const AuditLog = struct {
     },
     external_key_registered: ?struct {
         id: ?[]const u8,
-        data: ?JsonObject,
+        data: ?Metadata,
     },
     external_key_removed: ?struct {
         id: ?[]const u8,
@@ -839,12 +839,12 @@ pub const AuditLog = struct {
             name: ?[]const u8,
         },
     },
-    login_succeeded: ?JsonObject,
+    login_succeeded: ?Metadata,
     login_failed: ?struct {
         error_code: ?[]const u8,
         error_message: ?[]const u8,
     },
-    logout_succeeded: ?JsonObject,
+    logout_succeeded: ?Metadata,
     logout_failed: ?struct {
         error_code: ?[]const u8,
         error_message: ?[]const u8,
@@ -2960,7 +2960,7 @@ pub const CostsResult = struct {
         value: ?f64,
         currency: ?[]const u8,
     },
-    line_item: ?JsonObject,
+    line_item: ?Metadata,
     project_id: ?[]const u8,
 };
 pub const CreateAssistantRequest = struct {
@@ -3428,7 +3428,7 @@ pub const CreateGroupUserBody = struct {
     user_id: []const u8,
 };
 pub const CreateImageEditRequest = struct {
-    image: JsonObject,
+    image: GenericContent,
     prompt: []const u8,
     mask: ?[]const u8,
     background: ?[]const u8,
@@ -4039,14 +4039,14 @@ pub const CustomToolChatCompletions = struct {
     custom: struct {
         name: []const u8,
         description: ?[]const u8,
-        format: ?JsonObject,
+        format: ?FunctionParameters,
     },
 };
 pub const CustomToolParam = struct {
     type: []const u8,
     name: []const u8,
     description: ?[]const u8,
-    format: ?JsonObject,
+    format: ?FunctionParameters,
 };
 pub const DeleteAssistantResponse = struct {
     id: []const u8,
@@ -4678,7 +4678,7 @@ pub const FineTuningJobEvent = struct {
     level: []const u8,
     message: []const u8,
     type: ?[]const u8,
-    data: ?JsonObject,
+    data: ?Metadata,
 };
 pub const FunctionCallItemStatus = []const u8;
 pub const FunctionCallOutputItemParam = struct {
@@ -6213,7 +6213,7 @@ pub const LocalShellExecAction = struct {
     command: []const []const u8,
     timeout_ms: ?i64,
     working_directory: ?[]const u8,
-    env: JsonObject,
+    env: Metadata,
     user: ?[]const u8,
 };
 pub const LocalShellToolCall = struct {
@@ -6279,7 +6279,7 @@ pub const MCPListToolsTool = struct {
     name: []const u8,
     description: ?[]const u8,
     input_schema: FunctionParameters,
-    annotations: ?JsonObject,
+    annotations: ?Metadata,
 };
 pub const MCPTool = struct {
     type: []const u8,
@@ -6288,9 +6288,9 @@ pub const MCPTool = struct {
     connector_id: ?[]const u8,
     authorization: ?[]const u8,
     server_description: ?[]const u8,
-    headers: ?JsonObject,
-    allowed_tools: ?JsonObject,
-    require_approval: ?JsonObject,
+    headers: ?Metadata,
+    allowed_tools: ?Metadata,
+    require_approval: ?Metadata,
 };
 pub const MCPToolCall = struct {
     type: []const u8,
@@ -8754,7 +8754,7 @@ pub const RealtimeMCPToolCall = struct {
     arguments: []const u8,
     approval_request_id: ?[]const u8,
     output: ?[]const u8,
-    _error: ?JsonObject,
+    _error: ?Metadata,
 };
 pub const RealtimeMCPToolExecutionError = struct {
     type: []const u8,
@@ -9585,7 +9585,7 @@ pub const ReasoningEffort = []const u8;
 pub const ReasoningItem = struct {
     type: []const u8,
     id: []const u8,
-    encrypted_content: ?JsonObject,
+    encrypted_content: ?GenericContent,
     summary: []const Summary,
     content: ?[]const ReasoningTextContent,
     status: ?[]const u8,
@@ -11570,12 +11570,12 @@ pub const RunGraderResponse = struct {
             model_grader_server_error_details: ?[]const u8,
         },
         execution_time: f64,
-        scores: JsonObject,
+        scores: Metadata,
         token_usage: ?i64,
         sampled_model_name: ?[]const u8,
     },
-    sub_rewards: JsonObject,
-    model_grader_token_usage_per_model: JsonObject,
+    sub_rewards: Metadata,
+    model_grader_token_usage_per_model: Metadata,
 };
 pub const RunObject = struct {
     id: []const u8,
@@ -11611,7 +11611,7 @@ pub const RunObject = struct {
     top_p: ?f64,
     max_prompt_tokens: i64,
     max_completion_tokens: i64,
-    truncation_strategy: JsonObject,
+    truncation_strategy: FunctionParameters,
     tool_choice: AssistantsApiToolChoiceOption,
     parallel_tool_calls: ParallelToolCalls,
     response_format: AssistantsApiResponseFormatOption,
@@ -11700,7 +11700,7 @@ pub const RunStepDeltaStepDetailsToolCallsFileSearchObject = struct {
     index: i64,
     id: ?[]const u8,
     type: []const u8,
-    file_search: JsonObject,
+    file_search: FunctionParameters,
 };
 pub const RunStepDeltaStepDetailsToolCallsFunctionObject = struct {
     index: i64,
@@ -13649,7 +13649,7 @@ pub const WebSearchToolCall = struct {
     id: []const u8,
     type: []const u8,
     status: []const u8,
-    action: JsonObject,
+    action: Metadata,
 };
 pub const WebhookBatchCancelled = struct {
     created_at: i64,
