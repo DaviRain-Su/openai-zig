@@ -3994,3 +3994,40 @@ test "eval create request sources now parse via FunctionParameters" {
         .raw => |value| try std.testing.expectEqualStrings("file_123", value.object.get("id").?.string),
     }
 }
+
+test "raw constructors accept plain JsonObject for FunctionParameters-backed unions" {
+    const raw_value = try std.json.parseFromSlice(
+        gen.JsonObject,
+        std.testing.allocator,
+        "{\"x\":1,\"type\":\"test\"}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw_value.deinit();
+
+    const as_event = gen.AssistantStreamEvent.forRaw(raw_value.value);
+    switch (as_event) {
+        .raw => |value| switch (value) {
+            .raw => |obj| try std.testing.expectEqual(@as(i64, 1), obj.object.get("x").?.integer),
+            .schema => try std.testing.expect(false),
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const as_response = gen.CreateResponse.forRaw(raw_value.value);
+    switch (as_response) {
+        .raw => |value| switch (value) {
+            .raw => |obj| try std.testing.expectEqualStrings("test", obj.object.get("type").?.string),
+            .schema => try std.testing.expect(false),
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const as_tool_choice = gen.ToolChoiceParam.forRaw(raw_value.value);
+    switch (as_tool_choice) {
+        .raw => |value| switch (value) {
+            .raw => |obj| try std.testing.expect(obj.object.get("type") != null),
+            .schema => try std.testing.expect(false),
+        },
+        else => try std.testing.expect(false),
+    }
+}
