@@ -6521,11 +6521,15 @@ pub const MCPListTools = struct {
     tools: []const MCPListToolsTool,
     _error: ?[]const u8,
 };
+
+pub const MCPListToolsInputSchema = FunctionParameters;
+pub const MCPListToolsAnnotations = FunctionParameters;
+
 pub const MCPListToolsTool = struct {
     name: []const u8,
     description: ?[]const u8,
-    input_schema: FunctionParameters,
-    annotations: ?FunctionParameters,
+    input_schema: MCPListToolsInputSchema,
+    annotations: ?MCPListToolsAnnotations,
 };
 pub const MCPTool = struct {
     type: []const u8,

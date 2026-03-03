@@ -4085,3 +4085,64 @@ test "eval data source schema aliases resolve through FunctionParameters-backed 
         .raw => |value| try std.testing.expectEqualStrings("w", value.object.get("field").?.string),
     }
 }
+
+
+test "mcp list tools aliases parse as FunctionParameters-backed fields" {
+    const mcp_tool_payload =
+        "{\"name\":\"search\",\"input_schema\":{\"type\":\"object\",\"properties\":{\"q\":{\"type\":\"string\"}}},\"annotations\":{\"scope\":\"mcp\",\"version\":1},\"description\":\"search web\"}";
+    const parsed_tool = try std.json.parseFromSlice(
+        gen.MCPListToolsTool,
+        std.testing.allocator,
+        mcp_tool_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_tool.deinit();
+
+    switch (parsed_tool.value.input_schema) {
+        .schema => |value| try std.testing.expectEqualStrings(
+            "object",
+            value.object.get("type").?.string,
+        ),
+        .raw => |value| try std.testing.expectEqualStrings(
+            "object",
+            value.object.get("type").?.string,
+        ),
+    }
+
+    if (parsed_tool.value.annotations) |annotations| {
+        switch (annotations) {
+            .schema => |value| try std.testing.expectEqualStrings(
+                "mcp",
+                value.object.get("scope").?.string,
+            ),
+            .raw => |value| try std.testing.expectEqualStrings(
+                "mcp",
+                value.object.get("scope").?.string,
+            ),
+        }
+    } else {
+        try std.testing.expect(false);
+    }
+
+    const mcp_tools_payload =
+        "{\"type\":\"mcp.list_tools\",\"id\":\"evt_1\",\"server_label\":\"local\",\"tools\":[{\"name\":\"search\",\"input_schema\":{\"type\":\"object\"}}]}";
+    const parsed_list = try std.json.parseFromSlice(
+        gen.MCPListTools,
+        std.testing.allocator,
+        mcp_tools_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_list.deinit();
+    try std.testing.expectEqual(@as(usize, 1), parsed_list.value.tools.len);
+    const tool_from_list = parsed_list.value.tools[0];
+    switch (tool_from_list.input_schema) {
+        .schema => |value| try std.testing.expectEqualStrings(
+            "object",
+            value.object.get("type").?.string,
+        ),
+        .raw => |value| try std.testing.expectEqualStrings(
+            "object",
+            value.object.get("type").?.string,
+        ),
+    }
+}
