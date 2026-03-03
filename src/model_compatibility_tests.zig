@@ -3193,3 +3193,54 @@ test "fine tuning job event keeps typed metadata payload" {
     };
     try std.testing.expectEqualStrings("bar", data.object.get("foo").?.string);
 }
+
+test "usage time bucket parses typed usage result variants" {
+    const payload =
+        \\{"object":"bucket","start_time":1,"end_time":2,"result":[{"object":"organization.usage.completions.result","input_tokens":10,"output_tokens":4,"num_model_requests":1},{"object":"organization.usage.images.result","images":2,"num_model_requests":1}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.UsageTimeBucket,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(@as(usize, 2), parsed.value.result.len);
+
+    switch (parsed.value.result[0]) {
+        .completions => |value| {
+            try std.testing.expectEqualStrings("organization.usage.completions.result", value.object);
+            try std.testing.expectEqual(@as(i64, 10), value.input_tokens);
+            try std.testing.expectEqual(@as(i64, 4), value.output_tokens);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    switch (parsed.value.result[1]) {
+        .images => |value| {
+            try std.testing.expectEqualStrings("organization.usage.images.result", value.object);
+            try std.testing.expectEqual(@as(i64, 2), value.images);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "usage time bucket keeps raw fallback for unknown usage result" {
+    const payload =
+        \\{"object":"bucket","start_time":1,"end_time":2,"result":[{"object":"organization.usage.future.result","x":1}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.UsageTimeBucket,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(@as(usize, 1), parsed.value.result.len);
+    switch (parsed.value.result[0]) {
+        .raw => |value| try std.testing.expectEqualStrings("organization.usage.future.result", value.object.get("object").?.string),
+        else => try std.testing.expect(false),
+    }
+}

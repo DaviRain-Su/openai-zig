@@ -13293,6 +13293,168 @@ pub const UsageModerationsResult = struct {
     api_key_id: ?[]const u8,
     model: ?[]const u8,
 };
+pub const UsageResult = union(enum) {
+    audio_speeches: UsageAudioSpeechesResult,
+    audio_transcriptions: UsageAudioTranscriptionsResult,
+    code_interpreter_sessions: UsageCodeInterpreterSessionsResult,
+    completions: UsageCompletionsResult,
+    embeddings: UsageEmbeddingsResult,
+    images: UsageImagesResult,
+    moderations: UsageModerationsResult,
+    vector_stores: UsageVectorStoresResult,
+    costs: CostsResult,
+    raw: JsonObject,
+
+    pub fn forRaw(value: JsonObject) UsageResult {
+        return .{ .raw = value };
+    }
+
+    pub fn jsonStringify(self: UsageResult, writer: anytype) !void {
+        switch (self) {
+            .audio_speeches => |value| try writer.write(value),
+            .audio_transcriptions => |value| try writer.write(value),
+            .code_interpreter_sessions => |value| try writer.write(value),
+            .completions => |value| try writer.write(value),
+            .embeddings => |value| try writer.write(value),
+            .images => |value| try writer.write(value),
+            .moderations => |value| try writer.write(value),
+            .vector_stores => |value| try writer.write(value),
+            .costs => |value| try writer.write(value),
+            .raw => |value| try writer.write(value),
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !UsageResult {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !UsageResult {
+        switch (source) {
+            .object => |root| {
+                const object_value = root.get("object");
+                const object_name = if (object_value != null and object_value.? == .string) object_value.?.string else null;
+
+                if (object_name) |name| {
+                    if (std.mem.indexOf(u8, name, "audio_speeches") != null) {
+                        const parsed = std.json.parseFromValue(UsageAudioSpeechesResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .audio_speeches = parsed.value };
+                    }
+
+                    if (std.mem.indexOf(u8, name, "audio_transcriptions") != null) {
+                        const parsed = std.json.parseFromValue(UsageAudioTranscriptionsResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .audio_transcriptions = parsed.value };
+                    }
+
+                    if (std.mem.indexOf(u8, name, "code_interpreter_sessions") != null) {
+                        const parsed = std.json.parseFromValue(UsageCodeInterpreterSessionsResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .code_interpreter_sessions = parsed.value };
+                    }
+
+                    if (std.mem.indexOf(u8, name, "completions") != null) {
+                        const parsed = std.json.parseFromValue(UsageCompletionsResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .completions = parsed.value };
+                    }
+
+                    if (std.mem.indexOf(u8, name, "embeddings") != null) {
+                        const parsed = std.json.parseFromValue(UsageEmbeddingsResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .embeddings = parsed.value };
+                    }
+
+                    if (std.mem.indexOf(u8, name, "images") != null) {
+                        const parsed = std.json.parseFromValue(UsageImagesResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .images = parsed.value };
+                    }
+
+                    if (std.mem.indexOf(u8, name, "moderations") != null) {
+                        const parsed = std.json.parseFromValue(UsageModerationsResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .moderations = parsed.value };
+                    }
+
+                    if (std.mem.indexOf(u8, name, "vector_stores") != null) {
+                        const parsed = std.json.parseFromValue(UsageVectorStoresResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .vector_stores = parsed.value };
+                    }
+
+                    if (std.mem.indexOf(u8, name, "costs") != null) {
+                        const parsed = std.json.parseFromValue(CostsResult, allocator, source, options) catch return .{ .raw = source };
+                        defer parsed.deinit();
+                        return .{ .costs = parsed.value };
+                    }
+                }
+
+                if (root.get("output_tokens") != null) {
+                    const parsed = std.json.parseFromValue(UsageCompletionsResult, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .completions = parsed.value };
+                }
+
+                if (root.get("images") != null) {
+                    const parsed = std.json.parseFromValue(UsageImagesResult, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .images = parsed.value };
+                }
+
+                if (root.get("seconds") != null) {
+                    const parsed = std.json.parseFromValue(UsageAudioTranscriptionsResult, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .audio_transcriptions = parsed.value };
+                }
+
+                if (root.get("characters") != null) {
+                    const parsed = std.json.parseFromValue(UsageAudioSpeechesResult, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .audio_speeches = parsed.value };
+                }
+
+                if (root.get("num_sessions") != null) {
+                    const parsed = std.json.parseFromValue(UsageCodeInterpreterSessionsResult, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .code_interpreter_sessions = parsed.value };
+                }
+
+                if (root.get("usage_bytes") != null) {
+                    const parsed = std.json.parseFromValue(UsageVectorStoresResult, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .vector_stores = parsed.value };
+                }
+
+                if (root.get("amount") != null) {
+                    const parsed = std.json.parseFromValue(CostsResult, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .costs = parsed.value };
+                }
+
+                if (root.get("input_tokens") != null) {
+                    if (std.json.parseFromValue(UsageEmbeddingsResult, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .embeddings = parsed.value };
+                    } else |_| {}
+
+                    if (std.json.parseFromValue(UsageModerationsResult, allocator, source, options)) |parsed| {
+                        defer parsed.deinit();
+                        return .{ .moderations = parsed.value };
+                    } else |_| {}
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
+};
 pub const UsageResponse = struct {
     object: []const u8,
     data: []const UsageTimeBucket,
@@ -13303,7 +13465,7 @@ pub const UsageTimeBucket = struct {
     object: []const u8,
     start_time: i64,
     end_time: i64,
-    result: JsonObjectArray,
+    result: []const UsageResult,
 };
 pub const UsageVectorStoresResult = struct {
     object: []const u8,
