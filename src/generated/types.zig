@@ -1,5 +1,7 @@
 const std = @import("std");
 
+pub const JsonObject = std.json.Value;
+
 pub const ActiveStatus = struct {
     type: []const u8,
 };
@@ -1061,7 +1063,7 @@ pub const ChatCompletionRequestMessage = union(enum) {
     assistant: ChatCompletionRequestAssistantMessage,
     tool: ChatCompletionRequestToolMessage,
     function: ChatCompletionRequestFunctionMessage,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn jsonStringify(self: ChatCompletionRequestMessage, writer: anytype) !void {
         switch (self) {
@@ -1086,6 +1088,63 @@ pub const ChatCompletionRequestMessage = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !ChatCompletionRequestMessage {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !ChatCompletionRequestMessage {
+        switch (source) {
+            .object => |root| {
+                const role = root.get("role") orelse return .{ .raw = source };
+                if (role != .string) return .{ .raw = source };
+
+                if (std.mem.eql(u8, role.string, "developer")) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestDeveloperMessage, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .developer = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "system")) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestSystemMessage, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .system = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "user")) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestUserMessage, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .user = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "assistant")) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestAssistantMessage, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .assistant = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "tool")) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestToolMessage, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .tool = parsed.value };
+                }
+
+                if (std.mem.eql(u8, role.string, "function")) {
+                    const parsed = std.json.parseFromValue(ChatCompletionRequestFunctionMessage, allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .function = parsed.value };
+                }
+
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -3459,7 +3518,11 @@ pub const CreateMessageRequestContentPart = union(enum) {
         type: []const u8,
         text: []const u8,
     },
-    raw: std.json.Value,
+    raw: JsonObject,
+
+    pub fn forRaw(value: JsonObject) CreateMessageRequestContentPart {
+        return .{ .raw = value };
+    }
 
     pub fn jsonStringify(self: CreateMessageRequestContentPart, writer: anytype) !void {
         switch (self) {
@@ -3471,12 +3534,48 @@ pub const CreateMessageRequestContentPart = union(enum) {
             },
         }
     }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateMessageRequestContentPart {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !CreateMessageRequestContentPart {
+        switch (source) {
+            .object => |root| {
+                const type_value = root.get("type");
+                if (type_value != null and type_value.? == .string and std.mem.eql(u8, type_value.?.string, "text")) {
+                    const parsed = std.json.parseFromValue(@FieldType(CreateMessageRequestContentPart, "text"), allocator, source, options) catch return .{ .raw = source };
+                    defer parsed.deinit();
+                    return .{ .text = parsed.value };
+                }
+                return .{ .raw = source };
+            },
+            else => return .{ .raw = source },
+        }
+    }
 };
 
 pub const CreateMessageRequestContent = union(enum) {
     text: []const u8,
     parts: []const CreateMessageRequestContentPart,
-    raw: std.json.Value,
+    raw: JsonObject,
+
+    pub fn forText(value: []const u8) CreateMessageRequestContent {
+        return .{ .text = value };
+    }
+
+    pub fn forParts(value: []const CreateMessageRequestContentPart) CreateMessageRequestContent {
+        return .{ .parts = value };
+    }
+
+    pub fn forRaw(value: JsonObject) CreateMessageRequestContent {
+        return .{ .raw = value };
+    }
 
     pub fn jsonStringify(self: CreateMessageRequestContent, writer: anytype) !void {
         switch (self) {
@@ -3489,6 +3588,27 @@ pub const CreateMessageRequestContent = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateMessageRequestContent {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !CreateMessageRequestContent {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const CreateMessageRequestContentPart, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .parts = parsed.value };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -3511,7 +3631,7 @@ pub const CreateModerationRequest = struct {
 pub const CreateModerationRequestInput = union(enum) {
     text: []const u8,
     texts: []const []const u8,
-    raw: std.json.Value,
+    raw: JsonObject,
 
     pub fn forText(text: []const u8) CreateModerationRequestInput {
         return .{ .text = text };
@@ -3521,7 +3641,7 @@ pub const CreateModerationRequestInput = union(enum) {
         return .{ .texts = texts };
     }
 
-    pub fn forRaw(value: std.json.Value) CreateModerationRequestInput {
+    pub fn forRaw(value: JsonObject) CreateModerationRequestInput {
         return .{ .raw = value };
     }
 
@@ -3536,6 +3656,27 @@ pub const CreateModerationRequestInput = union(enum) {
             .raw => |value| {
                 try writer.write(value);
             },
+        }
+    }
+
+    pub fn jsonParse(allocator: std.mem.Allocator, source: anytype, options: std.json.ParseOptions) !CreateModerationRequestInput {
+        const parsed = try std.json.Value.jsonParse(allocator, source, options);
+        return try jsonParseFromValue(allocator, parsed, options);
+    }
+
+    pub fn jsonParseFromValue(
+        allocator: std.mem.Allocator,
+        source: JsonObject,
+        options: std.json.ParseOptions,
+    ) !CreateModerationRequestInput {
+        switch (source) {
+            .string => return .{ .text = source.string },
+            .array => {
+                const parsed = std.json.parseFromValue([]const []const u8, allocator, source, options) catch return .{ .raw = source };
+                defer parsed.deinit();
+                return .{ .texts = parsed.value };
+            },
+            else => return .{ .raw = source },
         }
     }
 };
@@ -5577,7 +5718,7 @@ pub const InviteRequest = struct {
         id: []const u8,
         role: []const u8,
     },
-}; 
+};
 pub const Item = union(enum) {
     input_message: InputMessage,
     output_message: OutputMessage,
