@@ -4536,3 +4536,96 @@ test "deepseek response stream error event captures message and optional code" {
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream output_text.delta carries text fragment" {
+    const payload =
+        \\{"type":"response.output_text.delta","item_id":"msg_2","output_index":3,"content_index":0,"delta":"think","sequence_number":20,"logprobs":[]}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .text_delta => |evt| {
+            try std.testing.expectEqualStrings("msg_2", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 3), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 0), evt.content_index);
+            try std.testing.expectEqual(@as(i64, 20), evt.sequence_number);
+            try std.testing.expectEqualStrings("think", evt.delta);
+            try std.testing.expectEqual(@as(usize, 0), evt.logprobs.len);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream refusal event parses refusal delta and done" {
+    const delta_payload =
+        \\{"type":"response.refusal.delta","item_id":"msg_3","output_index":4,"content_index":0,"delta":"I can't","sequence_number":21}
+    ;
+    const delta_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        delta_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer delta_event.deinit();
+
+    switch (delta_event.value) {
+        .refusal_delta => |evt| {
+            try std.testing.expectEqualStrings("msg_3", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 4), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 21), evt.sequence_number);
+            try std.testing.expectEqualStrings("I can't", evt.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const done_payload =
+        \\{"type":"response.refusal.done","item_id":"msg_3","output_index":4,"content_index":0,"refusal":"I can't answer that.","sequence_number":22}
+    ;
+    const done_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        done_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer done_event.deinit();
+
+    switch (done_event.value) {
+        .refusal_done => |evt| {
+            try std.testing.expectEqualStrings("msg_3", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 4), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 22), evt.sequence_number);
+            try std.testing.expectEqualStrings("I can't answer that.", evt.refusal);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream output_text.done preserves final text" {
+    const payload =
+        \\{"type":"response.output_text.done","item_id":"msg_4","output_index":5,"content_index":0,"text":"done","sequence_number":23,"logprobs":[]}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .text_done => |evt| {
+            try std.testing.expectEqualStrings("msg_4", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 5), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 23), evt.sequence_number);
+            try std.testing.expectEqualStrings("done", evt.text);
+            try std.testing.expectEqual(@as(usize, 0), evt.logprobs.len);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
