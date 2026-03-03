@@ -222,7 +222,14 @@ test "create responses parser supports both structured and raw variants" {
     defer request_object.deinit();
     switch (request_object.value) {
         .object => |value| {
-            try std.testing.expectEqualStrings("tell me a joke", value.input.?.string);
+            const input = value.input orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (input) {
+                .text => |text| try std.testing.expectEqualStrings("tell me a joke", text),
+                else => try std.testing.expect(false),
+            }
         },
         .raw => {
             try std.testing.expect(false);
@@ -432,7 +439,7 @@ test "prompt parses template object and falls back raw on invalid payload" {
             try std.testing.expectEqualStrings("prompt-123", value.id);
             try std.testing.expectEqualStrings("v1", value.version.?);
             try std.testing.expect(value.variables != null);
-            try std.testing.expectEqualStrings("Alice", value.variables.?.object.get("customer").?.string);
+            try std.testing.expectEqualStrings("Alice", value.variables.?.asJson().object.get("customer").?.string);
         },
         .raw => |_| {
             try std.testing.expect(false);
@@ -618,7 +625,7 @@ test "AssistantsApiResponseFormatOption parses json_schema form" {
             try std.testing.expectEqualStrings("question answer", value.json_schema.description.?);
             try std.testing.expect(value.json_schema.strict.?);
             try std.testing.expect(value.json_schema.schema != null);
-            try std.testing.expect(value.json_schema.schema != null and value.json_schema.schema.?.object.get("type") != null);
+            try std.testing.expect(value.json_schema.schema != null and value.json_schema.schema.?.asJson().object.get("type") != null);
         },
         else => try std.testing.expect(false),
     }
@@ -1287,8 +1294,9 @@ test "generated message content parses text variants with structured annotations
         else => try std.testing.expect(false),
     }
 
-    const unknown_payload = \\{"type":"legacy","raw":"x"}
- ;
+    const unknown_payload =
+        \\{"type":"legacy","raw":"x"}
+    ;
     const parsed_unknown = try std.json.parseFromSlice(
         gen.MessageContent,
         std.testing.allocator,
@@ -1488,7 +1496,8 @@ test "generated output content parses output_text and falls back to raw for unkn
         else => try std.testing.expect(false),
     }
 
-    const output_raw_payload = \\{"type":"unknown_output","data":123}
+    const output_raw_payload =
+        \\{"type":"unknown_output","data":123}
     ;
     const parsed_output_raw = try std.json.parseFromSlice(
         gen.OutputContent,
@@ -2371,5 +2380,1208 @@ test "Response keeps response output raw fallback on invalid shape" {
             }
         },
         .raw => try std.testing.expect(false),
+    }
+}
+
+test "create response object parses narrowed typed request fields" {
+    const payload =
+        \\{"input":"tell me another joke","model":"deepseek-chat","tools":[{"type":"function","function":{"name":"noop","parameters":{"type":"object"}}}],"tool_choice":{"type":"function","name":"noop"},"parallel_tool_calls":true,"response_format":{"type":"json_object"},"conversation":"conv_123"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.CreateResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .object => |value| {
+            const input = value.input orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (input) {
+                .text => |text| try std.testing.expectEqualStrings("tell me another joke", text),
+                else => try std.testing.expect(false),
+            }
+
+            try std.testing.expect(value.tools != null);
+            try std.testing.expectEqual(@as(usize, 1), value.tools.?.len);
+            switch (value.tools.?[0]) {
+                .raw => |raw| {
+                    try std.testing.expectEqualStrings("function", raw.object.get("type").?.string);
+                },
+                else => try std.testing.expect(false),
+            }
+
+            try std.testing.expect(value.tool_choice != null);
+            switch (value.tool_choice.?) {
+                .raw => |raw| {
+                    try std.testing.expectEqualStrings("function", raw.object.get("type").?.string);
+                },
+                else => try std.testing.expect(false),
+            }
+
+            try std.testing.expect(value.parallel_tool_calls != null and value.parallel_tool_calls.?);
+
+            const response_format = value.response_format orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (response_format) {
+                .json_object => |format| try std.testing.expectEqualStrings("json_object", format.type),
+                else => try std.testing.expect(false),
+            }
+
+            const conversation = value.conversation orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (conversation) {
+                .id => |id| try std.testing.expectEqualStrings("conv_123", id),
+                else => try std.testing.expect(false),
+            }
+        },
+        .raw => try std.testing.expect(false),
+    }
+}
+
+test "token counts body parses narrowed fields" {
+    const payload =
+        \\{"model":"gpt-4o-mini","input":"count this","text":{"format":{"type":"text"},"verbosity":"low"},"reasoning":{"effort":"medium","summary":"auto"},"conversation":{"id":"conv_456"},"parallel_tool_calls":true}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.TokenCountsBody,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const input = parsed.value.input orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (input) {
+        .text => |text| try std.testing.expectEqualStrings("count this", text),
+        else => try std.testing.expect(false),
+    }
+
+    const text = parsed.value.text orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    const format = text.format orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (format) {
+        .text => |value| try std.testing.expectEqualStrings("text", value.type),
+        else => try std.testing.expect(false),
+    }
+    try std.testing.expectEqualStrings("low", text.verbosity.?);
+
+    const reasoning = parsed.value.reasoning orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expectEqualStrings("medium", reasoning.effort.?);
+    try std.testing.expectEqualStrings("auto", reasoning.summary.?);
+
+    const conversation = parsed.value.conversation orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (conversation) {
+        .conversation => |value| try std.testing.expectEqualStrings("conv_456", value.id),
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expect(parsed.value.parallel_tool_calls != null and parsed.value.parallel_tool_calls.?);
+}
+
+test "realtime create client secret response parses typed session" {
+    const payload =
+        \\{"value":"secret_123","expires_at":1700000000,"session":{"id":"sess_123","object":"realtime.session","model":"gpt-4o-realtime-preview","input_audio_transcription":{"model":"gpt-4o-transcribe"},"prompt":{"id":"pmpt_1"},"include":["item.input_audio_transcription.logprobs"]}}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.RealtimeCreateClientSecretResponse,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqualStrings("secret_123", parsed.value.value);
+    try std.testing.expectEqualStrings("sess_123", parsed.value.session.id.?);
+    try std.testing.expectEqualStrings("gpt-4o-transcribe", parsed.value.session.input_audio_transcription.?.model.?);
+    try std.testing.expectEqual(@as(usize, 1), parsed.value.session.include.?.len);
+
+    const prompt = parsed.value.session.prompt orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (prompt) {
+        .template => |value| try std.testing.expectEqualStrings("pmpt_1", value.id),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime response create params parses typed tools and conversation" {
+    const payload =
+        \\{"conversation":"conv_realtime_1","tools":[{"type":"function","function":{"name":"lookup_weather","parameters":{"type":"object"}}}],"max_output_tokens":256}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.RealtimeResponseCreateParams,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const conversation = parsed.value.conversation orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (conversation) {
+        .id => |id| try std.testing.expectEqualStrings("conv_realtime_1", id),
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expect(parsed.value.tools != null);
+    try std.testing.expectEqual(@as(usize, 1), parsed.value.tools.?.len);
+    switch (parsed.value.tools.?[0]) {
+        .raw => |raw| try std.testing.expectEqualStrings("function", raw.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+    try std.testing.expectEqual(@as(?i64, 256), parsed.value.max_output_tokens);
+}
+
+test "eval grader config parses typed variants" {
+    const score_payload =
+        \\{"type":"score_model","name":"score","model":"gpt-4o-mini","input":[{"role":"assistant","content":"ok"}],"range":[0,1]}
+    ;
+    const score = try std.json.parseFromSlice(
+        gen.EvalGraderConfig,
+        std.testing.allocator,
+        score_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer score.deinit();
+    switch (score.value) {
+        .score_model => |value| {
+            try std.testing.expectEqualStrings("score", value.name);
+            try std.testing.expectEqualStrings("gpt-4o-mini", value.model);
+            try std.testing.expectEqual(@as(usize, 1), value.input.len);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const multi_payload =
+        \\{"type":"multi","name":"combo","graders":[{"type":"python","name":"py","source":"return 1"}],"calculate_output":"mean"}
+    ;
+    const multi = try std.json.parseFromSlice(
+        gen.EvalGraderConfig,
+        std.testing.allocator,
+        multi_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer multi.deinit();
+    switch (multi.value) {
+        .multi => |value| {
+            try std.testing.expectEqualStrings("combo", value.name);
+            try std.testing.expectEqual(@as(usize, 1), value.graders.len);
+            switch (value.graders[0]) {
+                .python => |py| try std.testing.expectEqualStrings("py", py.name),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval grader config keeps raw fallback for unknown shape" {
+    const raw_payload =
+        \\{"type":"future_grader","foo":1}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.EvalGraderConfig,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| {
+            try std.testing.expectEqualStrings("future_grader", value.object.get("type").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime truncation parses mode/object and keeps raw fallback" {
+    const mode = try std.json.parseFromSlice(
+        gen.RealtimeTruncation,
+        std.testing.allocator,
+        "\"auto\"",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer mode.deinit();
+    switch (mode.value) {
+        .mode => |value| try std.testing.expectEqualStrings("auto", value),
+        else => try std.testing.expect(false),
+    }
+
+    const config_payload =
+        \\{"type":"retention","last_messages":8}
+    ;
+    const config = try std.json.parseFromSlice(
+        gen.RealtimeTruncation,
+        std.testing.allocator,
+        config_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer config.deinit();
+    switch (config.value) {
+        .config => |value| {
+            try std.testing.expectEqualStrings("retention", value.type);
+            try std.testing.expectEqual(@as(?i64, 8), value.last_messages);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw = try std.json.parseFromSlice(
+        gen.RealtimeTruncation,
+        std.testing.allocator,
+        "1",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqual(@as(std.json.Value, .{ .integer = 1 }), value),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime session parses typed turn detection" {
+    const payload =
+        \\{"turn_detection":{"type":"server_vad","threshold":0.4,"prefix_padding_ms":120,"silence_duration_ms":250}}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.RealtimeSession,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const turn_detection = parsed.value.turn_detection orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expectEqualStrings("server_vad", turn_detection.type.?);
+    try std.testing.expectEqual(@as(?f64, 0.4), turn_detection.threshold);
+    try std.testing.expectEqual(@as(?i64, 120), turn_detection.prefix_padding_ms);
+    try std.testing.expectEqual(@as(?i64, 250), turn_detection.silence_duration_ms);
+}
+
+test "realtime client event parses typed variant and keeps raw fallback" {
+    const typed_payload =
+        \\{"type":"response.create","response":null}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.RealtimeClientEvent,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .response_create => |value| {
+            try std.testing.expectEqualStrings("response.create", value.type);
+            try std.testing.expect(value.response == null);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"type":"future.client.event","x":1}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.RealtimeClientEvent,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future.client.event", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime server event parses typed variant and keeps raw fallback" {
+    const typed_payload =
+        \\{"event_id":"evt_1","type":"session.updated","session":{"id":"sess_1"}}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.RealtimeServerEvent,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .session_updated => |value| {
+            try std.testing.expectEqualStrings("session.updated", value.type);
+            try std.testing.expectEqualStrings("sess_1", value.session.id.?);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"event_id":"evt_2","type":"future.server.event","foo":true}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.RealtimeServerEvent,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future.server.event", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval item content parses text and array variants" {
+    const text_payload = "\"graded answer\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.EvalItemContent,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("graded answer", value),
+        else => try std.testing.expect(false),
+    }
+
+    const array_payload =
+        \\[
+        \\  {"type":"output_text","text":"hello"},
+        \\  {"type":"input_image","image_url":"https://example.com/a.png"}
+        \\]
+    ;
+    const parsed_items = try std.json.parseFromSlice(
+        gen.EvalItemContent,
+        std.testing.allocator,
+        array_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_items.deinit();
+
+    switch (parsed_items.value) {
+        .items => |items| {
+            try std.testing.expectEqual(@as(usize, 2), items.len);
+            switch (items[0]) {
+                .output_text => |value| try std.testing.expectEqualStrings("hello", value.text),
+                else => try std.testing.expect(false),
+            }
+            switch (items[1]) {
+                .input_image => |value| try std.testing.expectEqualStrings("https://example.com/a.png", value.image_url),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval item content item keeps raw fallback for unknown type" {
+    const raw_payload =
+        \\{"type":"future_eval_item","foo":"bar"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.EvalItemContentItem,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future_eval_item", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create eval item parses typed eval item and raw fallback" {
+    const typed_payload =
+        \\{"role":"assistant","content":"scored output","type":"message"}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.CreateEvalItem,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .item => |value| {
+            try std.testing.expectEqualStrings("assistant", value.role);
+            switch (value.content) {
+                .text => |text| try std.testing.expectEqualStrings("scored output", text),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"foo":"bar"}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.CreateEvalItem,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "fine-tune assistant message parses typed assistant payload and raw fallback" {
+    const typed_payload =
+        \\{"role":"assistant","content":"done"}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.FineTuneChatCompletionRequestAssistantMessage,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .message => |message| {
+            try std.testing.expectEqualStrings("assistant", message.role);
+            const content = message.content orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (content) {
+                .text => |text| try std.testing.expectEqualStrings("done", text),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"role":"tool","content":"other"}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.FineTuneChatCompletionRequestAssistantMessage,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("tool", value.object.get("role").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create chat completion request parses typed object and raw fallback" {
+    const typed_payload =
+        \\{"model":"gpt-4o-mini","messages":[{"role":"user","content":"hello"}]}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.CreateChatCompletionRequest,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .object => |value| {
+            try std.testing.expectEqualStrings("gpt-4o-mini", value.model.?);
+            try std.testing.expectEqual(@as(usize, 1), value.messages.?.len);
+            switch (value.messages.?[0]) {
+                .user => |message| try std.testing.expectEqualStrings("user", message.role),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"foo":"bar"}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.CreateChatCompletionRequest,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "chat completion request message parses typed role variants and raw fallback" {
+    const typed_payload =
+        \\{"role":"assistant","content":"hi"}
+    ;
+    const typed = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestMessage,
+        std.testing.allocator,
+        typed_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer typed.deinit();
+
+    switch (typed.value) {
+        .assistant => |message| {
+            try std.testing.expectEqualStrings("assistant", message.role);
+            const content = message.content orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            switch (content) {
+                .text => |text| try std.testing.expectEqualStrings("hi", text),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"role":"future_role","content":"x"}
+    ;
+    const raw = try std.json.parseFromSlice(
+        gen.ChatCompletionRequestMessage,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer raw.deinit();
+
+    switch (raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future_role", value.object.get("role").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generic content parses text and array variants" {
+    const text_payload = "\"hello-content\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.GenericContent,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("hello-content", value),
+        else => try std.testing.expect(false),
+    }
+
+    const array_payload =
+        \\[{"a":1},{"b":"x"}]
+    ;
+    const parsed_array = try std.json.parseFromSlice(
+        gen.GenericContent,
+        std.testing.allocator,
+        array_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_array.deinit();
+
+    switch (parsed_array.value) {
+        .items => |items| {
+            try std.testing.expectEqual(@as(usize, 2), items.len);
+            switch (items[0]) {
+                .raw => |value| try std.testing.expectEqual(@as(i64, 1), value.object.get("a").?.integer),
+                else => try std.testing.expect(false),
+            }
+            switch (items[1]) {
+                .raw => |value| try std.testing.expectEqualStrings("x", value.object.get("b").?.string),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "generic content keeps raw fallback for object payload" {
+    const payload =
+        \\{"k":"v"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.GenericContent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .raw => |value| try std.testing.expectEqualStrings("v", value.object.get("k").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create eval request parses testing criteria as typed grader config" {
+    const payload =
+        \\{"name":"eval-1","data_source_config":{"foo":"bar"},"testing_criteria":[{"type":"python","name":"grader_py","source":"return 1"}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.CreateEvalRequest,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(@as(usize, 1), parsed.value.testing_criteria.len);
+    switch (parsed.value.testing_criteria[0]) {
+        .python => |value| {
+            try std.testing.expectEqualStrings("grader_py", value.name);
+            try std.testing.expectEqualStrings("return 1", value.source);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "function tool call output parses generic content variants" {
+    const text_payload =
+        \\{"type":"function_call_output","call_id":"call_1","output":"ok"}
+    ;
+    const parsed_text = try std.json.parseFromSlice(
+        gen.FunctionToolCallOutput,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value.output) {
+        .text => |value| try std.testing.expectEqualStrings("ok", value),
+        else => try std.testing.expect(false),
+    }
+
+    const object_payload =
+        \\{"type":"function_call_output","call_id":"call_1","output":{"foo":"bar"}}
+    ;
+    const parsed_object = try std.json.parseFromSlice(
+        gen.FunctionToolCallOutput,
+        std.testing.allocator,
+        object_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_object.deinit();
+
+    switch (parsed_object.value.output) {
+        .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "realtime mcp obfuscation parses generic content" {
+    const payload =
+        \\{"event_id":"evt_1","type":"response.mcp_call.arguments.delta","response_id":"resp_1","item_id":"item_1","output_index":0,"delta":"x","obfuscation":"redacted"}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.RealtimeServerEventResponseMCPCallArgumentsDelta,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const obfuscation = parsed.value.obfuscation orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    switch (obfuscation) {
+        .text => |value| try std.testing.expectEqualStrings("redacted", value),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval data source config parses typed create and eval variants" {
+    const create_logs_payload =
+        \\{"type":"logs","metadata":{"team":"alpha"}}
+    ;
+    const parsed_create_logs = try std.json.parseFromSlice(
+        gen.EvalDataSourceConfig,
+        std.testing.allocator,
+        create_logs_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_create_logs.deinit();
+
+    switch (parsed_create_logs.value) {
+        .logs_create => |value| {
+            const metadata = value.metadata orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            try std.testing.expectEqualStrings("alpha", metadata.asJson().object.get("team").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const eval_stored_payload =
+        \\{"type":"stored_completions","metadata":{"source":"api"},"schema":{"type":"object"}}
+    ;
+    const parsed_eval_stored = try std.json.parseFromSlice(
+        gen.EvalDataSourceConfig,
+        std.testing.allocator,
+        eval_stored_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_eval_stored.deinit();
+
+    switch (parsed_eval_stored.value) {
+        .stored_completions => |value| {
+            const metadata = value.metadata orelse {
+                try std.testing.expect(false);
+                return;
+            };
+            try std.testing.expectEqualStrings("api", metadata.asJson().object.get("source").?.string);
+            try std.testing.expectEqualStrings("object", value.schema.asJson().object.get("type").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval data source config keeps raw fallback for unknown type" {
+    const payload =
+        \\{"type":"future_source","foo":1}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.EvalDataSourceConfig,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    switch (parsed.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future_source", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "eval run data source parses typed variants and raw fallback" {
+    const responses_payload =
+        \\{"type":"responses","source":{"dataset":"eval-set"}}
+    ;
+    const parsed_responses = try std.json.parseFromSlice(
+        gen.EvalRunDataSource,
+        std.testing.allocator,
+        responses_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_responses.deinit();
+
+    switch (parsed_responses.value) {
+        .responses => |value| {
+            try std.testing.expectEqualStrings("responses", value.type);
+            try std.testing.expectEqualStrings("eval-set", value.source.object.get("dataset").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"type":"future_run_source","k":1}
+    ;
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.EvalRunDataSource,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("future_run_source", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create eval run request parses typed data source" {
+    const payload =
+        \\{"name":"nightly-eval","data_source":{"type":"completions","source":{"id":"src_1"}}}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.CreateEvalRunRequest,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqualStrings("nightly-eval", parsed.value.name.?);
+    switch (parsed.value.data_source) {
+        .completions => |value| {
+            try std.testing.expectEqualStrings("completions", value.type);
+            try std.testing.expectEqualStrings("src_1", value.source.object.get("id").?.string);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "fine-tune chat request input parses typed message unions" {
+    const payload =
+        \\{"messages":[{"role":"user","content":"hello"},{"role":"assistant","content":"world"}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.FineTuneChatRequestInput,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expect(parsed.value.messages != null);
+    try std.testing.expectEqual(@as(usize, 2), parsed.value.messages.?.len);
+    switch (parsed.value.messages.?[0]) {
+        .user => |value| try std.testing.expectEqualStrings("user", value.role),
+        else => try std.testing.expect(false),
+    }
+    switch (parsed.value.messages.?[1]) {
+        .assistant => |value| try std.testing.expectEqualStrings("assistant", value.role),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "fine-tune preference request input parses assistant outputs with raw fallback" {
+    const payload =
+        \\{"input":{"messages":[{"role":"user","content":"prompt"}]},"preferred_output":[{"role":"assistant","content":"good"}],"non_preferred_output":[{"role":"tool","content":"bad"}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.FineTunePreferenceRequestInput,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    const input = parsed.value.input orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expect(input.messages != null);
+    switch (input.messages.?[0]) {
+        .user => |value| try std.testing.expectEqualStrings("user", value.role),
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expect(parsed.value.preferred_output != null);
+    switch (parsed.value.preferred_output.?[0]) {
+        .message => |value| try std.testing.expectEqualStrings("assistant", value.role),
+        else => try std.testing.expect(false),
+    }
+
+    try std.testing.expect(parsed.value.non_preferred_output != null);
+    switch (parsed.value.non_preferred_output.?[0]) {
+        .raw => |value| try std.testing.expectEqualStrings("tool", value.object.get("role").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "fine-tune reinforcement request input parses typed message unions" {
+    const payload =
+        \\{"messages":[{"role":"user","content":"q"},{"role":"assistant","content":"a"}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.FineTuneReinforcementRequestInput,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(@as(usize, 2), parsed.value.messages.len);
+    switch (parsed.value.messages[0]) {
+        .user => |value| try std.testing.expectEqualStrings("user", value.role),
+        else => try std.testing.expect(false),
+    }
+    switch (parsed.value.messages[1]) {
+        .assistant => |value| try std.testing.expectEqualStrings("assistant", value.role),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create image edit request parses generic image payload variants" {
+    const text_payload =
+        \\{"image":"ipfs://image-1","prompt":"retouch"}
+    ;
+    const parsed_text = try std.json.parseFromSlice(
+        gen.CreateImageEditRequest,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value.image) {
+        .text => |value| try std.testing.expectEqualStrings("ipfs://image-1", value),
+        else => try std.testing.expect(false),
+    }
+
+    const object_payload =
+        \\{"image":{"id":"img_1"},"prompt":"retouch"}
+    ;
+    const parsed_object = try std.json.parseFromSlice(
+        gen.CreateImageEditRequest,
+        std.testing.allocator,
+        object_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_object.deinit();
+
+    switch (parsed_object.value.image) {
+        .raw => |value| try std.testing.expectEqualStrings("img_1", value.object.get("id").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "fine tuning job event keeps typed metadata payload" {
+    const payload =
+        \\{"object":"fine_tuning.job.event","id":"ev_abc","created_at":1700000000,"level":"info","message":"starting","type":"message","data":{"foo":"bar"}}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.FineTuningJobEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    const data = event.value.data orelse {
+        try std.testing.expect(false);
+        return;
+    };
+    try std.testing.expectEqualStrings("bar", data.asJson().object.get("foo").?.string);
+}
+
+test "usage time bucket parses typed usage result variants" {
+    const payload =
+        \\{"object":"bucket","start_time":1,"end_time":2,"result":[{"object":"organization.usage.completions.result","input_tokens":10,"output_tokens":4,"num_model_requests":1},{"object":"organization.usage.images.result","images":2,"num_model_requests":1}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.UsageTimeBucket,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(@as(usize, 2), parsed.value.result.len);
+
+    switch (parsed.value.result[0]) {
+        .completions => |value| {
+            try std.testing.expectEqualStrings("organization.usage.completions.result", value.object);
+            try std.testing.expectEqual(@as(i64, 10), value.input_tokens);
+            try std.testing.expectEqual(@as(i64, 4), value.output_tokens);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    switch (parsed.value.result[1]) {
+        .images => |value| {
+            try std.testing.expectEqualStrings("organization.usage.images.result", value.object);
+            try std.testing.expectEqual(@as(i64, 2), value.images);
+        },
+        else => try std.testing.expect(false),
+    }
+}
+
+test "usage time bucket keeps raw fallback for unknown usage result" {
+    const payload =
+        \\{"object":"bucket","start_time":1,"end_time":2,"result":[{"object":"organization.usage.future.result","x":1}]}
+    ;
+    const parsed = try std.json.parseFromSlice(
+        gen.UsageTimeBucket,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed.deinit();
+
+    try std.testing.expectEqual(@as(usize, 1), parsed.value.result.len);
+    switch (parsed.value.result[0]) {
+        .raw => |value| try std.testing.expectEqualStrings("organization.usage.future.result", value.object.get("object").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "function parameters parse schema object and raw fallback" {
+    const schema_payload =
+        \\{"type":"object","properties":{"city":{"type":"string"}}}
+    ;
+    const parsed_schema = try std.json.parseFromSlice(
+        gen.FunctionParameters,
+        std.testing.allocator,
+        schema_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_schema.deinit();
+
+    switch (parsed_schema.value) {
+        .schema => |value| try std.testing.expectEqualStrings("object", value.object.get("type").?.string),
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload = "\"not-an-object\"";
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.FunctionParameters,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("not-an-object", value.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create message request content parses text/parts/raw variants" {
+    const text_payload = "\"hello world\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.CreateMessageRequestContent,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("hello world", value),
+        else => try std.testing.expect(false),
+    }
+
+    const parts_payload =
+        \\[
+        \\  {"type":"text","text":"part-1"},
+        \\  {"type":"future","x":1}
+        \\]
+    ;
+    const parsed_parts = try std.json.parseFromSlice(
+        gen.CreateMessageRequestContent,
+        std.testing.allocator,
+        parts_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_parts.deinit();
+
+    switch (parsed_parts.value) {
+        .parts => |parts| {
+            try std.testing.expectEqual(@as(usize, 2), parts.len);
+            switch (parts[0]) {
+                .text => |value| try std.testing.expectEqualStrings("part-1", value.text),
+                else => try std.testing.expect(false),
+            }
+            switch (parts[1]) {
+                .raw => |value| try std.testing.expectEqualStrings("future", value.object.get("type").?.string),
+                else => try std.testing.expect(false),
+            }
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"k":"v"}
+    ;
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.CreateMessageRequestContent,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("v", value.object.get("k").?.string),
+        else => try std.testing.expect(false),
+    }
+}
+
+test "create moderation request input parses scalar/array/raw variants" {
+    const text_payload = "\"safe text\"";
+    const parsed_text = try std.json.parseFromSlice(
+        gen.CreateModerationRequestInput,
+        std.testing.allocator,
+        text_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_text.deinit();
+
+    switch (parsed_text.value) {
+        .text => |value| try std.testing.expectEqualStrings("safe text", value),
+        else => try std.testing.expect(false),
+    }
+
+    const array_payload =
+        \\["a","b"]
+    ;
+    const parsed_array = try std.json.parseFromSlice(
+        gen.CreateModerationRequestInput,
+        std.testing.allocator,
+        array_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_array.deinit();
+
+    switch (parsed_array.value) {
+        .texts => |texts| {
+            try std.testing.expectEqual(@as(usize, 2), texts.len);
+            try std.testing.expectEqualStrings("a", texts[0]);
+            try std.testing.expectEqualStrings("b", texts[1]);
+        },
+        else => try std.testing.expect(false),
+    }
+
+    const raw_payload =
+        \\{"foo":"bar"}
+    ;
+    const parsed_raw = try std.json.parseFromSlice(
+        gen.CreateModerationRequestInput,
+        std.testing.allocator,
+        raw_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer parsed_raw.deinit();
+
+    switch (parsed_raw.value) {
+        .raw => |value| try std.testing.expectEqualStrings("bar", value.object.get("foo").?.string),
+        else => try std.testing.expect(false),
     }
 }
