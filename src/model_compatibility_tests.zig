@@ -4359,3 +4359,82 @@ test "response stream unknown event falls back to raw payload" {
         else => return error.TestUnexpectedResult,
     }
 }
+
+test "deepseek response stream output_item_added wraps message item" {
+    const payload =
+        \\{"type":"response.output_item.added","output_index":0,"sequence_number":1,"item":{"type":"message","id":"msg_1","status":"in_progress","role":"assistant","content":[{"type":"output_text","text":"thinking..."}]}
+    ;
+    const event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer event.deinit();
+
+    switch (event.value) {
+        .output_item_added => |evt| {
+            try std.testing.expectEqual(@as(i64, 0), evt.output_index);
+            try std.testing.expectEqual(@as(i64, 1), evt.sequence_number);
+            switch (evt.item) {
+                .message => |msg| {
+                    try std.testing.expectEqualStrings("msg_1", msg.id);
+                    try std.testing.expectEqualStrings("assistant", msg.role);
+                    try std.testing.expectEqualStrings("in_progress", msg.status);
+                    try std.testing.expectEqual(@as(usize, 1), msg.content.len);
+                    switch (msg.content[0]) {
+                        .text => |txt| try std.testing.expectEqualStrings("thinking...", txt.text),
+                        else => return error.TestUnexpectedResult,
+                    }
+                },
+                else => return error.TestUnexpectedResult,
+            }
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}
+
+test "deepseek response stream function_call argument events" {
+    const delta_payload =
+        \\{"type":"response.function_call_arguments.delta","item_id":"fn_1","output_index":1,"sequence_number":9,"delta":"{\"x\": \"start\"}"
+    ;
+    const delta_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        delta_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer delta_event.deinit();
+
+    switch (delta_event.value) {
+        .function_call_arguments_delta => |evt| {
+            try std.testing.expectEqual(@as(i64, 1), evt.output_index);
+            try std.testing.expectEqualStrings("fn_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 9), evt.sequence_number);
+            try std.testing.expectEqualStrings("{\"x\": \"start\"}", evt.delta);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+
+    const done_payload =
+        \\{"type":"response.function_call_arguments.done","item_id":"fn_1","name":"fetch_data","output_index":1,"sequence_number":10,"arguments":"{\"x\": \"done\"}"
+    ;
+    const done_event = try std.json.parseFromSlice(
+        gen.ResponseStreamEvent,
+        std.testing.allocator,
+        done_payload,
+        .{ .ignore_unknown_fields = true },
+    );
+    defer done_event.deinit();
+
+    switch (done_event.value) {
+        .function_call_arguments_done => |evt| {
+            try std.testing.expectEqualStrings("fetch_data", evt.name);
+            try std.testing.expectEqualStrings("fn_1", evt.item_id);
+            try std.testing.expectEqual(@as(i64, 10), evt.sequence_number);
+            try std.testing.expectEqual(@as(i64, 1), evt.output_index);
+            try std.testing.expectEqualStrings("{\"x\": \"done\"}", evt.arguments);
+        },
+        else => return error.TestUnexpectedResult,
+    }
+}

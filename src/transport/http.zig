@@ -1111,6 +1111,10 @@ test "deepseek completions requests are routed to /beta" {
     const responses_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/responses", null);
     defer std.testing.allocator.free(responses_url);
     try std.testing.expectEqualStrings("https://api.deepseek.com/v1", responses_url);
+
+    const responses_stream_url = try resolveRequestBaseUrl(std.testing.allocator, "https://api.deepseek.com/v1", "/responses", "{\"model\":\"deepseek-reasoner\",\"stream\":true}");
+    defer std.testing.allocator.free(responses_stream_url);
+    try std.testing.expectEqualStrings("https://api.deepseek.com/v1", responses_stream_url);
 }
 
 test "non-deepseek base URLs keep original host" {
