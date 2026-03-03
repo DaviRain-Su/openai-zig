@@ -162,7 +162,7 @@ pub const AssistantStreamEvent = union(enum) {
     run_step: RunStepStreamEvent,
     message: MessageStreamEvent,
     err: ErrorEvent,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forThread(value: ThreadStreamEvent) AssistantStreamEvent {
         return .{ .thread = value };
@@ -184,7 +184,7 @@ pub const AssistantStreamEvent = union(enum) {
         return .{ .err = value };
     }
 
-    pub fn forRaw(value: JsonObject) AssistantStreamEvent {
+    pub fn forRaw(value: FunctionParameters) AssistantStreamEvent {
         return .{ .raw = value };
     }
 
@@ -326,7 +326,7 @@ pub const AssistantsApiResponseFormatOption = union(enum) {
     text: ResponseFormatText,
     json_object: ResponseFormatJsonObject,
     json_schema: ResponseFormatJsonSchema,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forAuto() AssistantsApiResponseFormatOption {
         return .auto;
@@ -344,7 +344,7 @@ pub const AssistantsApiResponseFormatOption = union(enum) {
         return .{ .json_schema = json_schema };
     }
 
-    pub fn forRaw(value: JsonObject) AssistantsApiResponseFormatOption {
+    pub fn forRaw(value: FunctionParameters) AssistantsApiResponseFormatOption {
         return .{ .raw = value };
     }
 
@@ -917,7 +917,7 @@ pub const ChatCompletionRequestFunctionCall = struct {
 pub const ChatCompletionRequestAssistantMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestAssistantMessageContentPart,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ChatCompletionRequestAssistantMessageContent, writer: anytype) !void {
         switch (self) {
@@ -957,7 +957,7 @@ pub const ChatCompletionRequestAssistantMessageContent = union(enum) {
 pub const ChatCompletionRequestAssistantMessageContentPart = union(enum) {
     text: ChatCompletionRequestMessageContentPartText,
     refusal: ChatCompletionRequestMessageContentPartRefusal,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ChatCompletionRequestAssistantMessageContentPart, writer: anytype) !void {
         switch (self) {
@@ -1014,7 +1014,7 @@ pub const ChatCompletionRequestDeveloperMessage = struct {
 pub const ChatCompletionRequestDeveloperMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestMessageContentPartText,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ChatCompletionRequestDeveloperMessageContent, writer: anytype) !void {
         switch (self) {
@@ -1063,7 +1063,7 @@ pub const ChatCompletionRequestMessage = union(enum) {
     assistant: ChatCompletionRequestAssistantMessage,
     tool: ChatCompletionRequestToolMessage,
     function: ChatCompletionRequestFunctionMessage,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ChatCompletionRequestMessage, writer: anytype) !void {
         switch (self) {
@@ -1186,7 +1186,7 @@ pub const ChatCompletionRequestSystemMessage = struct {
 pub const ChatCompletionRequestSystemMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestSystemMessageContentPart,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ChatCompletionRequestSystemMessageContent, writer: anytype) !void {
         switch (self) {
@@ -1232,7 +1232,7 @@ pub const ChatCompletionRequestToolMessage = struct {
 pub const ChatCompletionRequestToolMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestToolMessageContentPart,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ChatCompletionRequestToolMessageContent, writer: anytype) !void {
         switch (self) {
@@ -1278,7 +1278,7 @@ pub const ChatCompletionRequestUserMessage = struct {
 pub const ChatCompletionRequestUserMessageContent = union(enum) {
     text: []const u8,
     parts: []const ChatCompletionRequestUserMessageContentPart,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ChatCompletionRequestUserMessageContent, writer: anytype) !void {
         switch (self) {
@@ -1320,7 +1320,7 @@ pub const ChatCompletionRequestUserMessageContentPart = union(enum) {
     image: ChatCompletionRequestMessageContentPartImage,
     audio: ChatCompletionRequestMessageContentPartAudio,
     file: ChatCompletionRequestMessageContentPartFile,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ChatCompletionRequestUserMessageContentPart, writer: anytype) !void {
         switch (self) {
@@ -1506,7 +1506,7 @@ pub const ChunkingStrategyRequestParam = union(enum) {
     auto: AutoChunkingStrategyRequestParam,
     static: StaticChunkingStrategyRequestParam,
     other: OtherChunkingStrategyResponseParam,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forAuto() ChunkingStrategyRequestParam {
         return .{ .auto = .{ .type = "auto" } };
@@ -1525,7 +1525,7 @@ pub const ChunkingStrategyRequestParam = union(enum) {
         return .{ .other = .{ .type = value } };
     }
 
-    pub fn forRaw(value: JsonObject) ChunkingStrategyRequestParam {
+    pub fn forRaw(value: FunctionParameters) ChunkingStrategyRequestParam {
         return .{ .raw = value };
     }
 
@@ -1608,7 +1608,7 @@ pub const ChunkingStrategyResponse = union(enum) {
     auto: AutoChunkingStrategyRequestParam,
     static: StaticChunkingStrategyResponseParam,
     other: OtherChunkingStrategyResponseParam,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forAuto() ChunkingStrategyResponse {
         return .{ .auto = .{ .type = "auto" } };
@@ -1627,7 +1627,7 @@ pub const ChunkingStrategyResponse = union(enum) {
         return .{ .other = .{ .type = value } };
     }
 
-    pub fn forRaw(value: JsonObject) ChunkingStrategyResponse {
+    pub fn forRaw(value: FunctionParameters) ChunkingStrategyResponse {
         return .{ .raw = value };
     }
 
@@ -1737,13 +1737,13 @@ pub const CodeInterpreterContainerAuto = struct {
 };
 pub const CodeInterpreterToolContainer = union(enum) {
     auto: CodeInterpreterContainerAuto,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forAuto(container: CodeInterpreterContainerAuto) CodeInterpreterToolContainer {
         return .{ .auto = container };
     }
 
-    pub fn forRaw(value: JsonObject) CodeInterpreterToolContainer {
+    pub fn forRaw(value: FunctionParameters) CodeInterpreterToolContainer {
         return .{ .raw = value };
     }
 
@@ -1818,7 +1818,7 @@ pub const CodeInterpreterOutput = union(enum) {
     logs: CodeInterpreterOutputLogs,
     text: CodeInterpreterTextOutput,
     file: CodeInterpreterFileOutput,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: CodeInterpreterOutput, writer: anytype) !void {
         switch (self) {
@@ -1900,7 +1900,7 @@ pub const ComparisonFilter = struct {
 pub const ComparisonFilterValueItems = union(enum) {
     string: []const u8,
     number: f64,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forString(value: []const u8) ComparisonFilterValueItems {
         return .{ .string = value };
@@ -1910,7 +1910,7 @@ pub const ComparisonFilterValueItems = union(enum) {
         return .{ .number = value };
     }
 
-    pub fn forRaw(value: JsonObject) ComparisonFilterValueItems {
+    pub fn forRaw(value: FunctionParameters) ComparisonFilterValueItems {
         return .{ .raw = value };
     }
 
@@ -1957,7 +1957,7 @@ pub const ComparisonFilterValue = union(enum) {
     number: f64,
     boolean: bool,
     items: []const ComparisonFilterValueItems,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: ComparisonFilterValue, writer: anytype) !void {
         switch (self) {
@@ -1999,7 +1999,7 @@ pub const ComparisonFilterValue = union(enum) {
         return .{ .items = value };
     }
 
-    pub fn forRaw(value: JsonObject) ComparisonFilterValue {
+    pub fn forRaw(value: FunctionParameters) ComparisonFilterValue {
         return .{ .raw = value };
     }
 
@@ -2063,7 +2063,7 @@ pub const CompoundFilter = struct {
 pub const Filters = union(enum) {
     comparison: ComparisonFilter,
     compound: CompoundFilter,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: Filters, writer: anytype) !void {
         switch (self) {
@@ -2133,7 +2133,7 @@ pub const ComputerAction = union(enum) {
     scroll: Scroll,
     type_action: Type,
     wait: Wait,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forClick(value: ClickParam) ComputerAction {
         return .{ .click = value };
@@ -2171,7 +2171,7 @@ pub const ComputerAction = union(enum) {
         return .{ .wait = value };
     }
 
-    pub fn forRaw(value: JsonObject) ComputerAction {
+    pub fn forRaw(value: FunctionParameters) ComputerAction {
         return .{ .raw = value };
     }
 
@@ -2450,7 +2450,7 @@ pub const ConversationItem = union(enum) {
     mcp_tool_call: MCPToolCall,
     custom_tool_call: CustomToolCall,
     custom_tool_call_output: CustomToolCallOutput,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forMessage(value: Message) ConversationItem {
         return .{ .message = value };
@@ -2460,7 +2460,7 @@ pub const ConversationItem = union(enum) {
         return .{ .function_tool_call = value };
     }
 
-    pub fn forRaw(value: JsonObject) ConversationItem {
+    pub fn forRaw(value: FunctionParameters) ConversationItem {
         return .{ .raw = value };
     }
 
@@ -2775,7 +2775,7 @@ pub const ConversationItemList = struct {
 pub const ConversationParam = union(enum) {
     id: []const u8,
     conversation: ConversationParam_2,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forId(value: []const u8) ConversationParam {
         return .{ .id = value };
@@ -2785,7 +2785,7 @@ pub const ConversationParam = union(enum) {
         return .{ .conversation = value };
     }
 
-    pub fn forRaw(value: JsonObject) ConversationParam {
+    pub fn forRaw(value: FunctionParameters) ConversationParam {
         return .{ .raw = value };
     }
 
@@ -2910,13 +2910,13 @@ pub const CreateCompletionLogitBiasEntry = struct {
 };
 pub const CreateCompletionLogitBias = union(enum) {
     entries: []const CreateCompletionLogitBiasEntry,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forEntries(entries: []const CreateCompletionLogitBiasEntry) CreateCompletionLogitBias {
         return .{ .entries = entries };
     }
 
-    pub fn forRaw(value: JsonObject) CreateCompletionLogitBias {
+    pub fn forRaw(value: FunctionParameters) CreateCompletionLogitBias {
         return .{ .raw = value };
     }
 
@@ -3032,7 +3032,7 @@ pub const CreateEmbeddingRequest = struct {
 pub const CreateEmbeddingRequestInput = union(enum) {
     text: []const u8,
     texts: []const []const u8,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(text: []const u8) CreateEmbeddingRequestInput {
         return .{ .text = text };
@@ -3042,7 +3042,7 @@ pub const CreateEmbeddingRequestInput = union(enum) {
         return .{ .texts = texts };
     }
 
-    pub fn forRaw(value: JsonObject) CreateEmbeddingRequestInput {
+    pub fn forRaw(value: FunctionParameters) CreateEmbeddingRequestInput {
         return .{ .raw = value };
     }
 
@@ -3109,7 +3109,7 @@ pub const CreateEvalDataSourceConfig = union(enum) {
     custom: CreateEvalCustomDataSourceConfig,
     logs: CreateEvalLogsDataSourceConfig,
     stored_completions: CreateEvalStoredCompletionsDataSourceConfig,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forCustom(value: CreateEvalCustomDataSourceConfig) CreateEvalDataSourceConfig {
         return .{ .custom = value };
@@ -3123,7 +3123,7 @@ pub const CreateEvalDataSourceConfig = union(enum) {
         return .{ .stored_completions = value };
     }
 
-    pub fn forRaw(value: JsonObject) CreateEvalDataSourceConfig {
+    pub fn forRaw(value: FunctionParameters) CreateEvalDataSourceConfig {
         return .{ .raw = value };
     }
 
@@ -3203,7 +3203,7 @@ pub const CreateEvalSimpleInputMessage = struct {
 pub const CreateEvalItem = union(enum) {
     simple: CreateEvalSimpleInputMessage,
     eval_item: EvalItem,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forSimple(value: CreateEvalSimpleInputMessage) CreateEvalItem {
         return .{ .simple = value };
@@ -3213,7 +3213,7 @@ pub const CreateEvalItem = union(enum) {
         return .{ .eval_item = value };
     }
 
-    pub fn forRaw(value: JsonObject) CreateEvalItem {
+    pub fn forRaw(value: FunctionParameters) CreateEvalItem {
         return .{ .raw = value };
     }
 
@@ -3289,7 +3289,7 @@ pub const CreateEvalTestingCriteria = union(enum) {
     text_similarity: EvalGraderTextSimilarity,
     python: EvalGraderPython,
     score_model: EvalGraderScoreModel,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forLabelModel(value: CreateEvalLabelModelGrader) CreateEvalTestingCriteria {
         return .{ .label_model = value };
@@ -3311,7 +3311,7 @@ pub const CreateEvalTestingCriteria = union(enum) {
         return .{ .score_model = value };
     }
 
-    pub fn forRaw(value: JsonObject) CreateEvalTestingCriteria {
+    pub fn forRaw(value: FunctionParameters) CreateEvalTestingCriteria {
         return .{ .raw = value };
     }
 
@@ -3518,9 +3518,9 @@ pub const CreateMessageRequestContentPart = union(enum) {
         type: []const u8,
         text: []const u8,
     },
-    raw: JsonObject,
+    raw: FunctionParameters,
 
-    pub fn forRaw(value: JsonObject) CreateMessageRequestContentPart {
+    pub fn forRaw(value: FunctionParameters) CreateMessageRequestContentPart {
         return .{ .raw = value };
     }
 
@@ -3563,7 +3563,7 @@ pub const CreateMessageRequestContentPart = union(enum) {
 pub const CreateMessageRequestContent = union(enum) {
     text: []const u8,
     parts: []const CreateMessageRequestContentPart,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(value: []const u8) CreateMessageRequestContent {
         return .{ .text = value };
@@ -3573,7 +3573,7 @@ pub const CreateMessageRequestContent = union(enum) {
         return .{ .parts = value };
     }
 
-    pub fn forRaw(value: JsonObject) CreateMessageRequestContent {
+    pub fn forRaw(value: FunctionParameters) CreateMessageRequestContent {
         return .{ .raw = value };
     }
 
@@ -3631,7 +3631,7 @@ pub const CreateModerationRequest = struct {
 pub const CreateModerationRequestInput = union(enum) {
     text: []const u8,
     texts: []const []const u8,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(text: []const u8) CreateModerationRequestInput {
         return .{ .text = text };
@@ -3641,7 +3641,7 @@ pub const CreateModerationRequestInput = union(enum) {
         return .{ .texts = texts };
     }
 
-    pub fn forRaw(value: JsonObject) CreateModerationRequestInput {
+    pub fn forRaw(value: FunctionParameters) CreateModerationRequestInput {
         return .{ .raw = value };
     }
 
@@ -3751,13 +3751,13 @@ pub const CreateResponseObject = struct {
 
 pub const CreateResponse = union(enum) {
     object: CreateResponseObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forObject(value: CreateResponseObject) CreateResponse {
         return .{ .object = value };
     }
 
-    pub fn forRaw(value: JsonObject) CreateResponse {
+    pub fn forRaw(value: FunctionParameters) CreateResponse {
         return .{ .raw = value };
     }
 
@@ -3842,7 +3842,7 @@ pub const CreateSpeechRequest = struct {
 pub const CreateSpeechResponseStreamEvent = union(enum) {
     delta: SpeechAudioDeltaEvent,
     done: SpeechAudioDoneEvent,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forDelta(value: SpeechAudioDeltaEvent) CreateSpeechResponseStreamEvent {
         return .{ .delta = value };
@@ -3852,7 +3852,7 @@ pub const CreateSpeechResponseStreamEvent = union(enum) {
         return .{ .done = value };
     }
 
-    pub fn forRaw(value: JsonObject) CreateSpeechResponseStreamEvent {
+    pub fn forRaw(value: FunctionParameters) CreateSpeechResponseStreamEvent {
         return .{ .raw = value };
     }
 
@@ -3984,7 +3984,7 @@ pub const CreateTranscriptionResponseStreamEvent = union(enum) {
     delta: TranscriptTextDeltaEvent,
     done: TranscriptTextDoneEvent,
     segment: TranscriptTextSegmentEvent,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forDelta(value: TranscriptTextDeltaEvent) CreateTranscriptionResponseStreamEvent {
         return .{ .delta = value };
@@ -3998,7 +3998,7 @@ pub const CreateTranscriptionResponseStreamEvent = union(enum) {
         return .{ .segment = value };
     }
 
-    pub fn forRaw(value: JsonObject) CreateTranscriptionResponseStreamEvent {
+    pub fn forRaw(value: FunctionParameters) CreateTranscriptionResponseStreamEvent {
         return .{ .raw = value };
     }
 
@@ -4328,7 +4328,7 @@ pub const EvalItem = struct {
 pub const EvalItemContent = union(enum) {
     item: EvalItemContentItem,
     items: EvalItemContentArray,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forItem(value: EvalItemContentItem) EvalItemContent {
         return .{ .item = value };
@@ -4338,7 +4338,7 @@ pub const EvalItemContent = union(enum) {
         return .{ .items = value };
     }
 
-    pub fn forRaw(value: JsonObject) EvalItemContent {
+    pub fn forRaw(value: FunctionParameters) EvalItemContent {
         return .{ .raw = value };
     }
 
@@ -4395,7 +4395,7 @@ pub const EvalItemContentItem = union(enum) {
     output_text: EvalItemContentOutputText,
     input_image: EvalItemInputImage,
     input_audio: InputAudio,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(value: EvalItemContentText) EvalItemContentItem {
         return .{ .text = value };
@@ -4417,7 +4417,7 @@ pub const EvalItemContentItem = union(enum) {
         return .{ .input_audio = value };
     }
 
-    pub fn forRaw(value: JsonObject) EvalItemContentItem {
+    pub fn forRaw(value: FunctionParameters) EvalItemContentItem {
         return .{ .raw = value };
     }
 
@@ -4722,13 +4722,13 @@ pub const FileUploadParam = struct {
 };
 pub const FineTuneChatCompletionRequestAssistantMessage = union(enum) {
     message: ChatCompletionRequestAssistantMessage,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forMessage(value: ChatCompletionRequestAssistantMessage) FineTuneChatCompletionRequestAssistantMessage {
         return .{ .message = value };
     }
 
-    pub fn forRaw(value: JsonObject) FineTuneChatCompletionRequestAssistantMessage {
+    pub fn forRaw(value: FunctionParameters) FineTuneChatCompletionRequestAssistantMessage {
         return .{ .raw = value };
     }
 
@@ -4898,7 +4898,7 @@ pub const FunctionCallOutputItemParam = struct {
 pub const FunctionAndCustomToolCallOutput = union(enum) {
     function: FunctionToolCallOutput,
     custom: CustomToolCallOutput,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forFunction(value: FunctionToolCallOutput) FunctionAndCustomToolCallOutput {
         return .{ .function = value };
@@ -4908,7 +4908,7 @@ pub const FunctionAndCustomToolCallOutput = union(enum) {
         return .{ .custom = value };
     }
 
-    pub fn forRaw(value: JsonObject) FunctionAndCustomToolCallOutput {
+    pub fn forRaw(value: FunctionParameters) FunctionAndCustomToolCallOutput {
         return .{ .raw = value };
     }
 
@@ -4982,7 +4982,7 @@ pub const FunctionParameters = union(enum) {
         return .{ .schema = value };
     }
 
-    pub fn forRaw(value: JsonObject) FunctionParameters {
+    pub fn forRaw(value: FunctionParameters) FunctionParameters {
         return .{ .raw = value };
     }
 
@@ -5072,7 +5072,7 @@ pub const FunctionShellCallOutputItemParam = struct {
 pub const FunctionShellCallOutputOutcome = union(enum) {
     exit: FunctionShellCallOutputExitOutcome,
     timeout: FunctionShellCallOutputTimeoutOutcome,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forExit(outcome: FunctionShellCallOutputExitOutcome) FunctionShellCallOutputOutcome {
         return .{ .exit = outcome };
@@ -5082,7 +5082,7 @@ pub const FunctionShellCallOutputOutcome = union(enum) {
         return .{ .timeout = outcome };
     }
 
-    pub fn forRaw(value: JsonObject) FunctionShellCallOutputOutcome {
+    pub fn forRaw(value: FunctionParameters) FunctionShellCallOutputOutcome {
         return .{ .raw = value };
     }
 
@@ -5306,7 +5306,7 @@ pub const ImageEditPartialImageEvent = struct {
 pub const ImageEditStreamEvent = union(enum) {
     completed: ImageEditCompletedEvent,
     partial_image: ImageEditPartialImageEvent,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forCompleted(value: ImageEditCompletedEvent) ImageEditStreamEvent {
         return .{ .completed = value };
@@ -5316,7 +5316,7 @@ pub const ImageEditStreamEvent = union(enum) {
         return .{ .partial_image = value };
     }
 
-    pub fn forRaw(value: JsonObject) ImageEditStreamEvent {
+    pub fn forRaw(value: FunctionParameters) ImageEditStreamEvent {
         return .{ .raw = value };
     }
 
@@ -5405,7 +5405,7 @@ pub const ImageGenPartialImageEvent = struct {
 pub const ImageGenStreamEvent = union(enum) {
     completed: ImageGenCompletedEvent,
     partial_image: ImageGenPartialImageEvent,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forCompleted(value: ImageGenCompletedEvent) ImageGenStreamEvent {
         return .{ .completed = value };
@@ -5415,7 +5415,7 @@ pub const ImageGenStreamEvent = union(enum) {
         return .{ .partial_image = value };
     }
 
-    pub fn forRaw(value: JsonObject) ImageGenStreamEvent {
+    pub fn forRaw(value: FunctionParameters) ImageGenStreamEvent {
         return .{ .raw = value };
     }
 
@@ -5537,7 +5537,7 @@ pub const InputContent = union(enum) {
     image: InputImageContent,
     file: InputFileContent,
     audio: InputAudio,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(value: []const u8) InputContent {
         return .{
@@ -5560,7 +5560,7 @@ pub const InputContent = union(enum) {
         return .{ .audio = value };
     }
 
-    pub fn forRaw(value: JsonObject) InputContent {
+    pub fn forRaw(value: FunctionParameters) InputContent {
         return .{ .raw = value };
     }
 
@@ -5693,7 +5693,7 @@ pub const InputMessageResource = struct {
 pub const InputParam = union(enum) {
     text: []const u8,
     items: []const InputItem,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(value: []const u8) InputParam {
         return .{ .text = value };
@@ -5703,7 +5703,7 @@ pub const InputParam = union(enum) {
         return .{ .items = value };
     }
 
-    pub fn forRaw(value: JsonObject) InputParam {
+    pub fn forRaw(value: FunctionParameters) InputParam {
         return .{ .raw = value };
     }
 
@@ -5816,7 +5816,7 @@ pub const Item = union(enum) {
     mcp_tool_call: MCPToolCall,
     custom_tool_call: CustomToolCall,
     custom_tool_call_output: CustomToolCallOutput,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forInputMessage(value: InputMessage) Item {
         return .{ .input_message = value };
@@ -5830,7 +5830,7 @@ pub const Item = union(enum) {
         return .{ .file_search_tool_call = value };
     }
 
-    pub fn forRaw(value: JsonObject) Item {
+    pub fn forRaw(value: FunctionParameters) Item {
         return .{ .raw = value };
     }
 
@@ -6056,7 +6056,7 @@ pub const InputItem = union(enum) {
     easy_message: EasyInputMessage,
     item: Item,
     item_reference: ItemReferenceParam,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forEasyMessage(value: EasyInputMessage) InputItem {
         return .{ .easy_message = value };
@@ -6070,7 +6070,7 @@ pub const InputItem = union(enum) {
         return .{ .item_reference = value };
     }
 
-    pub fn forRaw(value: JsonObject) InputItem {
+    pub fn forRaw(value: FunctionParameters) InputItem {
         return .{ .raw = value };
     }
 
@@ -6148,9 +6148,9 @@ pub const ItemResource = union(enum) {
     mcp_approval_request: MCPApprovalRequest,
     mcp_approval_response: MCPApprovalResponseResource,
     mcp_tool_call: MCPToolCall,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
-    pub fn forRaw(value: JsonObject) ItemResource {
+    pub fn forRaw(value: FunctionParameters) ItemResource {
         return .{ .raw = value };
     }
 
@@ -6566,7 +6566,7 @@ pub const Message = struct {
 pub const MessageTextAnnotation = union(enum) {
     file_citation: MessageContentTextAnnotationsFileCitationObject,
     file_path: MessageContentTextAnnotationsFilePathObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forFileCitation(value: MessageContentTextAnnotationsFileCitationObject) MessageTextAnnotation {
         return .{ .file_citation = value };
@@ -6576,7 +6576,7 @@ pub const MessageTextAnnotation = union(enum) {
         return .{ .file_path = value };
     }
 
-    pub fn forRaw(value: JsonObject) MessageTextAnnotation {
+    pub fn forRaw(value: FunctionParameters) MessageTextAnnotation {
         return .{ .raw = value };
     }
 
@@ -6640,7 +6640,7 @@ pub const MessageTextAnnotation = union(enum) {
 pub const MessageTextAnnotationDelta = union(enum) {
     file_citation: MessageDeltaContentTextAnnotationsFileCitationObject,
     file_path: MessageDeltaContentTextAnnotationsFilePathObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forFileCitation(value: MessageDeltaContentTextAnnotationsFileCitationObject) MessageTextAnnotationDelta {
         return .{ .file_citation = value };
@@ -6650,7 +6650,7 @@ pub const MessageTextAnnotationDelta = union(enum) {
         return .{ .file_path = value };
     }
 
-    pub fn forRaw(value: JsonObject) MessageTextAnnotationDelta {
+    pub fn forRaw(value: FunctionParameters) MessageTextAnnotationDelta {
         return .{ .raw = value };
     }
 
@@ -6716,7 +6716,7 @@ pub const MessageContent = union(enum) {
     image_file: MessageContentImageFileObject,
     image_url: MessageContentImageUrlObject,
     refusal: MessageContentRefusalObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(value: MessageContentTextObject) MessageContent {
         return .{ .text = value };
@@ -6734,7 +6734,7 @@ pub const MessageContent = union(enum) {
         return .{ .refusal = value };
     }
 
-    pub fn forRaw(value: JsonObject) MessageContent {
+    pub fn forRaw(value: FunctionParameters) MessageContent {
         return .{ .raw = value };
     }
 
@@ -6828,7 +6828,7 @@ pub const MessageContentDelta = union(enum) {
     image_file: MessageDeltaContentImageFileObject,
     image_url: MessageDeltaContentImageUrlObject,
     refusal: MessageDeltaContentRefusalObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(value: MessageDeltaContentTextObject) MessageContentDelta {
         return .{ .text = value };
@@ -6846,7 +6846,7 @@ pub const MessageContentDelta = union(enum) {
         return .{ .refusal = value };
     }
 
-    pub fn forRaw(value: JsonObject) MessageContentDelta {
+    pub fn forRaw(value: FunctionParameters) MessageContentDelta {
         return .{ .raw = value };
     }
 
@@ -7088,7 +7088,7 @@ pub const MessageStreamEvent = union(enum) {
     delta: MessageStreamEventDelta,
     completed: MessageStreamEventCompleted,
     incomplete: MessageStreamEventIncomplete,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forCreated(value: MessageStreamEventCreated) MessageStreamEvent {
         return .{ .created = value };
@@ -7110,7 +7110,7 @@ pub const MessageStreamEvent = union(enum) {
         return .{ .incomplete = value };
     }
 
-    pub fn forRaw(value: JsonObject) MessageStreamEvent {
+    pub fn forRaw(value: FunctionParameters) MessageStreamEvent {
         return .{ .raw = value };
     }
 
@@ -7318,7 +7318,7 @@ pub const OutputContent = union(enum) {
     refusal: RefusalContent,
     reasoning: ReasoningTextContent,
     audio: OutputAudio,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(value: OutputTextContent) OutputContent {
         return .{ .text = value };
@@ -7336,7 +7336,7 @@ pub const OutputContent = union(enum) {
         return .{ .audio = value };
     }
 
-    pub fn forRaw(value: JsonObject) OutputContent {
+    pub fn forRaw(value: FunctionParameters) OutputContent {
         return .{ .raw = value };
     }
 
@@ -7444,7 +7444,7 @@ pub const OutputItem = union(enum) {
     mcp_list_tools: MCPListTools,
     mcp_approval_request: MCPApprovalRequest,
     custom_tool_call: CustomToolCall,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forMessage(value: OutputMessage) OutputItem {
         return .{ .message = value };
@@ -7518,7 +7518,7 @@ pub const OutputItem = union(enum) {
         return .{ .custom_tool_call = value };
     }
 
-    pub fn forRaw(value: JsonObject) OutputItem {
+    pub fn forRaw(value: FunctionParameters) OutputItem {
         return .{ .raw = value };
     }
 
@@ -7875,13 +7875,13 @@ pub const PromptTemplate = struct {
 
 pub const Prompt = union(enum) {
     template: PromptTemplate,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forTemplate(value: PromptTemplate) Prompt {
         return .{ .template = value };
     }
 
-    pub fn forRaw(value: JsonObject) Prompt {
+    pub fn forRaw(value: FunctionParameters) Prompt {
         return .{ .raw = value };
     }
 
@@ -7978,7 +7978,7 @@ pub const RealtimeAudioFormats = union(enum) {
     pcm: RealtimeAudioFormatPcm,
     pcmu: RealtimeAudioFormatPcmu,
     pcma: RealtimeAudioFormatPcma,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forPcm(value: RealtimeAudioFormatPcm) RealtimeAudioFormats {
         return .{ .pcm = value };
@@ -7992,7 +7992,7 @@ pub const RealtimeAudioFormats = union(enum) {
         return .{ .pcma = value };
     }
 
-    pub fn forRaw(value: JsonObject) RealtimeAudioFormats {
+    pub fn forRaw(value: FunctionParameters) RealtimeAudioFormats {
         return .{ .raw = value };
     }
 
@@ -8563,13 +8563,13 @@ pub const RealtimeConversationItem = union(enum) {
     mcp_approval_response: RealtimeMCPApprovalResponse,
     mcp_list_tools: RealtimeMCPListTools,
     mcp_tool_call: RealtimeMCPToolCall,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forFunctionCall(value: RealtimeConversationItemFunctionCall) RealtimeConversationItem {
         return .{ .function_call = value };
     }
 
-    pub fn forRaw(value: JsonObject) RealtimeConversationItem {
+    pub fn forRaw(value: FunctionParameters) RealtimeConversationItem {
         return .{ .raw = value };
     }
 
@@ -9489,7 +9489,7 @@ pub const RealtimeTurnDetectionSemanticVad = struct {
 pub const RealtimeTurnDetection = union(enum) {
     server_vad: RealtimeTurnDetectionServerVad,
     semantic_vad: RealtimeTurnDetectionSemanticVad,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forServerVad(value: RealtimeTurnDetectionServerVad) RealtimeTurnDetection {
         return .{ .server_vad = value };
@@ -9499,7 +9499,7 @@ pub const RealtimeTurnDetection = union(enum) {
         return .{ .semantic_vad = value };
     }
 
-    pub fn forRaw(value: JsonObject) RealtimeTurnDetection {
+    pub fn forRaw(value: FunctionParameters) RealtimeTurnDetection {
         return .{ .raw = value };
     }
 
@@ -9565,7 +9565,7 @@ pub const RealtimeTruncation = union(enum) {
         retention_ratio: f64,
         token_limits: ?RealtimeTruncationTokenLimits = null,
     },
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forAuto() RealtimeTruncation {
         return .auto;
@@ -9588,7 +9588,7 @@ pub const RealtimeTruncation = union(enum) {
         };
     }
 
-    pub fn forRaw(value: JsonObject) RealtimeTruncation {
+    pub fn forRaw(value: FunctionParameters) RealtimeTruncation {
         return .{ .raw = value };
     }
 
@@ -9671,7 +9671,7 @@ pub const RefusalContent = struct {
 pub const ResponseOutput = union(enum) {
     item: OutputItem,
     items: []const OutputItem,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forItem(value: OutputItem) ResponseOutput {
         return .{ .item = value };
@@ -9681,7 +9681,7 @@ pub const ResponseOutput = union(enum) {
         return .{ .items = value };
     }
 
-    pub fn forRaw(value: JsonObject) ResponseOutput {
+    pub fn forRaw(value: FunctionParameters) ResponseOutput {
         return .{ .raw = value };
     }
 
@@ -9754,13 +9754,13 @@ pub const ResponseObject = struct {
 
 pub const Response = union(enum) {
     object: ResponseObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forObject(value: ResponseObject) Response {
         return .{ .object = value };
     }
 
-    pub fn forRaw(value: JsonObject) Response {
+    pub fn forRaw(value: FunctionParameters) Response {
         return .{ .raw = value };
     }
 
@@ -9894,7 +9894,7 @@ pub const ResponseError = union(enum) {
         message: []const u8,
         param: ?[]const u8 = null,
     },
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forObject(
         error_type: ?[]const u8,
@@ -9910,7 +9910,7 @@ pub const ResponseError = union(enum) {
         } };
     }
 
-    pub fn forRaw(value: JsonObject) ResponseError {
+    pub fn forRaw(value: FunctionParameters) ResponseError {
         return .{ .raw = value };
     }
 
@@ -10653,7 +10653,7 @@ pub const ResponseStreamEvent = union(enum) {
     web_search_call_completed: ResponseStreamEventWebSearchCallCompleted,
     web_search_call_in_progress: ResponseStreamEventWebSearchCallInProgress,
     web_search_call_searching: ResponseStreamEventWebSearchCallSearching,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forAudioDelta(value: ResponseStreamEventAudioDelta) ResponseStreamEvent {
         return .{ .audio_delta = value };
@@ -10867,7 +10867,7 @@ pub const ResponseStreamEvent = union(enum) {
         return .{ .web_search_call_searching = value };
     }
 
-    pub fn forRaw(value: JsonObject) ResponseStreamEvent {
+    pub fn forRaw(value: FunctionParameters) ResponseStreamEvent {
         return .{ .raw = value };
     }
 
@@ -11710,7 +11710,7 @@ pub const RunStepDeltaStepDetailsToolCall = union(enum) {
     code_interpreter: RunStepDeltaStepDetailsToolCallsCodeObject,
     file_search: RunStepDeltaStepDetailsToolCallsFileSearchObject,
     function: RunStepDeltaStepDetailsToolCallsFunctionObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: RunStepDeltaStepDetailsToolCall, writer: anytype) !void {
         switch (self) {
@@ -11789,7 +11789,7 @@ pub const RunStepDeltaStepDetailsToolCallsObject = struct {
 pub const RunStepDeltaStepDetails = union(enum) {
     message_creation: RunStepDeltaStepDetailsMessageCreationObject,
     tool_calls: RunStepDeltaStepDetailsToolCallsObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: RunStepDeltaStepDetails, writer: anytype) !void {
         switch (self) {
@@ -11831,7 +11831,7 @@ pub const RunStepDetailsToolCall = union(enum) {
     code_interpreter: RunStepDetailsToolCallsCodeObject,
     file_search: RunStepDetailsToolCallsFileSearchObject,
     function: RunStepDetailsToolCallsFunctionObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: RunStepDetailsToolCall, writer: anytype) !void {
         switch (self) {
@@ -11921,7 +11921,7 @@ pub const RunStepDetailsToolCallsObject = struct {
 pub const RunStepDetails = union(enum) {
     message_creation: RunStepDetailsMessageCreationObject,
     tool_calls: RunStepDetailsToolCallsObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: RunStepDetails, writer: anytype) !void {
         switch (self) {
@@ -12012,7 +12012,7 @@ pub const RunStepStreamEvent = union(enum) {
     failed: RunStepStreamEventFailed,
     cancelled: RunStepStreamEventCancelled,
     expired: RunStepStreamEventExpired,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forCreated(value: RunStepStreamEventCreated) RunStepStreamEvent {
         return .{ .created = value };
@@ -12042,7 +12042,7 @@ pub const RunStepStreamEvent = union(enum) {
         return .{ .expired = value };
     }
 
-    pub fn forRaw(value: JsonObject) RunStepStreamEvent {
+    pub fn forRaw(value: FunctionParameters) RunStepStreamEvent {
         return .{ .raw = value };
     }
 
@@ -12224,7 +12224,7 @@ pub const RunStreamEvent = union(enum) {
     cancelling: RunStreamEventCancelling,
     cancelled: RunStreamEventCancelled,
     expired: RunStreamEventExpired,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forCreated(value: RunStreamEventCreated) RunStreamEvent {
         return .{ .created = value };
@@ -12266,7 +12266,7 @@ pub const RunStreamEvent = union(enum) {
         return .{ .expired = value };
     }
 
-    pub fn forRaw(value: JsonObject) RunStreamEvent {
+    pub fn forRaw(value: FunctionParameters) RunStreamEvent {
         return .{ .raw = value };
     }
 
@@ -12492,7 +12492,7 @@ pub const StaticChunkingStrategyResponseParam = struct {
 pub const StopConfiguration = union(enum) {
     single: []const u8,
     multiple: []const []const u8,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn jsonStringify(self: StopConfiguration, writer: anytype) !void {
         switch (self) {
@@ -12537,7 +12537,7 @@ pub const StopConfiguration = union(enum) {
         return .{ .multiple = values };
     }
 
-    pub fn forRaw(value: JsonObject) StopConfiguration {
+    pub fn forRaw(value: FunctionParameters) StopConfiguration {
         return .{ .raw = value };
     }
 };
@@ -12596,7 +12596,7 @@ pub const TextResponseFormatConfiguration = union(enum) {
     text: ResponseFormatText,
     json_schema: TextResponseFormatJsonSchema,
     json_object: ResponseFormatJsonObject,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forText(value: ResponseFormatText) TextResponseFormatConfiguration {
         return .{ .text = value };
@@ -12610,7 +12610,7 @@ pub const TextResponseFormatConfiguration = union(enum) {
         return .{ .json_object = value };
     }
 
-    pub fn forRaw(value: JsonObject) TextResponseFormatConfiguration {
+    pub fn forRaw(value: FunctionParameters) TextResponseFormatConfiguration {
         return .{ .raw = value };
     }
 
@@ -12699,7 +12699,7 @@ pub const ThreadItem = union(enum) {
     client_tool_call: ClientToolCallItem,
     task: TaskItem,
     task_group: TaskGroupItem,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forUser(value: UserMessageItem) ThreadItem {
         return .{ .user = value };
@@ -12725,7 +12725,7 @@ pub const ThreadItem = union(enum) {
         return .{ .task_group = value };
     }
 
-    pub fn forRaw(value: JsonObject) ThreadItem {
+    pub fn forRaw(value: FunctionParameters) ThreadItem {
         return .{ .raw = value };
     }
 
@@ -12878,13 +12878,13 @@ pub const ThreadStreamEventCreated = struct {
 };
 pub const ThreadStreamEvent = union(enum) {
     created: ThreadStreamEventCreated,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forCreated(value: ThreadStreamEventCreated) ThreadStreamEvent {
         return .{ .created = value };
     }
 
-    pub fn forRaw(value: JsonObject) ThreadStreamEvent {
+    pub fn forRaw(value: FunctionParameters) ThreadStreamEvent {
         return .{ .raw = value };
     }
 
@@ -12958,7 +12958,7 @@ pub const Tool = union(enum) {
     computer: ComputerUsePreviewTool,
     custom: CustomToolParam,
     mcp: MCPTool,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forFunction(function: FunctionTool) Tool {
         return .{ .function = function };
@@ -12984,7 +12984,7 @@ pub const Tool = union(enum) {
         return .{ .mcp = tool };
     }
 
-    pub fn forRaw(value: JsonObject) Tool {
+    pub fn forRaw(value: FunctionParameters) Tool {
         return .{ .raw = value };
     }
 
@@ -13061,7 +13061,7 @@ pub const ToolChoiceParam = union(enum) {
     custom: ToolChoiceCustom,
     mcp: ToolChoiceMCP,
     allowed: ToolChoiceAllowed,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forNone() ToolChoiceParam {
         return .none;
@@ -13114,7 +13114,7 @@ pub const ToolChoiceParam = union(enum) {
         };
     }
 
-    pub fn forRaw(value: JsonObject) ToolChoiceParam {
+    pub fn forRaw(value: FunctionParameters) ToolChoiceParam {
         return .{ .raw = value };
     }
 
@@ -13434,7 +13434,7 @@ pub const UserMessageInputText = struct {
 pub const UserMessageItemContent = union(enum) {
     input_text: UserMessageInputText,
     quoted_text: UserMessageQuotedText,
-    raw: JsonObject,
+    raw: FunctionParameters,
 
     pub fn forInputText(value: UserMessageInputText) UserMessageItemContent {
         return .{ .input_text = value };
@@ -13444,7 +13444,7 @@ pub const UserMessageItemContent = union(enum) {
         return .{ .quoted_text = value };
     }
 
-    pub fn forRaw(value: JsonObject) UserMessageItemContent {
+    pub fn forRaw(value: FunctionParameters) UserMessageItemContent {
         return .{ .raw = value };
     }
 
