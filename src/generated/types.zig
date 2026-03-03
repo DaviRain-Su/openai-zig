@@ -620,7 +620,7 @@ pub const AuditLog = struct {
             permissions_added: ?[]const []const u8,
             permissions_removed: ?[]const []const u8,
             description: ?[]const u8,
-            metadata: ?FunctionParameters,
+            metadata: ?Metadata,
         },
     },
     role_deleted: ?struct {
@@ -3281,7 +3281,7 @@ pub const CreateEvalLabelModelGrader = struct {
 };
 pub const CreateEvalLogsDataSourceConfig = struct {
     type: []const u8,
-    metadata: ?FunctionParameters,
+    metadata: ?Metadata,
 };
 pub const CreateEvalTestingCriteria = union(enum) {
     label_model: CreateEvalLabelModelGrader,

@@ -4031,3 +4031,19 @@ test "raw constructors accept plain JsonObject for FunctionParameters-backed uni
         else => try std.testing.expect(false),
     }
 }
+
+test "metadata alias parse supports optional metadata as FunctionParameters" {
+    const logs_data_source = try std.json.parseFromSlice(
+        gen.CreateEvalLogsDataSourceConfig,
+        std.testing.allocator,
+        "{\"type\":\"logs\",\"metadata\":{\"run_id\":\"r1\",\"attempt\":1}}",
+        .{ .ignore_unknown_fields = true },
+    );
+    defer logs_data_source.deinit();
+    try std.testing.expect(logs_data_source.value.metadata != null);
+    const metadata = logs_data_source.value.metadata.?;
+    switch (metadata) {
+        .schema => |value| try std.testing.expectEqualStrings("r1", value.object.get("run_id").?.string),
+        .raw => |value| try std.testing.expectEqualStrings("r1", value.object.get("run_id").?.string),
+    }
+}
